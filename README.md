@@ -210,6 +210,7 @@ metaHarmonizer/
 │   │       ├── harmonizer.py    # ML engine wrapper
 │   │       ├── analytics.py     # Quality metric computation
 │   │       └── exporter.py      # Export format generators
+│   ├── engine/                  # ML engine (SchemaMapEngine)
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
@@ -220,7 +221,6 @@ metaHarmonizer/
 │   │   └── api/                 # Typed HTTP client
 │   ├── Dockerfile
 │   └── package.json
-├── engine/                      # ML engine (SchemaMapEngine)
 ├── metadata_samples/            # Reference & sample data
 ├── docker-compose.yml
 └── README.md

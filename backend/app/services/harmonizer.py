@@ -2,7 +2,7 @@
 MetaHarmonizer Dashboard — Harmonizer Service (Real Engine Wrapper)
 
 Wraps the real shbrief/MetaHarmonizer SchemaMapEngine with a clean interface.
-The engine lives in engine/ and provides a production-grade
+The engine lives in backend/engine/ and provides a production-grade
 4-stage cascade: Dict/Fuzzy → Value/Ontology → Numeric/Semantic → LLM.
 
 Architecture:
@@ -51,7 +51,7 @@ logger = logging.getLogger(__name__)
 # Real SchemaMapEngine Setup (lazy-loaded + cached)
 # ---------------------------------------------------------------------------
 
-_REPO_DIR = Path(__file__).resolve().parent.parent.parent.parent / "engine"
+_REPO_DIR = Path(__file__).resolve().parent.parent.parent / "engine"
 _HAS_REAL_ENGINE = False
 _SchemaMapEngine = None
 

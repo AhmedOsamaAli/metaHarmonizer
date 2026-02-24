@@ -39,12 +39,12 @@ backend/data/nci_cache.json
 !backend/data/uploads/.gitkeep
 
 # ML engine data (large model files, outputs)
-engine/data/outputs/
-engine/data/corpus/
-engine/src/__pycache__/
-engine/**/__pycache__/
-engine/*.egg-info/
-engine/.git-crypt/
+backend/engine/data/outputs/
+backend/engine/data/corpus/
+backend/engine/src/__pycache__/
+backend/engine/**/__pycache__/
+backend/engine/*.egg-info/
+backend/engine/.git-crypt/
 
 # Build artifacts
 *.tsbuildinfo
