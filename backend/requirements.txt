@@ -5,3 +5,7 @@ pydantic==2.9.2
 pandas==2.2.3
 rapidfuzz==3.9.7
 numpy==1.26.4
+sentence-transformers==3.0.1
+torch>=2.1.0
+requests>=2.31.0
+google-generativeai>=0.7.0
