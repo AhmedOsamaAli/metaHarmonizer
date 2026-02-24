@@ -4,16 +4,11 @@ import os
 # === Paths ===
 OUTPUT_DIR = "data/schema_mapping_eval"
 CURATED_DICT_PATH = "data/schema/curated_fields.csv"
-# CURATED_DICT_PATH = "data/schema/curated_dict.csv"
 ALIAS_DICT_PATH = ""
-# ALIAS_DICT_PATH = "data/schema/curated_fields_source_latest_with_flags.csv" 
-# ALIAS_DICT_PATH = "data/schema/heterogeneous_attribute_mapping_ver1.csv"
 VALUE_DICT_PATH = os.getenv("FIELD_VALUE_JSON") or "data/schema/field_value_dict.json"
-# VALUE_DICT_PATH = "data/schema/value_dictionary.json"
 
 # === Models ===
 FIELD_MODEL = "all-MiniLM-L6-v2"
-# FIELD_MODEL = "cambridgeltl/SapBERT-from-PubmedBERT-fulltext"
 LLM_MODEL = "gemma-3-27b-it"
 
 # === Thresholds ===

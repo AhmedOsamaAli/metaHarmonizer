@@ -211,6 +211,15 @@ metaHarmonizer/
 │   │       ├── analytics.py     # Quality metric computation
 │   │       └── exporter.py      # Export format generators
 │   ├── engine/                  # ML engine (SchemaMapEngine)
+│   │   ├── src/
+│   │   │   ├── models/schema_mapper/  # 4-stage cascade pipeline
+│   │   │   │   ├── engine.py    # Main SchemaMapEngine class
+│   │   │   │   ├── config.py    # Thresholds & model config
+│   │   │   │   ├── loaders/     # Dictionary & value loaders
+│   │   │   │   └── matchers/    # Stage 1–4 matcher classes
+│   │   │   ├── utils/           # Schema mapping utilities
+│   │   │   └── CustomLogger/    # Structured logging
+│   │   └── data/schema/         # Curated dictionaries & ontology data
 │   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
