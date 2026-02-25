@@ -2,7 +2,7 @@
 import os
 import json
 from typing import List, Tuple, Optional
-import google.generativeai as genai
+from google import genai
 from .base import BaseMatcher
 from ..config import LLM_MODEL
 from src.CustomLogger.custom_logger import CustomLogger
@@ -30,20 +30,13 @@ class LLMMatcher(BaseMatcher):
                 "Please set it in your .env file."
             )
         
-        # Configure Gemini
-        genai.configure(api_key=api_key)
+        # Configure Gemini client
+        self.client = genai.Client(api_key=api_key)
         
         # Use model from config
-        model_name = LLM_MODEL
+        self.model_name = LLM_MODEL
         
-        # Add 'models/' prefix if not present
-        if not model_name.startswith('models/'):
-            model_name = f'models/{model_name}'
-        
-        self.model = genai.GenerativeModel(model_name)
-        self.model_name = model_name
-        
-        logger.info(f"[LLM] Initialized with {model_name}")
+        logger.info(f"[LLM] Initialized with {self.model_name}")
     
     def _build_prompt(self, col: str, sample_values: Optional[List[str]] = None) -> str:
         """
@@ -116,7 +109,10 @@ JSON Response:"""
             
             # Call LLM API
             logger.info(f"[LLM] Calling API for column '{col}'")
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt,
+            )
             
             # Parse response
             response_text = response.text.strip()
