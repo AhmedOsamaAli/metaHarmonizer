@@ -8,42 +8,60 @@ MetaHarmonizer bridges the gap between raw, inconsistent clinical metadata and s
 
 ---
 
-## Problem
+## The Problem
 
-cBioPortal hosts 400+ cancer genomics studies with clinical metadata from diverse sources. Metadata heterogeneity across studies severely limits cross-study analysis:
+cBioPortal hosts 400+ cancer genomics studies with clinical metadata from diverse sources. Cross-study metadata heterogeneity severely limits analysis:
 
-- Treatment appears as 24+ variants: `RADIO_THERAPY`, `Rad`, `XRT`, `Radiation`…
-- Age attributes vary: `AGE`, `AGE_AT_DIAGNOSIS`, `DIAGNOSIS_AGE`…
-- Staging is inconsistent: `TUMOR_STAGE_2009`, `AJCC_STAGE`, `PATHOLOGIC_STAGE`…
+| Issue | Examples |
+|-------|----------|
+| **Attribute naming** | `AGE`, `AGE_AT_DIAGNOSIS`, `DIAGNOSIS_AGE` — all mean the same thing |
+| **Value encoding** | Sex recorded as `male`, `M`, `1`, `Male`, `MALE` |
+| **Treatment synonyms** | 24+ variants: `RADIO_THERAPY`, `Rad`, `XRT`, `Radiation`, `RT` |
+| **Staging inconsistency** | `TUMOR_STAGE_2009`, `AJCC_STAGE`, `STAGE`, `PATHOLOGIC_STAGE` |
 
-Manual harmonization cannot scale. MetaHarmonizer automates this using a **4-stage cascade pipeline** backed by dictionary matching, ontology resolution, semantic embeddings, and optional LLM inference — then presents results in a curator-friendly dashboard for review.
+Manual harmonization does not scale. MetaHarmonizer automates this using a **4-stage cascade pipeline** backed by dictionary matching, ontology resolution, semantic embeddings, and optional LLM inference — then presents results in a curator-friendly dashboard for review and correction.
 
 ---
 
-## Key Features
+## Dashboard Pages
 
-### Harmonization Engine
-- **4-Stage Cascade Pipeline**: Dict/Fuzzy → Value/Ontology → Semantic (SentenceTransformer) → LLM
-- **Ontology Value Normalization**: Maps raw values to standard terms (NCIT, UBERON, OHMI)
-- **Confidence Scoring**: Each mapping includes a confidence score and the producing stage
-- **Top-K Alternatives**: Returns up to 5 ranked alternative matches per column for curator review
+### 1. Upload
 
-### Curator Review Dashboard
-- **Interactive Mapping Review**: Accept, reject, or manually edit automated mappings
-- **Batch Operations**: Accept or reject multiple mappings at once
-- **Ontology Browser**: Search and browse NCIT, UBERON, OHMI terms with fuzzy matching
-- **Quality Analytics**: Confidence distributions, stage breakdowns, coverage metrics, progress tracking
-- **Audit Trail**: Full logging of all curator actions for reproducibility
+Upload a CSV or TSV file containing raw clinical metadata. The pipeline automatically processes all columns through the 4-stage cascade and returns results in seconds.
 
-### Export & Integration
-- **Harmonized CSV**: Download data with standardized column names
-- **cBioPortal Format**: Tab-separated export with proper header lines for direct cBioPortal ingestion
-- **JSON Audit Report**: Complete mapping report with provenance and curator decisions
+![Upload Page](pics/upload_page.png)
 
-### Performance
-- **Engine Caching**: SentenceTransformer model and dictionaries persist across requests
-- **Pre-warming**: Background model loading at startup — first upload is fast
-- **NCI Cache Persistence**: API responses cached to disk, cutting repeat startup time
+---
+
+### 2. Schema Mapping Review
+
+The core curator workspace. Each column mapping displays the suggested standardized field name, confidence score (color-coded), the pipeline stage that produced the match, and up to 4 alternative candidates. Curators can accept, reject, or manually edit any mapping — individually or in batch.
+
+![Schema Mapping Review](pics/schema_mapping.png)
+
+---
+
+### 3. Ontology Value Mapping
+
+View how raw cell values within mapped columns are resolved to standard ontology terms from NCIT, UBERON, and OHMI. Curators can search and browse terms with fuzzy matching to verify or override automated assignments.
+
+![Ontology Mapping](pics/ontlogy_mapping.png)
+
+---
+
+### 4. Quality Dashboard
+
+Monitor harmonization quality at a glance — KPI cards for overall coverage and confidence, a confidence score histogram showing score distribution, stage breakdown charts revealing which pipeline stages contribute most matches, and review progress tracking.
+
+![Quality Dashboard](pics/quality_dashboard.png)
+
+---
+
+### 5. Export
+
+Download results in three formats: harmonized CSV with standardized column names, cBioPortal-compatible TSV with the proper 4-line header format for direct ingestion, and a JSON audit report capturing every mapping decision and curator action.
+
+![Completed Harmonization](pics/completed_harmonization.png)
 
 ---
 
@@ -78,14 +96,25 @@ Manual harmonization cannot scale. MetaHarmonizer automates this using a **4-sta
 
 ## Tech Stack
 
-| Layer        | Technology                                                          |
-|-------------|---------------------------------------------------------------------|
-| **Frontend** | React 18, TypeScript, Tailwind CSS, Recharts, Lucide Icons          |
-| **Backend**  | FastAPI, Pydantic v2, Uvicorn                                       |
-| **Database** | SQLite (WAL mode, foreign keys, indexes)                            |
-| **ML Engine**| SentenceTransformer (`all-MiniLM-L6-v2`), RapidFuzz, NCI EVS API    |
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | React 18, TypeScript, Tailwind CSS, Recharts, Lucide Icons |
+| **Backend** | FastAPI, Pydantic v2, Uvicorn |
+| **Database** | SQLite (WAL mode, foreign keys, indexes) |
+| **ML Engine** | SentenceTransformer (`all-MiniLM-L6-v2`), RapidFuzz, NCI EVS API |
 
-**Technical decisions rationale** — see the [GSoC Proposal](GSoC_Proposal.md) for detailed reasoning behind every technology choice.
+---
+
+## Pipeline Stages
+
+| Stage | Method | Description |
+|-------|--------|-------------|
+| **Stage 1** | Dict / Fuzzy | Exact and near-exact name matching via curated dictionaries (RapidFuzz token_sort ≥92%) |
+| **Stage 2** | Value / Ontology | Matches columns by value distributions and NCI EVS ontology lookups |
+| **Stage 3** | Semantic | SentenceTransformer (`all-MiniLM-L6-v2`) cosine similarity between column names |
+| **Stage 4** | LLM | Optional Gemini API inference for ambiguous columns (disabled by default) |
+
+Columns flow through stages sequentially. If a stage produces a high-confidence match, later stages are skipped. Unmatched columns are flagged for manual review.
 
 ---
 
@@ -111,60 +140,15 @@ npm install
 npm run dev
 ```
 
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:8000
-- **API Docs (Swagger)**: http://localhost:8000/docs
-
----
-
-## Usage Workflow
-
-### 1. Upload Metadata
-Upload a CSV/TSV file containing raw clinical metadata. The pipeline automatically processes all columns through the 4-stage cascade.
-
-### 2. Review Mappings
-Each column mapping shows:
-- **Matched Field** — the suggested standardized column name
-- **Confidence Score** — how confident the model is (color-coded: green ≥90%, yellow 50–90%, red <50%)
-- **Stage** — which pipeline stage produced the match (S1–S4)
-- **Alternatives** — up to 4 alternative matches to choose from
-
-Accept high-confidence mappings, reject incorrect ones, or manually edit to assign the correct field.
-
-### 3. Browse Ontology Mappings
-View how raw values within mapped columns are resolved to ontology terms (NCIT, UBERON, OHMI).
-
-### 4. Quality Dashboard
-Monitor harmonization quality with:
-- Coverage metrics (mapped vs. unmapped columns)
-- Confidence score distribution histogram
-- Stage breakdown (which stages contribute most matches)
-- Review progress tracking
-
-### 5. Export
-Download results in three formats:
-- **Harmonized CSV** — data with standardized column names
-- **cBioPortal Clinical** — tab-separated format ready for cBioPortal import
-- **Mapping Report** — JSON audit trail of all mappings and curator decisions
-
----
-
-## Pipeline Stages
-
-| Stage | Method | Description |
-|-------|--------|-------------|
-| **Stage 1** | Dict / Fuzzy | Exact and near-exact name matching via curated dictionaries (RapidFuzz token_sort ≥92%) |
-| **Stage 2** | Value / Ontology | Matches columns by value distributions and NCI EVS ontology lookups |
-| **Stage 3** | Semantic | SentenceTransformer (`all-MiniLM-L6-v2`) cosine similarity between column names |
-| **Stage 4** | LLM | Optional Gemini API inference for ambiguous columns (disabled by default) |
-
-Columns flow through stages sequentially. If a stage produces a high-confidence match, later stages are skipped. Unmatched columns are flagged for manual review.
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:8000 |
+| API Docs (Swagger) | http://localhost:8000/docs |
 
 ---
 
 ## API Reference
-
-The backend exposes a RESTful API documented via OpenAPI/Swagger at `/docs`.
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -193,41 +177,26 @@ metaHarmonizer/
 │   ├── app/
 │   │   ├── main.py              # FastAPI app entry point
 │   │   ├── models.py            # Pydantic request/response schemas
-│   │   ├── database.py          # SQLite data layer (4 tables, 17 functions)
+│   │   ├── database.py          # SQLite data layer
 │   │   ├── routers/             # API route handlers
-│   │   │   ├── harmonize.py     # Upload & pipeline execution
-│   │   │   ├── mappings.py      # Curator review CRUD + batch ops
-│   │   │   ├── ontology.py      # Ontology search & browse
-│   │   │   ├── quality.py       # Analytics metrics
-│   │   │   └── export.py        # Data export endpoints
 │   │   └── services/            # Business logic
-│   │       ├── harmonizer.py    # ML engine wrapper + ontology mapping
-│   │       ├── analytics.py     # Quality metric computation
-│   │       └── exporter.py      # Export format generators
 │   ├── engine/                  # ML engine (SchemaMapEngine)
-│   │   ├── src/
-│   │   │   ├── models/schema_mapper/
-│   │   │   │   ├── engine.py    # Main SchemaMapEngine class (4-stage cascade)
-│   │   │   │   ├── config.py    # Thresholds & model config
-│   │   │   │   ├── loaders/     # Dictionary & value loaders
-│   │   │   │   └── matchers/    # Stage 1–4 matcher classes
-│   │   │   ├── utils/           # Schema mapping utilities
-│   │   │   └── CustomLogger/    # Structured logging
-│   │   └── data/
-│   │       ├── schema/          # Curated dictionaries & ontology data
-│   │       └── schema_mapping_eval/  # Pipeline evaluation outputs
+│   │   ├── src/models/schema_mapper/
+│   │   │   ├── engine.py        # 4-stage cascade
+│   │   │   ├── config.py        # Thresholds & model config
+│   │   │   ├── loaders/         # Dictionary & value loaders
+│   │   │   └── matchers/        # Stage 1–4 matcher classes
+│   │   └── data/schema/         # Curated dictionaries & ontology data
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx              # Main app with routing (5 pages)
+│   │   ├── App.tsx              # Main app with routing
 │   │   ├── pages/               # Upload, Review, Ontology, Quality, Export
-│   │   ├── components/          # ConfidenceBadge, FileUploader, StageBadge, StatusBadge
-│   │   └── api/                 # Typed HTTP client (12 functions, 10 interfaces)
+│   │   ├── components/          # Reusable UI components
+│   │   └── api/                 # Typed HTTP client
 │   └── package.json
+├── pics/                        # Dashboard screenshots
 ├── metadata_samples/            # Reference & sample data
-│   ├── curated_meta.csv         # 37 standardized columns (reference schema)
-│   └── new_meta.csv             # 131 raw columns (test data)
-├── GSoC_Proposal.md             # Full GSoC 2026 proposal
 └── README.md
 ```
 
@@ -237,8 +206,18 @@ metaHarmonizer/
 
 | File | Description |
 |------|-------------|
-| `metadata_samples/curated_meta.csv` | Reference schema with 37 standardized columns (cBioPortal-compatible), including ontology term IDs |
-| `metadata_samples/new_meta.csv` | Raw metadata with 131 heterogeneous columns from multiple studies |
+| `metadata_samples/curated_meta.csv` | Reference schema — 37 standardized columns with ontology term IDs |
+| `metadata_samples/new_meta.csv` | Raw metadata — 131 heterogeneous columns from multiple studies |
+
+---
+
+## Performance
+
+| Metric | Value |
+|--------|-------|
+| Upload-to-results (141 columns) | **2.6 seconds** |
+| Cold start (original) | 235 seconds |
+| Optimization | 99% latency reduction via engine caching, NCI disk-cache, background pre-warming |
 
 ---
 
