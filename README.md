@@ -61,7 +61,7 @@ Monitor harmonization quality at a glance — KPI cards for overall coverage and
 
 Download results in three formats: harmonized CSV with standardized column names, cBioPortal-compatible TSV with the proper 4-line header format for direct ingestion, and a JSON audit report capturing every mapping decision and curator action.
 
-![Completed Harmonization](pics/completed_harmonization.png)
+![Export](pics/export.png)
 
 ---
 
