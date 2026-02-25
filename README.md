@@ -227,8 +227,3 @@ metaHarmonizer/
 - [cBioPortal](https://www.cbioportal.org/) — Target schema standard for cancer genomics
 - [NCI Thesaurus (NCIt)](https://ncithesaurus.nci.nih.gov/) — Biomedical ontology for value normalization
 
----
-
-## License
-
-This project is provided as-is for research and educational purposes.
