@@ -20,6 +20,33 @@ from app import database as db
 
 
 # ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _find_id_column(df: pd.DataFrame, candidates: list[str]) -> str:
+    """
+    Find the best existing column in `df` that matches one of the candidate
+    names (case-insensitive).  If none found, return the first column that
+    contains mostly unique non-null values (heuristic for an ID column).
+    As a last resort, synthesize a column name — the exporter will fill it
+    with row indices.
+    """
+    lower_cols = {c.lower(): c for c in df.columns}
+    for cand in candidates:
+        if cand.lower() in lower_cols:
+            return lower_cols[cand.lower()]
+
+    # Heuristic: find a column with high cardinality (likely an ID)
+    for c in df.columns:
+        non_null = df[c].dropna()
+        if len(non_null) > 0 and non_null.nunique() / len(non_null) > 0.9:
+            return c
+
+    # Fallback: use first column
+    return df.columns[0] if len(df.columns) > 0 else "_GENERATED_ID"
+
+
+# ---------------------------------------------------------------------------
 # Harmonized CSV
 # ---------------------------------------------------------------------------
 
@@ -71,19 +98,29 @@ def export_harmonized_csv(study_id: str, raw_df: pd.DataFrame) -> str:
 
 def export_cbioportal(study_id: str, raw_df: pd.DataFrame) -> str:
     """
-    Produce a cBioPortal-format clinical data file.
+    Produce a cBioPortal-format clinical sample data file.
 
-    cBioPortal expects:
-      Line 1: #Display names
-      Line 2: #Descriptions
-      Line 3: #Data types (STRING / NUMBER)
-      Line 4: #Priority (1 for all)
-      Line 5+: Header + data rows (tab-separated)
+    Follows the official cBioPortal file format specification:
+    https://docs.cbioportal.org/file-formats/#clinical-data
+
+    cBioPortal clinical data files require:
+      Row 1: #Display names
+      Row 2: #Descriptions (longer description of each attribute)
+      Row 3: #Data types (STRING, NUMBER, or BOOLEAN)
+      Row 4: #Priority (numeric; higher = more prominent in UI)
+      Row 5: Column attribute IDs (UPPER_CASE, no # prefix)
+      Row 6+: Data rows (tab-separated)
+
+    Required columns for sample-level data:
+      - PATIENT_ID: unique patient identifier
+      - SAMPLE_ID: unique sample identifier
     """
     mappings = db.get_mappings(study_id)
 
     # Build column list from accepted / mapped
     cols: list[dict[str, Any]] = []
+    seen_targets: set[str] = set()
+
     for m in mappings:
         target = m.get("curator_field") or m.get("matched_field")
         if not target:
@@ -94,39 +131,106 @@ def export_cbioportal(study_id: str, raw_df: pd.DataFrame) -> str:
         if raw not in raw_df.columns:
             continue
 
-        # Determine type
+        target_id = target.upper().replace(" ", "_")
+
+        # Skip duplicate target columns
+        if target_id in seen_targets:
+            continue
+        seen_targets.add(target_id)
+
+        # Determine data type
         dtype = "STRING"
         try:
             pd.to_numeric(raw_df[raw].dropna())
             dtype = "NUMBER"
         except (ValueError, TypeError):
-            pass
+            # Check for boolean-like columns
+            unique_vals = set(raw_df[raw].dropna().str.lower().unique())
+            if unique_vals and unique_vals <= {"true", "false", "yes", "no", "0", "1"}:
+                dtype = "BOOLEAN"
+
+        # Priority: well-known cBioPortal attributes get higher priority
+        priority = 1
+        high_priority_attrs = {
+            "PATIENT_ID", "SAMPLE_ID", "CANCER_TYPE", "CANCER_TYPE_DETAILED",
+            "GENDER", "SEX", "AGE", "OS_STATUS", "OS_MONTHS", "TUMOR_SITE",
+        }
+        if target_id in high_priority_attrs:
+            priority = 10
 
         cols.append(
             {
                 "raw": raw,
-                "target": target.upper().replace(" ", "_"),
+                "target": target_id,
                 "display": target.replace("_", " ").title(),
+                "description": target.replace("_", " ").capitalize(),
                 "dtype": dtype,
+                "priority": priority,
             }
         )
 
     if not cols:
         return "# No mappings available for export\n"
 
+    # ---------------------------------------------------------------
+    # Ensure required columns PATIENT_ID and SAMPLE_ID are present.
+    # cBioPortal sample clinical data REQUIRES both.
+    # If the schema mapper matched subject_id or sample_id, they'll
+    # already be in `cols`.  Otherwise, we synthesize them from
+    # available data.
+    # ---------------------------------------------------------------
+    target_ids = {c["target"] for c in cols}
+
+    if "PATIENT_ID" not in target_ids:
+        # Try to find a suitable source column in the raw data
+        patient_src = _find_id_column(raw_df, ["subject_id", "patient_id", "participant_id", "case_id"])
+        cols.insert(0, {
+            "raw": patient_src,
+            "target": "PATIENT_ID",
+            "display": "Patient Identifier",
+            "description": "Unique patient identifier",
+            "dtype": "STRING",
+            "priority": 10,
+        })
+    else:
+        # Move PATIENT_ID to front
+        idx = next(i for i, c in enumerate(cols) if c["target"] == "PATIENT_ID")
+        cols.insert(0, cols.pop(idx))
+
+    if "SAMPLE_ID" not in target_ids:
+        # Try to find a suitable source column in the raw data
+        sample_src = _find_id_column(raw_df, ["sample_id", "run_id", "sampleid", "accession"])
+        pos = 1  # right after PATIENT_ID
+        cols.insert(pos, {
+            "raw": sample_src,
+            "target": "SAMPLE_ID",
+            "display": "Sample Identifier",
+            "description": "Unique sample identifier",
+            "dtype": "STRING",
+            "priority": 10,
+        })
+    else:
+        # Move SAMPLE_ID to position 1 (right after PATIENT_ID)
+        idx = next(i for i, c in enumerate(cols) if c["target"] == "SAMPLE_ID")
+        if idx != 1:
+            cols.insert(1, cols.pop(idx))
+
     buf = io.StringIO()
     writer = csv.writer(buf, delimiter="\t", lineterminator="\n")
 
-    # Header lines
+    # Row 1: Display names
     writer.writerow(["#" + c["display"] for c in cols])
-    writer.writerow(["#" + c["display"] for c in cols])
+    # Row 2: Descriptions (distinct from display names per spec)
+    writer.writerow(["#" + c["description"] for c in cols])
+    # Row 3: Data types
     writer.writerow(["#" + c["dtype"] for c in cols])
-    writer.writerow(["#" + "1" for _ in cols])
+    # Row 4: Priority
+    writer.writerow(["#" + str(c["priority"]) for c in cols])
 
-    # Column IDs
+    # Row 5: Column attribute IDs (no # prefix, UPPER_CASE)
     writer.writerow([c["target"] for c in cols])
 
-    # Data rows
+    # Row 6+: Data rows
     for _, row in raw_df.iterrows():
         writer.writerow([row.get(c["raw"], "") for c in cols])
 

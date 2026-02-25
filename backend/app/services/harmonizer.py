@@ -197,25 +197,12 @@ def _create_engine(csv_path: str):
     """Create a fresh SchemaMapEngine instance (expensive, ~10-15 s)."""
     engine = _SchemaMapEngine(csv_path, mode="manual", top_k=5)
 
-    # Neutralize slow NCI EVS REST API calls.
-    #
-    # Stage 2's OntologyMatcher calls nci_client.map_value_to_schema()
-    # for EVERY column that reaches stage 2 (~130 columns).  Each call
-    # fans out to the NCI API for every unique value in the column,
-    # adding ~100 s of network latency.  In practice, the value_dict
-    # matcher (which runs first in the stage 2 cascade) already catches
-    # the same 5 columns.  By returning no candidates for API lookups
-    # we save ~100 s per upload with negligible accuracy impact.
-    #
-    # The local term cache and classification logic are preserved, so
-    # any previously-resolved terms still work.
-    _orig_search = engine.nci_client.search_candidates
+    # NCI EVS REST API is enabled — Stage 2's OntologyMatcher will call
+    # nci_client.map_value_to_schema() for columns that reach stage 2.
+    # This adds network latency (~100 s on first run) but improves
+    # ontology-based matching accuracy.  Resolved terms are cached to
+    # nci_cache.json so subsequent runs are fast.
 
-    def _fast_search(term, limit=1):
-        # Return empty candidates instead of making an HTTP call.
-        return []
-
-    engine.nci_client.search_candidates = _fast_search
     return engine
 
 
