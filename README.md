@@ -78,7 +78,7 @@ MetaHarmonizer automates this process using a **4-stage cascade pipeline** backe
 | **Backend**  | FastAPI, Pydantic v2, Uvicorn                                       |
 | **Database** | SQLite (WAL mode, foreign keys)                                     |
 | **ML Engine**| SentenceTransformer, RapidFuzz, NCI EVS API, Pandas                 |
-| **Infra**    | Docker Compose, Nginx (reverse proxy), multi-stage builds           |
+| **Infra**    | Local dev servers (Uvicorn + Vite)                                   |
 
 ---
 
@@ -87,21 +87,8 @@ MetaHarmonizer automates this process using a **4-stage cascade pipeline** backe
 ### Prerequisites
 - Python 3.11+
 - Node.js 18+
-- Docker & Docker Compose (optional, for containerized deployment)
 
-### Option 1: Docker Compose (Recommended)
-
-```bash
-git clone https://github.com/AhmedOsamaAli/metaHarmonizer.git
-cd metaHarmonizer
-docker compose up --build
-```
-
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-
-### Option 2: Local Development
+### Setup
 
 **Backend:**
 ```bash
@@ -220,7 +207,6 @@ metaHarmonizer/
 │   │   │   ├── utils/           # Schema mapping utilities
 │   │   │   └── CustomLogger/    # Structured logging
 │   │   └── data/schema/         # Curated dictionaries & ontology data
-│   ├── Dockerfile
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -228,10 +214,8 @@ metaHarmonizer/
 │   │   ├── pages/               # Upload, Review, Quality, Export pages
 │   │   ├── components/          # Reusable UI components
 │   │   └── api/                 # Typed HTTP client
-│   ├── Dockerfile
 │   └── package.json
 ├── metadata_samples/            # Reference & sample data
-├── docker-compose.yml
 └── README.md
 ```
 
@@ -257,3 +241,65 @@ This project is provided as-is for research and educational purposes.
 - [MetaHarmonizer Engine](https://github.com/shbrief/MetaHarmonizer) — Core ML pipeline for schema mapping
 - [cBioPortal](https://www.cbioportal.org/) — Target schema standard for cancer genomics
 - [NCI Thesaurus (NCIt)](https://ncithesaurus.nci.nih.gov/) — Biomedical ontology for value normalization
+
+---
+
+## Testing
+
+### Quick Smoke Test
+
+1. Start the backend and frontend (see [Quick Start](#quick-start)).
+2. Open the Swagger UI at **http://localhost:8000/docs** and verify all endpoints are listed.
+3. Upload the sample file via the UI at **http://localhost:5173**:
+   - Navigate to the **Upload** page
+   - Select `metadata_samples/new_meta.csv`
+   - Wait for processing to complete (~20–40 s on warm engine, ~60 s on first run)
+4. Verify results appear on the **Mapping Review** page with confidence scores and stage badges.
+
+### API Testing with curl
+
+**Upload & harmonize a file:**
+```bash
+curl -X POST http://localhost:8000/harmonize \
+  -F "file=@metadata_samples/new_meta.csv"
+```
+
+**List all studies:**
+```bash
+curl http://localhost:8000/api/v1/mappings/studies
+```
+
+**Get mappings for a study** (replace `STUDY_ID` with the ID returned from upload):
+```bash
+curl http://localhost:8000/api/v1/mappings/STUDY_ID
+```
+
+**Get quality metrics:**
+```bash
+curl http://localhost:8000/api/v1/quality/STUDY_ID
+```
+
+**Search ontology terms:**
+```bash
+curl "http://localhost:8000/api/v1/ontology/search?q=breast+cancer&limit=10"
+```
+
+**Export harmonized data:**
+```bash
+curl -o harmonized.csv http://localhost:8000/api/v1/export/STUDY_ID/harmonized
+curl -o cbioportal.txt http://localhost:8000/api/v1/export/STUDY_ID/cbioportal
+curl -o report.json http://localhost:8000/api/v1/export/STUDY_ID/report
+```
+
+### What to Verify
+
+| Check | Expected Result |
+|-------|----------------|
+| Upload completes | Study ID returned, mappings stored in database |
+| Mapping Review page | Columns listed with confidence scores, stage badges (S1–S3) |
+| Accept/reject a mapping | Status updates in UI and persists on refresh |
+| Quality Dashboard | Charts render with coverage, confidence distribution, stage breakdown |
+| Ontology search | Returns matching NCIT/UBERON/OHMI terms with IDs |
+| CSV export | Columns renamed to standardized field names |
+| cBioPortal export | Tab-separated file with required header lines |
+| Report export | JSON file with full mapping provenance and curator decisions |
