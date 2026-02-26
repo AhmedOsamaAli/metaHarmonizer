@@ -1,4 +1,3 @@
-import React from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
 import { Upload, Table2, BarChart3, Download, Microscope } from 'lucide-react';
 import UploadPage from './pages/UploadPage';
