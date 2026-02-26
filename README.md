@@ -215,7 +215,7 @@ metaHarmonizer/
 
 | Metric | Value |
 |--------|-------|
-| Upload-to-results (141 columns) | **< 1 second** |
+| Upload-to-results (141 columns) | **< 2 second** |
 | Cold start (original, incl. model download) | ~235 seconds |
 | Cold start (model cached, NCI enabled) | ~120 seconds |
 | Optimization | 99%+ latency reduction via engine caching, background pre-warming |
