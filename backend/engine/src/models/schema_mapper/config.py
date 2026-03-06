@@ -4,7 +4,7 @@ import os
 # === Paths ===
 OUTPUT_DIR = "data/schema_mapping_eval"
 CURATED_DICT_PATH = "data/schema/curated_fields.csv"
-ALIAS_DICT_PATH = ""
+ALIAS_DICT_PATH = "data/schema/alias_dict.csv"
 VALUE_DICT_PATH = os.getenv("FIELD_VALUE_JSON") or "data/schema/field_value_dict.json"
 
 # === Models ===
@@ -15,7 +15,7 @@ LLM_MODEL = "gemma-3-27b-it"
 FUZZY_THRESH = 92
 NUMERIC_THRESH = 0.6
 FIELD_ALIAS_THRESH = 0.5
-VALUE_DICT_THRESH = 0.85
+VALUE_DICT_THRESH = 0.75
 VALUE_UNIQUE_CAP = 50
 VALUE_PERCENTAGE_THRESH = 0.15
 LLM_THRESHOLD = 0.5
