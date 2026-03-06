@@ -91,6 +91,16 @@ class OntologyMappingOut(BaseModel):
     ontology_id: Optional[str] = None
     confidence_score: Optional[float] = None
     status: str = "pending"
+    curator_term: Optional[str] = None
+    curator_id: Optional[str] = None
+    reviewed_at: Optional[str] = None
+    reviewed_by: Optional[str] = None
+
+
+class OntologyEditRequest(BaseModel):
+    new_term: str
+    new_id: Optional[str] = None
+    note: str = ""
 
 
 class OntologySearchResult(BaseModel):

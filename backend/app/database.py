@@ -70,7 +70,11 @@ def init_db() -> None:
             ontology_term    TEXT,
             ontology_id      TEXT,
             confidence_score REAL,
-            status           TEXT NOT NULL DEFAULT 'pending'
+            status           TEXT NOT NULL DEFAULT 'pending',
+            curator_term     TEXT,
+            curator_id       TEXT,
+            reviewed_at      TEXT,
+            reviewed_by      TEXT
         );
 
         CREATE TABLE IF NOT EXISTS audit_log (
@@ -89,6 +93,16 @@ def init_db() -> None:
         CREATE INDEX IF NOT EXISTS idx_audit_study ON audit_log(study_id);
         """
     )
+    conn.commit()
+
+    # --- Incremental migrations (safe to run on existing DBs) ---
+    existing_onto_cols = {
+        row[1]
+        for row in cur.execute("PRAGMA table_info(ontology_mappings)").fetchall()
+    }
+    for col in ("curator_term", "curator_id", "reviewed_at", "reviewed_by"):
+        if col not in existing_onto_cols:
+            cur.execute(f"ALTER TABLE ontology_mappings ADD COLUMN {col} TEXT")
     conn.commit()
     conn.close()
 
@@ -302,3 +316,112 @@ def get_audit_log(study_id: str) -> list[dict]:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+def update_ontology_mapping(
+    mapping_id: int,
+    status: str,
+    curator_term: Optional[str] = None,
+    curator_id: Optional[str] = None,
+    reviewed_by: str = "curator",
+) -> Optional[dict]:
+    """Curator override for an ontology value mapping."""
+    conn = get_connection()
+    # Migrate columns if they don't exist yet (supports pre-existing DBs)
+    existing_cols = {
+        row[1]
+        for row in conn.execute("PRAGMA table_info(ontology_mappings)").fetchall()
+    }
+    for col in ("curator_term", "curator_id", "reviewed_at", "reviewed_by"):
+        if col not in existing_cols:
+            conn.execute(f"ALTER TABLE ontology_mappings ADD COLUMN {col} TEXT")
+    conn.commit()
+
+    now = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        """UPDATE ontology_mappings
+           SET status = ?, curator_term = ?, curator_id = ?,
+               reviewed_at = ?, reviewed_by = ?
+           WHERE id = ?""",
+        (status, curator_term, curator_id, now, reviewed_by, mapping_id),
+    )
+    conn.commit()
+    row = conn.execute(
+        "SELECT * FROM ontology_mappings WHERE id = ?", (mapping_id,)
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+# ---------------------------------------------------------------------------
+# Mapping Evaluation  (compare engine output against a ground-truth CSV)
+# ---------------------------------------------------------------------------
+
+def compute_mapping_accuracy(
+    study_id: str,
+    ground_truth: dict[str, str],
+) -> dict:
+    """
+    Compare stored schema mappings for study_id against a ground_truth dict
+    (raw_column → correct_curated_field) and return precision/recall/F1.
+
+    ground_truth values of "" or None mean "no correct mapping exists".
+    """
+    mappings = get_mappings(study_id)
+    if not mappings:
+        return {"error": "No mappings found for this study"}
+
+    tp = fp = fn = tn = 0
+    per_column: list[dict] = []
+
+    for m in mappings:
+        col = m["raw_column"]
+        if col not in ground_truth:
+            continue
+
+        correct = (ground_truth[col] or "").strip().lower()
+        # Use curator override if present, else engine match
+        predicted = (
+            (m.get("curator_field") or m.get("matched_field") or "")
+            .strip()
+            .lower()
+        )
+
+        if correct and predicted:
+            if predicted == correct:
+                tp += 1
+                per_column.append({"column": col, "result": "TP",
+                                    "predicted": predicted, "correct": correct,
+                                    "score": m.get("confidence_score", 0)})
+            else:
+                fp += 1
+                per_column.append({"column": col, "result": "FP",
+                                    "predicted": predicted, "correct": correct,
+                                    "score": m.get("confidence_score", 0)})
+        elif correct and not predicted:
+            fn += 1
+            per_column.append({"column": col, "result": "FN",
+                                "predicted": None, "correct": correct,
+                                "score": 0})
+        elif not correct and not predicted:
+            tn += 1
+        elif not correct and predicted:
+            fp += 1
+            per_column.append({"column": col, "result": "FP",
+                                "predicted": predicted, "correct": "(none)",
+                                "score": m.get("confidence_score", 0)})
+
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = (2 * precision * recall / (precision + recall)
+          if (precision + recall) > 0 else 0.0)
+
+    return {
+        "study_id": study_id,
+        "tp": tp, "fp": fp, "fn": fn, "tn": tn,
+        "precision": round(precision, 4),
+        "recall": round(recall, 4),
+        "f1": round(f1, 4),
+        "evaluated_columns": len(per_column) + tn,
+        "per_column": per_column,
+    }
