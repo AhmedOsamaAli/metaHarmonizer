@@ -44,15 +44,15 @@ creatine,stage3,semantic,treatment_name,0.3619,drug name,treatment_group,0.3172,
 albumine,stage3,semantic,treatment_name,0.41,drug,treatment_group,0.3475,arm,body_site,0.3469,organ,sex,0.3318,,age_at_diagnosis,0.3262,patientage
 hscrp,stage3,semantic,treatment_type,0.362,rad,disease,0.2988,dx,treatment_group,0.2824,cohort,location,0.2809,city,age_at_diagnosis,0.2749,patientage
 ESR,stage3,semantic,treatment_type,0.3167,rad,location,0.2907,institution,treatment_status,0.2753,response,treatment_group,0.2731,cohort,country,0.271,nation
-ast,stage2,ontology,cancer_type,0.3,ast,disease,0.3,ast,cancer_type_details,0.3,ast,,,,,,
+ast,stage3,semantic,treatment_type,0.4138,rt,treatment_group,0.3074,cohort,oncotree_code,0.2771,,study_design,0.2718,study type,sample_type,0.264,sample type
 alt,stage3,semantic,treatment_group,0.3947,arm,treatment_status,0.3268,response,treatment_type,0.3134,rt,body_site,0.2972,organ,ancestry,0.286,race
 globulin,stage3,semantic,treatment_name,0.3578,medication,treatment_group,0.3118,arm,treatment_no,0.2909,,treatment_type,0.2877,treatment,body_site,0.2775,tissue
 urea_nitrogen,stage3,semantic,body_site,0.3018,organ,treatment_no,0.2681,,treatment_number,0.2642,n treatments,treatment_name,0.2291,drug name,treatment_type,0.2212,rt
 BASDAI,stage3,semantic,ancestry_details,0.2827,ethnicity details,treatment_type,0.2805,rad,country,0.2786,nationality,ancestry,0.2765,ethnicity,location,0.2522,city
 BASFI,stage3,semantic,location,0.2686,center,treatment_group,0.2538,cohort,treatment_type,0.2534,rad,sex,0.2438,,age_group,0.243,life stage
-alcohol,stage2,ontology,treatment_name,0.3,alcohol,,,,,,,,,,,,
+alcohol,stage3,semantic,treatment_name,0.5877,drug,sex,0.4702,,treatment_type,0.374,treatment,treatment_group,0.3476,arm,cancer_type,0.3362,cancer
 flg_genotype,stage3,semantic,cancer_subtype,0.3794,molecular subtype,age_at_diagnosis,0.2959,diag age,cancer_type_details,0.2668,histological subtype,specimen_type,0.2617,specimen type,ancestry,0.2475,ethnicity
-population,stage2,value,country,1.0,Dutch,,,,,,,,,,,,
+population,stage3,semantic,ancestry,0.401,ethnicity,country,0.3648,nation,ancestry_details,0.3524,ethnicity details,age_at_procurement,0.3513,sampling age,treatment_group,0.3354,cohort
 menopausal_status,stage3,semantic,cancer_status,0.3948,disease status,vital_status,0.3523,patient status,treatment_status,0.335,treatment status,cancer_type,0.3015,neoplasm type,age_at_diagnosis,0.2916,age diagnosis
 lifestyle,stage3,semantic,vital_status,0.522,living status,age_group,0.4434,life stage,treatment_name,0.4306,regimen,sex,0.4005,,country,0.3632,nation
 body_subsite,stage3,semantic,body_site,0.8014,body site,body_site_ontology_term_id,0.5291,,location,0.3254,study site,disease,0.2882,host disease,disease_ontology_term_id,0.2096,
@@ -86,8 +86,8 @@ glucose,stage3,semantic,treatment_name,0.3094,drug,treatment_type,0.2902,chemo,c
 creatinine,stage3,semantic,treatment_name,0.4542,medication,treatment_type,0.3681,treatment,treatment_no,0.3251,,treatment_number,0.3238,n treatments,treatment_group,0.313,arm
 bilubirin,stage3,semantic,treatment_name,0.3362,drug name,country,0.3218,nation,treatment_group,0.301,arm,ancestry,0.2739,ethnicity,location,0.2716,
 prothrombin_time,stage3,semantic,treatment_duration,0.3563,duration,treatment_duration_unit,0.3157,,age_at_diagnosis_min,0.2302,,treatment_frequency,0.2213,,treatment_end,0.2205,treatment end date
-wbc,stage2,ontology,body_site,0.3,wbc,,,,,,,,,,,,
-rbc,stage2,ontology,body_site,0.3,rbc,,,,,,,,,,,,
+wbc,stage3,semantic,ancestry,0.4128,race,location,0.4035,hospital,treatment_name,0.3989,medication,treatment_group,0.3974,treatment group,treatment_type,0.3819,treatment
+rbc,stage3,semantic,treatment_type,0.4343,rad,location,0.3751,center,ancestry,0.2909,racial background,body_site,0.2819,site,country,0.2774,country
 hemoglobinometry,stage3,semantic,disease,0.3945,clinical diagnosis,cancer_type,0.3392,histology,treatment_reason,0.3274,treatment indication,specimen_type,0.3094,biopsy type,treatment_type,0.2888,treatment
 FMT_role,stage3,semantic,treatment_type,0.3306,rt,treatment_group,0.2285,study group,sex,0.2202,gender,study_design,0.2158,study type,vital_status,0.2113,status vital
 subcohort,stage3,semantic,treatment_group,0.733,cohort,cancer_subtype,0.5034,molecular subtype,cancer_type_details,0.3753,histological subtype,treatment_name,0.3489,regimen,age_group,0.3345,
@@ -99,7 +99,7 @@ insulin_cat,stage3,semantic,treatment_name,0.3468,medication,body_site,0.2996,or
 adiponectin,stage3,semantic,treatment_name,0.3666,drug agent,body_site,0.3165,organ,treatment_type,0.2414,treatment,disease,0.2206,,age_at_diagnosis,0.2194,patientage
 glp_1,stage3,semantic,treatment_group,0.3134,,treatment_type,0.3062,rt,sex,0.2696,gender,age_group,0.2684,,location,0.2643,
 cd163,stage3,semantic,disease,0.3257,dx,oncotree_code,0.3024,cancer code,treatment_dose,0.2917,dose,body_site,0.2882,site,location,0.2767,institution
-il_1,stage2,ontology,treatment_name,0.3,il_1,,,,,,,,,,,,
+il_1,stage3,semantic,disease,0.3477,dx,treatment_type,0.3317,rt,treatment_status,0.326,response,location,0.3201,state,treatment_dose,0.2969,dose
 leptin,stage3,semantic,treatment_name,0.3885,medication,treatment_type,0.2829,chemo,disease,0.2598,,location,0.2404,center,treatment_group,0.2387,
 fgf_19,stage3,semantic,disease,0.3424,dx,age_at_diagnosis,0.333,age dx,treatment_type,0.3304,xrt,treatment_group,0.3164,cohort,cancer_type,0.3053,cancer
 glutamate_decarboxylase_2_antibody,stage3,semantic,treatment_type,0.3056,immunotherapy,treatment_name,0.2143,,oncotree_code,0.1991,cancer code,treatment_reason,0.1966,treatment indication,treatment_status,0.1908,treatment response
@@ -108,7 +108,7 @@ autoantibody_positive,stage3,semantic,treatment_reason,0.3188,treatment indicati
 age_seroconversion,stage3,semantic,age_at_diagnosis,0.521,diagnosis age,age_at_diagnosis_max,0.4711,,age_at_death,0.4705,death age,age_at_diagnosis_min,0.4552,,age_group,0.4529,age range
 age_T1D_diagnosis,stage3,semantic,age_at_diagnosis,0.6455,diagnosis age,age_at_diagnosis_min,0.5755,,age_at_diagnosis_max,0.5407,,disease,0.5137,diagnosis,cancer_status,0.375,disease status
 hitchip_probe_class,stage3,semantic,treatment_group,0.3136,study arm,specimen_type,0.3101,specimen type,study_design,0.2673,study type,location,0.2157,study site,age_group,0.213,age class
-previous_therapy,stage3,semantic,treatment_type,1.0,therapy,treatment_status,0.9156,therapy status,treatment_duration,0.8192,therapy duration,treatment_notes,0.7899,treatment comments,treatment_name,0.753,
+previous_therapy,stage3,semantic,treatment_type,1.0279,therapy,treatment_status,0.9156,therapy status,treatment_duration,0.8192,therapy duration,treatment_notes,0.7899,treatment comments,treatment_name,0.753,
 performance_status,stage3,semantic,vital_status,0.4745,os status,treatment_status,0.4453,,cancer_status,0.382,cancer status,treatment_reason,0.2854,treatment indication,treatment_duration,0.2757,duration
 toxicity_above_zero,stage3,semantic,treatment_dose,0.3859,dosage,vital_status,0.3398,survival status,treatment_dose_unit,0.3178,,treatment_type,0.3012,chemotherapy,age_at_death_max,0.2936,
 PFS12,stage3,semantic,age_group,0.2401,age class,oncotree_code,0.2399,cancer code,study_design,0.2328,project type,location,0.2197,region,treatment_type,0.2132,xrt
