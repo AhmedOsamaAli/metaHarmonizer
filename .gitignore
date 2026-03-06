@@ -49,6 +49,11 @@ backend/engine/.git-crypt/
 # Build artifacts
 *.tsbuildinfo
 
+# Personal / local-only documents
+GSoC_Proposal.md
+SYSTEM_OVERVIEW.md
+MEETING_PREP*.md
+
 # Logs
 *.log
 
