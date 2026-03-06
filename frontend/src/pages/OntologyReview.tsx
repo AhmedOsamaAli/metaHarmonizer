@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Loader2, Search } from 'lucide-react';
+import { Check, Loader2, Pencil, Search, X } from 'lucide-react';
 import {
-  listStudies,
+  acceptOntologyMapping,
+  editOntologyMapping,
   getOntologyMappings,
+  listStudies,
+  rejectOntologyMapping,
   searchOntology,
 } from '../api/client';
 import ConfidenceBadge from '../components/ConfidenceBadge';
 import StatusBadge from '../components/StatusBadge';
 import type { OntologyMapping, OntologySearchResult, Study } from '../api/types';
+
+interface EditState { id: number; term: string; ontId: string }
 
 export default function OntologyReview() {
   const { studyId } = useParams<{ studyId: string }>();
@@ -18,6 +23,8 @@ export default function OntologyReview() {
   const [selectedId, setSelectedId] = useState<string | null>(studyId ?? null);
   const [ontoMappings, setOntoMappings] = useState<OntologyMapping[]>([]);
   const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState<Record<number, boolean>>({});
+  const [editState, setEditState] = useState<EditState | null>(null);
 
   // Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,17 +44,37 @@ export default function OntologyReview() {
       .finally(() => setLoading(false));
   }, [selectedId]);
 
+  const patch = (updated: OntologyMapping) =>
+    setOntoMappings((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+
+  const handleAccept = async (id: number) => {
+    setBusy((b) => ({ ...b, [id]: true }));
+    try { patch(await acceptOntologyMapping(id)); } catch { /* ignore */ }
+    finally { setBusy((b) => ({ ...b, [id]: false })); }
+  };
+
+  const handleReject = async (id: number) => {
+    setBusy((b) => ({ ...b, [id]: true }));
+    try { patch(await rejectOntologyMapping(id)); } catch { /* ignore */ }
+    finally { setBusy((b) => ({ ...b, [id]: false })); }
+  };
+
+  const handleEditSave = async () => {
+    if (!editState || !editState.term.trim()) return;
+    setBusy((b) => ({ ...b, [editState.id]: true }));
+    try {
+      patch(await editOntologyMapping(editState.id, editState.term.trim(), editState.ontId.trim()));
+      setEditState(null);
+    } catch { /* ignore */ }
+    finally { setBusy((b) => ({ ...b, [editState!.id]: false })); }
+  };
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     setSearching(true);
-    try {
-      const results = await searchOntology(searchQuery);
-      setSearchResults(results);
-    } catch {
-      setSearchResults([]);
-    } finally {
-      setSearching(false);
-    }
+    try { setSearchResults(await searchOntology(searchQuery)); }
+    catch { setSearchResults([]); }
+    finally { setSearching(false); }
   };
 
   const handleStudyChange = (id: string) => {
@@ -55,12 +82,13 @@ export default function OntologyReview() {
     navigate(`/ontology/${id}`, { replace: true });
   };
 
-  // Group mappings by field
+  const applySearchResult = (r: OntologySearchResult) => {
+    if (!editState) return;
+    setEditState({ ...editState, term: r.term, ontId: r.ontology_id });
+  };
+
   const grouped = ontoMappings.reduce<Record<string, OntologyMapping[]>>(
-    (acc, m) => {
-      (acc[m.field_name] ??= []).push(m);
-      return acc;
-    },
+    (acc, m) => { (acc[m.field_name] ??= []).push(m); return acc; },
     {},
   );
 
@@ -92,6 +120,53 @@ export default function OntologyReview() {
 
   return (
     <div className="space-y-6">
+      {/* Edit Modal */}
+      {editState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="text-sm font-semibold text-gray-800">Override Ontology Term</h3>
+            <div className="space-y-2">
+              <label className="text-xs text-gray-500">Term name</label>
+              <input
+                autoFocus
+                value={editState.term}
+                onChange={(e) => setEditState({ ...editState, term: e.target.value })}
+                onKeyDown={(e) => e.key === 'Enter' && handleEditSave()}
+                placeholder="e.g. Male"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs text-gray-500">Ontology ID (optional — auto-resolved if blank)</label>
+              <input
+                value={editState.ontId}
+                onChange={(e) => setEditState({ ...editState, ontId: e.target.value })}
+                placeholder="e.g. NCIT:C20197"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+              />
+            </div>
+            <p className="text-xs text-gray-400">
+              Or search on the right and click a result to auto-fill.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setEditState(null)}
+                className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!editState.term.trim() || busy[editState.id]}
+                onClick={handleEditSave}
+                className="px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 flex items-center gap-1"
+              >
+                {busy[editState.id] ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Ontology Mapping Review</h2>
@@ -137,18 +212,66 @@ export default function OntologyReview() {
                       <th className="px-4 py-2 text-left">Ontology ID</th>
                       <th className="px-4 py-2 text-left">Score</th>
                       <th className="px-4 py-2 text-left">Status</th>
+                      <th className="px-4 py-2 text-left">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {items.map((om) => (
-                      <tr key={om.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-2 font-mono text-xs">{om.raw_value}</td>
-                        <td className="px-4 py-2 text-xs text-primary-700">{om.ontology_term || '—'}</td>
-                        <td className="px-4 py-2 text-xs font-mono text-gray-600">{om.ontology_id || '—'}</td>
-                        <td className="px-4 py-2"><ConfidenceBadge score={om.confidence_score} size="sm" /></td>
-                        <td className="px-4 py-2"><StatusBadge status={om.status} /></td>
-                      </tr>
-                    ))}
+                    {items.map((om) => {
+                      const isBusy = !!busy[om.id];
+                      const displayTerm = om.curator_term ?? om.ontology_term;
+                      const displayId = om.curator_id ?? om.ontology_id;
+                      return (
+                        <tr key={om.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-2 font-mono text-xs">{om.raw_value}</td>
+                          <td className="px-4 py-2 text-xs text-primary-700">
+                            {displayTerm || '—'}
+                            {om.curator_term && (
+                              <span className="ml-1 text-[10px] text-amber-600">(edited)</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-xs font-mono text-gray-600">{displayId || '—'}</td>
+                          <td className="px-4 py-2"><ConfidenceBadge score={om.confidence_score} size="sm" /></td>
+                          <td className="px-4 py-2"><StatusBadge status={om.status} /></td>
+                          <td className="px-4 py-2">
+                            {isBusy ? (
+                              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                            ) : (
+                              <div className="flex gap-1">
+                                {om.status !== 'accepted' && (
+                                  <button
+                                    title="Accept"
+                                    onClick={() => handleAccept(om.id)}
+                                    className="p-1 rounded hover:bg-green-50 text-green-600"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                {om.status !== 'rejected' && (
+                                  <button
+                                    title="Reject"
+                                    onClick={() => handleReject(om.id)}
+                                    className="p-1 rounded hover:bg-red-50 text-red-500"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                                <button
+                                  title="Edit term"
+                                  onClick={() => setEditState({
+                                    id: om.id,
+                                    term: om.curator_term ?? om.ontology_term ?? '',
+                                    ontId: om.curator_id ?? om.ontology_id ?? '',
+                                  })}
+                                  className="p-1 rounded hover:bg-blue-50 text-blue-500"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -159,9 +282,12 @@ export default function OntologyReview() {
         {/* Sidebar: Ontology search */}
         <div className="space-y-4">
           <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">
-              Ontology Search
-            </h3>
+            <h3 className="text-sm font-semibold text-gray-700 mb-1">Ontology Search</h3>
+            {editState && (
+              <p className="text-xs text-primary-600 mb-2">
+                Click a result to fill the open edit form.
+              </p>
+            )}
             <div className="flex gap-2">
               <input
                 value={searchQuery}
@@ -182,7 +308,11 @@ export default function OntologyReview() {
             {searchResults.length > 0 && (
               <ul className="mt-3 space-y-2 max-h-80 overflow-y-auto">
                 {searchResults.map((r, i) => (
-                  <li key={i} className="border border-gray-100 rounded-lg p-2 text-xs">
+                  <li
+                    key={i}
+                    onClick={() => applySearchResult(r)}
+                    className={`border border-gray-100 rounded-lg p-2 text-xs ${editState ? 'cursor-pointer hover:border-primary-300 hover:bg-primary-50' : ''}`}
+                  >
                     <div className="font-medium text-gray-900">{r.term}</div>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="font-mono text-gray-500">{r.ontology_id}</span>

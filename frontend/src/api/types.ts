@@ -43,6 +43,8 @@ export interface OntologyMapping {
     ontology_id: string | null;
     confidence_score: number | null;
     status: string;
+    curator_term: string | null;
+    curator_id: string | null;
 }
 
 export interface StageBreakdown {

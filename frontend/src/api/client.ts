@@ -115,6 +115,26 @@ export async function getOntologyMappings(
     return request<OntologyMapping[]>(`${BASE}/ontology/mappings/${studyId}`);
 }
 
+export async function acceptOntologyMapping(id: number): Promise<OntologyMapping> {
+    return request<OntologyMapping>(`${BASE}/ontology/mappings/${id}/accept`, { method: 'POST' });
+}
+
+export async function rejectOntologyMapping(id: number): Promise<OntologyMapping> {
+    return request<OntologyMapping>(`${BASE}/ontology/mappings/${id}/reject`, { method: 'POST' });
+}
+
+export async function editOntologyMapping(
+    id: number,
+    newTerm: string,
+    newId = '',
+): Promise<OntologyMapping> {
+    return request<OntologyMapping>(`${BASE}/ontology/mappings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_term: newTerm, new_id: newId || undefined }),
+    });
+}
+
 /* ---------- Export ---------- */
 
 export function getExportUrl(studyId: string, format: 'harmonized' | 'cbioportal' | 'report'): string {
