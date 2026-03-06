@@ -25,7 +25,8 @@ from .matchers.stage2_matchers import (
 from .matchers.stage3_matchers import (
     NumericCombinedMatcher, SemanticCombinedMatcher
 )
-from .matchers.stage4_matchers import LLMMatcher 
+# LLMMatcher is NOT imported here; it is lazy-imported inside _init_matchers and
+# run_llm_on_file so that manual mode works without google-generativeai installed.
 from src.utils.schema_mapper_utils import normalize, is_numeric_column, extract_valid_value
 from src.utils.invalid_column_utils import check_invalid
 from src.utils.ncit_match_utils import NCIClientSync
@@ -142,9 +143,10 @@ class SchemaMapEngine:
         self.numeric_combined = NumericCombinedMatcher(self)
         self.semantic_combined = SemanticCombinedMatcher(self)
         
-        # Stage 4 - LLM (only in auto mode)
+        # Stage 4 - LLM (only in auto mode; lazy import avoids hard dep on google-generativeai)
         if self.mode == "auto":
             try:
+                from .matchers.stage4_matchers import LLMMatcher
                 self.llm = LLMMatcher(self)
                 logger.info("[Engine] LLM matcher initialized for auto mode")
             except Exception as e:
@@ -473,9 +475,10 @@ class SchemaMapEngine:
         Returns:
             DataFrame with LLM results (merged or standalone)
         """
-        # Initialize LLM matcher if not already done
+        # Initialize LLM matcher if not already done (lazy import)
         if self.llm is None:
             try:
+                from .matchers.stage4_matchers import LLMMatcher
                 self.llm = LLMMatcher(self)
                 logger.info("[Engine] LLM matcher initialized for manual mode")
             except Exception as e:
