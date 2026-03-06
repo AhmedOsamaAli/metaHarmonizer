@@ -109,12 +109,12 @@ Download results in three formats: harmonized CSV with standardized column names
 
 | Stage | Method | Description |
 |-------|--------|-------------|
-| **Stage 1** | Dict / Fuzzy | Exact and near-exact name matching via curated dictionaries (RapidFuzz token_sort ≥92%) |
-| **Stage 2** | Value / Ontology | Matches columns by value distributions and NCI EVS ontology lookups |
-| **Stage 3** | Semantic | SentenceTransformer (`all-MiniLM-L6-v2`) cosine similarity between column names |
-| **Stage 4** | LLM | Optional Gemini API inference for ambiguous columns (disabled by default) |
+| **Stage 1** | Dict / Fuzzy | Exact and fuzzy name matching against curated standard fields and a ~220-entry alias dictionary (RapidFuzz `token_sort_ratio` ≥ 92%) |
+| **Stage 2** | Value / Ontology | Matches by value-distribution similarity via `field_value_dict.json` embeddings (SentenceTransformer cosine ≥ 0.75) and NCI EVS ontology lookups |
+| **Stage 3** | Numeric + Semantic | Numeric-family embedding matching with treatment/family boost; semantic cosine similarity across standard fields and aliases |
+| **Stage 4** | LLM | On-demand Gemini API inference for ambiguous columns (requires `GEMINI_API_KEY`) |
 
-Columns flow through stages sequentially. If a stage produces a high-confidence match, later stages are skipped. Unmatched columns are flagged for manual review.
+Columns flow through stages sequentially. A high-confidence match at any stage skips all later stages. Columns that pass all stages without a match are flagged for manual review or LLM rematch.
 
 ---
 
@@ -130,6 +130,12 @@ cd backend
 python -m venv venv
 venv\Scripts\activate        # Linux/macOS: source venv/bin/activate
 pip install -r requirements.txt
+
+# Offline mode (no live API calls, faster startup):
+$env:SKIP_NCI_API="1"
+# Online mode (live NCI EVS lookups):
+# $env:SKIP_NCI_API="0"
+
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -148,24 +154,52 @@ npm run dev
 
 ---
 
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SKIP_NCI_API` | `0` | Set to `1` to bypass live NCI EVS API calls (offline / fast mode) |
+| `GEMINI_API_KEY` | — | Required for Stage 4 LLM matching and `/api/v1/mappings/{id}/llm` |
+| `FIELD_VALUE_JSON` | `data/schema/field_value_dict.json` | Override path to value-level ontology dictionary |
+
+---
+
 ## API Reference
+
+**Schema Mapping**
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/v1/harmonize` | POST | Upload file and run harmonization pipeline |
-| `/api/v1/harmonize/{job_id}` | GET | Get results for a harmonization job |
+| `/api/v1/harmonize/{job_id}` | GET | Poll job status and results |
 | `/api/v1/studies` | GET | List all studies |
-| `/api/v1/mappings/{study_id}` | GET | Get mappings for a study |
+| `/api/v1/mappings/{study_id}` | GET | Get all column mappings for a study |
+| `/api/v1/mappings/{study_id}/suggestions` | GET | Low-confidence/unmapped columns with alternatives |
 | `/api/v1/mappings/{id}/accept` | POST | Accept a mapping |
 | `/api/v1/mappings/{id}/reject` | POST | Reject a mapping |
-| `/api/v1/mappings/{id}/edit` | POST | Manually edit a mapping |
+| `/api/v1/mappings/{id}/edit` | POST | Manually override a mapping |
+| `/api/v1/mappings/{id}/llm` | POST | Trigger on-demand LLM rematch (requires `GEMINI_API_KEY`) |
 | `/api/v1/mappings/batch` | POST | Batch accept/reject mappings |
-| `/api/v1/ontology/search` | GET | Search ontology terms |
-| `/api/v1/ontology/mappings/{study_id}` | GET | Get ontology mappings |
-| `/api/v1/quality/{study_id}` | GET | Get quality metrics |
-| `/api/v1/export/{study_id}/harmonized` | GET | Export harmonized CSV |
-| `/api/v1/export/{study_id}/cbioportal` | GET | Export cBioPortal format |
-| `/api/v1/export/{study_id}/report` | GET | Export JSON audit report |
+
+**Ontology Value Mapping**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/ontology/search` | GET | Fuzzy search across NCIT/UBERON/OHMI terms |
+| `/api/v1/ontology/mappings/{study_id}` | GET | Get all value-level ontology mappings |
+| `/api/v1/ontology/mappings/{id}/accept` | POST | Accept an ontology assignment |
+| `/api/v1/ontology/mappings/{id}/reject` | POST | Reject an ontology assignment |
+| `/api/v1/ontology/mappings/{id}` | PATCH | Curator override with custom term/ID |
+
+**Quality & Export**
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/quality/{study_id}` | GET | Coverage, confidence, stage breakdown |
+| `/api/v1/quality/{study_id}/evaluate` | POST | F1/precision/recall vs ground-truth CSV |
+| `/api/v1/export/{study_id}/harmonized` | GET | Harmonized CSV with standardized column names |
+| `/api/v1/export/{study_id}/cbioportal` | GET | cBioPortal-compatible TSV (4-line header) |
+| `/api/v1/export/{study_id}/report` | GET | JSON audit report |
 
 ---
 
