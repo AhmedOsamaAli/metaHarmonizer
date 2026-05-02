@@ -4,9 +4,7 @@ import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import FileUploader from '../components/FileUploader';
 import { uploadAndHarmonize } from '../api/client';
 import type { HarmonizeResponse } from '../api/types';
-       
-// import Papa, {ParseResult} from 'papaparse';
-import { parse } from "csv-parse/browser/esm";
+import Papa, {ParseResult} from 'papaparse';
 type UploadState = 'idle' | 'uploading' | 'success' | 'error';
 
 export default function UploadPage() {
@@ -15,37 +13,19 @@ export default function UploadPage() {
   const [result, setResult] = useState<HarmonizeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [data, setData] = useState<Record<string, any>[]>([]);
   const [preview, setPreview] = useState<any[]>([]);
   const handleFileSelected = (f: File | null) => {
     setFile(f);
     setError(null);
     setState('idle');
     if (f) {
-      const handleFile = (file: File) => {
-  const reader = new FileReader();
-
-  reader.onload = () => {
-    const text = reader.result as string;
-
-  parse(
-  text,
-  {
-    columns: true,
-    skip_empty_lines: true,
-  },
-  (err, records: any[]) => {
-    if (err) {
-      console.error(err);
-    } else {
-      setData(records);
-    }
-  }
-);
-  };
-
-  reader.readAsText(file);
-};
+      Papa.parse(f, {
+        header: true,
+        preview:5,
+        complete: (results: ParseResult<any>) => {
+          setPreview(results.data as any[]);
+        },
+      });
     } else {
       setPreview([]);
     }
