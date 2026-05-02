@@ -4,7 +4,9 @@ import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import FileUploader from '../components/FileUploader';
 import { uploadAndHarmonize } from '../api/client';
 import type { HarmonizeResponse } from '../api/types';
-
+       
+// import Papa, {ParseResult} from 'papaparse';
+import { parse } from "csv-parse/browser/esm";
 type UploadState = 'idle' | 'uploading' | 'success' | 'error';
 
 export default function UploadPage() {
@@ -13,11 +15,40 @@ export default function UploadPage() {
   const [result, setResult] = useState<HarmonizeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-
-  const handleFileSelected = (f: File) => {
+  const [data, setData] = useState<Record<string, any>[]>([]);
+  const [preview, setPreview] = useState<any[]>([]);
+  const handleFileSelected = (f: File | null) => {
     setFile(f);
     setError(null);
     setState('idle');
+    if (f) {
+      const handleFile = (file: File) => {
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    const text = reader.result as string;
+
+  parse(
+  text,
+  {
+    columns: true,
+    skip_empty_lines: true,
+  },
+  (err, records: any[]) => {
+    if (err) {
+      console.error(err);
+    } else {
+      setData(records);
+    }
+  }
+);
+  };
+
+  reader.readAsText(file);
+};
+    } else {
+      setPreview([]);
+    }
   };
 
   const handleUpload = async () => {
@@ -33,23 +64,58 @@ export default function UploadPage() {
       setState('error');
     }
   };
+  
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-2xl mx-auto space-y-10">
       {/* Heading */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Upload Study Metadata</h2>
+        <h2 className="text-3xl font-bold text-gray-900">Upload Study Metadata</h2>
         <p className="text-sm text-gray-500 mt-1">
           Upload a CSV/TSV file with clinical metadata. The harmonization pipeline will
           automatically map columns to the curated reference schema.
         </p>
       </div>
+{/* Upload Zone */}
+<FileUploader
+  onFileSelected={handleFileSelected}
+  disabled={state === 'uploading'}
+/>
 
-      {/* Upload Zone */}
-      <FileUploader
-        onFileSelected={handleFileSelected}
-        disabled={state === 'uploading'}
-      />
+{/* Preview */}
+{preview.length > 0 && (
+  <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+    <h3 className="text-sm font-semibold text-gray-900 mb-3">
+      Preview (first 5 rows)
+    </h3>
+
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-xs text-left border">
+        <thead className="bg-gray-100 text-gray-700">
+          <tr>
+            {Object.keys(preview[0]).map((col) => (
+              <th key={col} className="px-3 py-2 border">
+                {col}
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {preview.map((row, i) => (
+            <tr key={i} className="border-t hover:bg-gray-50 transition">
+              {Object.values(row).map((val, j) => (
+                <td key={j} className="px-3 py-2 border">
+                  {String(val)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
 
       {/* File Info */}
       {file && state !== 'success' && (
