@@ -16,6 +16,7 @@ from app.core.deps import actor_label, current_user, require_role
 from app.core.queue import enqueue_harmonize
 from app.core.settings import settings
 from app.core.uploads import check_upload_size
+from app.db.models import User
 from app.db.session import get_db
 from app.models import HarmonizeAccepted, OverviewResponse, StudyOut
 from app.repositories import audit as audit_repo
@@ -34,57 +35,25 @@ CURATED_PATH = (
     / "curated_meta.csv"
 )
 
+_ALLOWED_SUFFIXES = (".csv", ".tsv", ".txt")
 
-@router.post("/harmonize", response_model=HarmonizeAccepted, status_code=202)
-async def harmonize_study(
-    file: UploadFile = File(...),
-    mode: str = Form("both"),
-    schema_version_id: int | None = Form(None),
-    ontology_columns: str | None = Form(None),
-    user=Depends(require_role("curator")),
-    db_session: AsyncSession = Depends(get_db),
-):
-    """Upload a metadata file and enqueue harmonization.
 
-    Returns 202 immediately with a ``job_id``; the heavy pipeline runs off the
-    request path (thread/worker) so the API stays responsive under many
-    concurrent users. The client follows progress on
-    ``/api/v1/ws/jobs/{study_id}``.
-
-    ``mode`` selects which mappers run: ``both`` (default), ``schema`` (column
-    → field only), or ``ontology`` (value → ontology only). ``schema_version_id``
-    picks which registered target schema to map against (defaults to the current
-    one). ``ontology_columns`` is a comma-separated column allow-list that scopes
-    the ontology pass; leave it blank to resolve every column.
-    """
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No file provided")
-
+def _validate_mode(mode: str) -> str:
     mode = (mode or "both").strip().lower()
     if mode not in ("both", "schema", "ontology"):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid mode. Allowed: 'both', 'schema', 'ontology'.",
-        )
+        raise HTTPException(400, "Invalid mode. Allowed: 'both', 'schema', 'ontology'.")
+    return mode
 
-    onto_cols = [c.strip() for c in (ontology_columns or "").split(",") if c.strip()]
 
-    allowed = (".csv", ".tsv", ".txt")
-    suffix = Path(file.filename).suffix.lower()
-    if suffix not in allowed:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type '{suffix}'. Allowed: {allowed}",
-        )
+def _validate_suffix(filename: str) -> str:
+    suffix = Path(filename).suffix.lower()
+    if suffix not in _ALLOWED_SUFFIXES:
+        raise HTTPException(400, f"Unsupported file type '{suffix}'. Allowed: {_ALLOWED_SUFFIXES}")
+    return suffix
 
-    # Save uploaded file
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    study_id = generate_study_id(file.filename)
-    save_path = UPLOAD_DIR / f"{study_id}{suffix}"
 
-    # Stream to disk while enforcing the size cap (spec §6.4) — avoids holding
-    # a large upload fully in memory before rejecting it.
-    max_bytes = settings.max_upload_mb * 1024 * 1024
+async def _stream_upload(file: UploadFile, save_path: Path, max_bytes: int) -> None:
+    """Stream an upload to disk, enforcing the size cap without buffering it all."""
     written = 0
     with open(save_path, "wb") as f:
         while chunk := await file.read(1024 * 1024):
@@ -95,48 +64,78 @@ async def harmonize_study(
                 check_upload_size(written, settings.max_upload_mb)  # raises 413
             f.write(chunk)
 
-    # Resolve which target schema to map against: an explicitly-chosen registered
-    # version, else the current one, else the bundled curated file. The study is
-    # stamped with the resolved version for reproducibility.
+
+async def _resolve_schema(db: AsyncSession, schema_version_id: int | None):
+    """Resolve the target schema: explicit version, else current, else bundled."""
     from app.repositories import schema_versions as schema_repo
 
     if schema_version_id is not None:
-        chosen_schema = await schema_repo.get_by_id(db_session, schema_version_id)
-        if chosen_schema is None:
-            save_path.unlink(missing_ok=True)
-            raise HTTPException(
-                status_code=404,
-                detail=f"Schema version {schema_version_id} not found.",
-            )
+        chosen = await schema_repo.get_by_id(db, schema_version_id)
+        if chosen is None:
+            raise HTTPException(404, f"Schema version {schema_version_id} not found.")
     else:
-        chosen_schema = await schema_repo.get_current(db_session)
-
-    curated_path = Path(chosen_schema.source_path) if chosen_schema else CURATED_PATH
+        chosen = await schema_repo.get_current(db)
+    curated_path = Path(chosen.source_path) if chosen else CURATED_PATH
     if not curated_path.exists():
-        save_path.unlink(missing_ok=True)
         raise HTTPException(
-            status_code=500,
-            detail="Curated reference file not found. Place curated_meta.csv in metadata_samples/.",
+            500, "Curated reference file not found. Place curated_meta.csv in metadata_samples/."
         )
+    return chosen, curated_path
 
-    # Quick shape read for the study record (cheap; the engine work is deferred).
+
+def _read_shape(save_path: Path, suffix: str) -> pd.DataFrame:
     sep = "\t" if suffix in (".tsv", ".txt") else ","
     try:
-        shape_df = pd.read_csv(save_path, sep=sep, nrows=None, low_memory=False)
+        return pd.read_csv(save_path, sep=sep, low_memory=False)
     except Exception as exc:
-        save_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=422, detail=f"Failed to parse file: {exc}")
+        raise HTTPException(422, f"Failed to parse file: {exc}")
 
-    # Optional row ceiling (public-facing instances cap study size).
-    if settings.max_upload_rows and len(shape_df) > settings.max_upload_rows:
-        save_path.unlink(missing_ok=True)
+
+def _enforce_row_cap(shape_df: pd.DataFrame) -> None:
+    cap = settings.max_upload_rows
+    if cap and len(shape_df) > cap:
         raise HTTPException(
-            status_code=413,
-            detail=(
-                f"File has {len(shape_df)} rows, exceeding the limit of "
-                f"{settings.max_upload_rows}. Contact the operator for bulk access."
-            ),
+            413,
+            f"File has {len(shape_df)} rows, exceeding the limit of {cap}. "
+            "Contact the operator for bulk access.",
         )
+
+
+@router.post("/harmonize", response_model=HarmonizeAccepted, status_code=202)
+async def harmonize_study(
+    file: UploadFile = File(...),
+    mode: str = Form("both"),
+    schema_version_id: int | None = Form(None),
+    ontology_columns: str | None = Form(None),
+    user: User = Depends(require_role("curator")),
+    db_session: AsyncSession = Depends(get_db),
+):
+    """Upload a metadata file and enqueue harmonization.
+
+    Returns 202 with a ``job_id``; the pipeline runs off the request path and
+    the client follows ``/api/v1/ws/jobs/{study_id}``. ``mode`` is ``both`` /
+    ``schema`` / ``ontology``; ``schema_version_id`` picks the target schema
+    (default current); ``ontology_columns`` scopes the ontology pass.
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file provided")
+
+    mode = _validate_mode(mode)
+    suffix = _validate_suffix(file.filename)
+    onto_cols = [c.strip() for c in (ontology_columns or "").split(",") if c.strip()]
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    study_id = generate_study_id(file.filename)
+    save_path = UPLOAD_DIR / f"{study_id}{suffix}"
+
+    await _stream_upload(file, save_path, settings.max_upload_mb * 1024 * 1024)
+    try:
+        chosen_schema, curated_path = await _resolve_schema(db_session, schema_version_id)
+        shape_df = _read_shape(save_path, suffix)
+        _enforce_row_cap(shape_df)
+    except Exception:
+        save_path.unlink(missing_ok=True)
+        raise
 
     study_name = Path(file.filename).stem
     await studies_repo.create_study(
@@ -180,13 +179,10 @@ async def harmonize_study(
 
 @router.get("/schema-versions")
 async def list_target_schemas(
-    user=Depends(require_role("curator")),
+    user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    """List the registered target schemas a curator can map an upload against.
-
-    Read-only and curator-accessible (the admin equivalent under ``/admin`` also
-    allows uploading new versions). Powers the per-upload schema picker."""
+    """List the registered target schemas a curator can map an upload against."""
     from app.repositories import schema_versions as schema_repo
 
     return await schema_repo.list_versions(db)

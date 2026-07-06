@@ -1,26 +1,21 @@
-"""
-Job progress bus + cancellation + WS tickets — all Redis-backed (Sprint 4).
+"""Redis-backed job bus: progress broadcast, cancellation, and WS tickets.
 
-Everything here is shared state in Redis (never in-process memory) so the
-system works correctly when **many users run jobs at once** and when the API
-and workers are scaled to multiple processes/instances:
-
-- Progress is broadcast on a pub/sub channel per study; any API instance holding
-  a WebSocket for that study relays it, regardless of which worker produced it.
-- The latest snapshot is cached so a browser that connects mid-job (or
-  reconnects) immediately sees current state without waiting for the next tick.
-- Cancellation is a Redis flag the worker polls at each stage boundary.
-- WS auth tickets are one-time nonces with a short TTL.
+All state lives in Redis (never in-process) so it works across many concurrent
+jobs and multiple API/worker instances. Redis ops here are best-effort — a blip
+logs at debug and must never fail the job itself.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 import secrets
 from typing import Any
 
 from app.core.redis import get_redis
 from app.core.settings import settings
+
+logger = logging.getLogger(__name__)
 
 
 # ── channel / key helpers ─────────────────────────────────────────────────────
@@ -50,8 +45,8 @@ async def publish_progress(study_id: str, payload: dict[str, Any]) -> None:
         await r.publish(job_channel(study_id), body)
         await r.set(_snapshot_key(study_id), body, ex=3600)
     except Exception:
-        # Progress is best-effort: a Redis blip must never fail the job itself.
-        pass
+        # Best-effort: a Redis blip must never fail the job itself.
+        logger.debug("publish_progress failed for %s", study_id, exc_info=True)
 
 
 async def get_snapshot(study_id: str) -> dict[str, Any] | None:
@@ -59,6 +54,7 @@ async def get_snapshot(study_id: str) -> dict[str, Any] | None:
         raw = await get_redis().get(_snapshot_key(study_id))
         return json.loads(raw) if raw else None
     except Exception:
+        logger.debug("get_snapshot failed for %s", study_id, exc_info=True)
         return None
 
 
@@ -66,7 +62,7 @@ async def notify_user(user_id: int, payload: dict[str, Any]) -> None:
     try:
         await get_redis().publish(user_channel(user_id), json.dumps(payload))
     except Exception:
-        pass
+        logger.debug("notify_user failed for %s", user_id, exc_info=True)
 
 
 # ── cancellation ──────────────────────────────────────────────────────────────
@@ -74,13 +70,14 @@ async def request_cancel(study_id: str) -> None:
     try:
         await get_redis().set(_cancel_key(study_id), "1", ex=3600)
     except Exception:
-        pass
+        logger.debug("request_cancel failed for %s", study_id, exc_info=True)
 
 
 async def is_cancelled(study_id: str) -> bool:
     try:
         return bool(await get_redis().get(_cancel_key(study_id)))
     except Exception:
+        logger.debug("is_cancelled failed for %s", study_id, exc_info=True)
         return False
 
 
@@ -88,7 +85,7 @@ async def clear_cancel(study_id: str) -> None:
     try:
         await get_redis().delete(_cancel_key(study_id))
     except Exception:
-        pass
+        logger.debug("clear_cancel failed for %s", study_id, exc_info=True)
 
 
 # ── WS auth tickets (one-time, short-lived) ───────────────────────────────────

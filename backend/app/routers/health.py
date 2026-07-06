@@ -1,14 +1,7 @@
-"""
-Health endpoints — liveness and readiness probes.
+"""Health endpoints — liveness (/healthz) and readiness (/readyz) probes.
 
-- GET /healthz : process is alive (no dependency checks). Always cheap.
-- GET /readyz  : dependencies reachable (Postgres, Redis, object store).
-                 Returns 200 only when every checked dependency is OK,
-                 otherwise 503 with a per-dependency status map.
-
-These back the deploy/uptime probes (spec §4.4) and the docker-compose
-healthchecks. Dependency checks are best-effort and degrade gracefully:
-a check that isn't configured yet (e.g. Redis before Sprint 4) reports
+/readyz returns 200 only when every configured dependency (Postgres, Redis) is
+reachable, else 503 with a per-dependency status map. Unconfigured checks report
 "skipped" rather than failing readiness.
 """
 
