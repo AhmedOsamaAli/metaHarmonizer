@@ -204,19 +204,16 @@ async def get_harmonization_results(job_id: str, db: AsyncSession = Depends(get_
 
 
 @router.get("/studies", response_model=list[StudyOut])
-async def list_studies(user=Depends(current_user), db: AsyncSession = Depends(get_db)):
-    """List the caller's own *active* studies (completed ones are filed away and
-    excluded). Studies are private per-user; admin oversight is the audit feed,
-    not seeing others' studies."""
+async def list_studies(user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
+    """List the caller's own active studies (completed ones are filed away)."""
     return await studies_repo.list_studies(
         db, owner_id=getattr(user, "id", None), include_completed=False
     )
 
 
 @router.get("/overview", response_model=OverviewResponse)
-async def get_overview(user=Depends(current_user), db: AsyncSession = Depends(get_db)):
-    """Portfolio-wide harmonization summary for the home dashboard, scoped to
-    the caller's own studies."""
+async def get_overview(user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
+    """Portfolio-wide harmonization summary for the home dashboard (caller's studies)."""
     return await compute_overview(db, owner_id=getattr(user, "id", None))
 
 
@@ -232,7 +229,7 @@ async def get_study(study_id: str, db: AsyncSession = Depends(get_db)):
 @router.delete("/studies/{study_id}", status_code=204)
 async def delete_study(
     study_id: str,
-    user=Depends(require_role("curator")),
+    user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete one of the caller's studies (and its mappings/ontology rows)."""
@@ -256,7 +253,7 @@ async def delete_study(
 @router.post("/studies/{study_id}/complete", response_model=StudyOut)
 async def complete_study(
     study_id: str,
-    user=Depends(require_role("curator")),
+    user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
     """Mark a study completed: it's kept (so its work still counts toward the

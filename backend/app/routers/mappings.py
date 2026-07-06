@@ -1,9 +1,5 @@
-"""
-MetaHarmonizer — Mappings Router
-
-Curator review endpoints: accept, reject, edit, batch update individual mappings.
-Also: on-demand Stage 4 LLM re-match and field suggestions.
-"""
+"""Mappings router: curator accept/reject/edit + batch, on-demand Stage-4 LLM
+rematch, and field suggestions."""
 
 from __future__ import annotations
 
@@ -13,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import actor_label as _actor_label, require_role
+from app.db.models import User
 from app.db.session import get_db
 from app.models import (
     BatchUpdateRequest,
@@ -59,7 +56,7 @@ async def get_review_queue(study_id: str, db: AsyncSession = Depends(get_db)):
 @router.post("/{mapping_id}/accept", response_model=MappingOut)
 async def accept_mapping(
     mapping_id: int,
-    user=Depends(require_role("curator")),
+    user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
     """Accept an automated mapping."""
@@ -89,7 +86,7 @@ async def accept_mapping(
 @router.post("/{mapping_id}/reject", response_model=MappingOut)
 async def reject_mapping(
     mapping_id: int,
-    user=Depends(require_role("curator")),
+    user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
     """Reject an automated mapping."""
@@ -120,7 +117,7 @@ async def reject_mapping(
 async def edit_mapping(
     mapping_id: int,
     body: MappingEditRequest,
-    user=Depends(require_role("curator")),
+    user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
     """Curator manually edits a mapping to a different field."""
@@ -155,7 +152,7 @@ async def edit_mapping(
 @router.post("/batch", response_model=BatchUpdateResponse)
 async def batch_update_mappings(
     body: BatchUpdateRequest,
-    user=Depends(require_role("curator")),
+    user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
     """Batch accept or reject multiple mappings."""
@@ -184,22 +181,16 @@ async def batch_update_mappings(
     return BatchUpdateResponse(updated=updated, action=body.action)
 
 
-# ---------------------------------------------------------------------------
 # Stage 4 — on-demand LLM rematch
-# ---------------------------------------------------------------------------
 
 @router.post("/{mapping_id}/llm")
 async def llm_rematch(
     mapping_id: int,
-    user=Depends(require_role("curator")),
+    user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
-    """
-    Re-run Stage 4 (LLM / Gemini) for a single mapping on demand.
-
-    Requires GEMINI_API_KEY to be set in the backend environment.
-    Returns a list of suggested field matches without automatically accepting them.
-    """
+    """Re-run Stage 4 (LLM / Gemini) for one mapping on demand (needs
+    GEMINI_API_KEY). Returns suggested matches without accepting them."""
     mapping = await mappings_repo.get_mapping(db, mapping_id)
     if not mapping:
         raise HTTPException(status_code=404, detail="Mapping not found")
@@ -238,25 +229,18 @@ async def llm_rematch(
     }
 
 
-# ---------------------------------------------------------------------------
 # Column context — sample values to help a curator pick the right term
-# ---------------------------------------------------------------------------
 
 @router.get("/{study_id}/columns/{column}/context")
 async def get_column_context(
     study_id: str,
     column: str,
     limit: int = 15,
-    user=Depends(require_role("curator")),
+    user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return sample distinct values for one raw column of a study.
-
-    Context helps disambiguate a mapping: seeing the actual cell values (and how
-    often each occurs) is often what tells a curator whether a column is, say, a
-    body site vs a sample type. Read directly from the stored upload, capped so
-    a huge column can't blow up the response.
-    """
+    """Return sample distinct values (with counts) for one raw column, capped so
+    a huge column can't blow up the response — helps a curator disambiguate."""
     import pandas as pd
 
     study = await studies_repo.get_study(db, study_id)

@@ -1,9 +1,5 @@
-"""
-MetaHarmonizer — Ontology Router
-
-Search and browse ontology terms (NCIT, UBERON, OHMI).
-Also returns ontology mappings for a study and allows curator overrides.
-"""
+"""Ontology router: search/browse ontology terms (NCIT, UBERON, OHMI), return a
+study's ontology mappings, and apply curator overrides."""
 
 from __future__ import annotations
 
