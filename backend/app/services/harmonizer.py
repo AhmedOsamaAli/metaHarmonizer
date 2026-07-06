@@ -1,27 +1,12 @@
-"""
-MetaHarmonizer Dashboard — Ontology / value-mapping helpers.
+"""Dashboard-owned value-to-ontology helpers (the engine pipeline lives behind
+``app.engine_adapter``).
 
-NOTE (post-migration to engine_adapter):
-    This module no longer wraps a SchemaMapEngine — that responsibility now
-    lives entirely behind ``app.engine_adapter`` (see
-    ``backend/app/engine_adapter/README.md``). What remains here is the
-    dashboard-owned value-to-ontology lookup logic plus a few small helpers
-    used by routers:
-
-      - ``ONTOLOGY_MAP``         curated raw→canonical mappings (used by
-                                  ``routers/ontology.py`` to render the
-                                  "controlled vocabulary" tab and by
-                                  ``run_ontology_mapping`` as a fallback).
-      - ``_STATIC_NCIT``          canonical NCIT/UBERON code lookup table.
-      - ``_load_field_value_dict``  field → list of canonical values, loaded
-                                  from ``backend/data/schema/field_value_dict.json``.
-      - ``run_ontology_mapping``  the dashboard's value-mapping routine.
-      - ``generate_study_id``     filename → unique study id.
-
-The previous ``SchemaMapEngine`` wrapper, lazy importer, NCI-cache plumbing,
-fuzzy fallback, pre-warm and on-demand LLM matcher have all been deleted —
-the upstream ``metaharmonizer`` package now owns that pipeline and is reached
-exclusively via ``engine_adapter.MetaHarmonizerAdapter``.
+Exposes:
+- ``ONTOLOGY_MAP``          curated raw→canonical mappings + fallback source.
+- ``_STATIC_NCIT``          canonical NCIT/UBERON code lookup table.
+- ``_load_field_value_dict``  field → canonical values (field_value_dict.json).
+- ``run_ontology_mapping``  the dashboard's value-mapping routine.
+- ``generate_study_id``     filename → unique study id.
 """
 
 from __future__ import annotations
