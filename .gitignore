@@ -80,3 +80,6 @@ backend/data/schema/versions/
 # Internal architecture docs (not shipped)
 docs/
 
+
+# Local KB build output (large; built offline, distributed via the export CLI)
+backend/kb_build/
