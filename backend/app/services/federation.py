@@ -28,9 +28,7 @@ from app.core.settings import settings
 BUNDLE_VERSION = 1
 
 
-# ---------------------------------------------------------------------------
 # Canonical serialization (stable bytes for signing/hashing)
-# ---------------------------------------------------------------------------
 def canonical_bytes(payload: dict[str, Any]) -> bytes:
     """Deterministic UTF-8 JSON: sorted keys, no whitespace.
 
@@ -46,9 +44,7 @@ def payload_sha256(payload: dict[str, Any]) -> str:
     return hashlib.sha256(canonical_bytes(payload)).hexdigest()
 
 
-# ---------------------------------------------------------------------------
 # Keys
-# ---------------------------------------------------------------------------
 def _private_key() -> Ed25519PrivateKey:
     """This instance's signing key.
 

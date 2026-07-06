@@ -23,9 +23,7 @@ from rapidfuzz import fuzz, process
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Paths
-# ---------------------------------------------------------------------------
 
 # backend/data/ — dashboard-owned read-only assets (curated value dictionaries,
 # the NCI EVS cache, etc.). Survives removal of the legacy vendored engine.
@@ -34,12 +32,8 @@ _SCHEMA_DIR = _DATA_DIR / "schema"
 _NCI_CACHE_PATH = _DATA_DIR / "nci_cache.json"
 
 
-# ---------------------------------------------------------------------------
-# Static NCIT term → code lookup table.
-# Canonical NCIT codes for the most common terms that appear in
-# field_value_dict.json and ONTOLOGY_MAP. Used as the first lookup before
-# falling back to the persisted NCI EVS cache.
-# ---------------------------------------------------------------------------
+# Static NCIT term → code lookup table. Canonical codes for the common terms in
+# field_value_dict.json / ONTOLOGY_MAP; first lookup before the NCI EVS cache.
 
 _STATIC_NCIT: dict[str, str] = {
     # sex

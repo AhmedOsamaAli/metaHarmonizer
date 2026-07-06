@@ -116,9 +116,7 @@ _SURVIVAL_PREFIX: dict[str, str] = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Helpers
-# ---------------------------------------------------------------------------
 
 
 def _sanitize_id(value: Any) -> str:
@@ -157,9 +155,7 @@ def _find_id_column(df: pd.DataFrame, candidates: list[str]) -> str:
     return df.columns[0] if len(df.columns) > 0 else "_GENERATED_ID"
 
 
-# ---------------------------------------------------------------------------
 # Harmonized CSV
-# ---------------------------------------------------------------------------
 
 async def export_harmonized_csv(
     db: AsyncSession, study_id: str, raw_df: pd.DataFrame
@@ -232,9 +228,7 @@ async def _build_value_rewrites(
     return rewrites
 
 
-# ---------------------------------------------------------------------------
 # cBioPortal Format
-# ---------------------------------------------------------------------------
 
 _HIGH_PRIORITY_ATTRS: set[str] = {
     "PATIENT_ID", "SAMPLE_ID", "CANCER_TYPE", "CANCER_TYPE_DETAILED",
@@ -431,9 +425,7 @@ async def export_cbioportal(
     return _write_clinical_tsv(cols, raw_df, rewrites)
 
 
-# ---------------------------------------------------------------------------
 # cBioPortal study folder (validateData.py-ready)
-# ---------------------------------------------------------------------------
 
 def _meta_study(cancer_study_identifier: str, name: str, description: str) -> str:
     # No ``add_global_case_list`` — the checklist says not to use it; we ship an
@@ -587,9 +579,7 @@ async def export_cbioportal_study(
     return buf.getvalue()
 
 
-# ---------------------------------------------------------------------------
 # Labeled dataset export (G9 — curator-confirmed mappings for retraining)
-# ---------------------------------------------------------------------------
 
 LABELED_FIELDNAMES = [
     "record_type",
@@ -706,9 +696,7 @@ async def export_labeled_dataset(
     return buf.getvalue()
 
 
-# ---------------------------------------------------------------------------
 # LinkML export gate (G9 — controlled-vocabulary check before export)
-# ---------------------------------------------------------------------------
 
 
 def _parse_clinical_columns(tsv_text: str) -> dict[str, list[str]]:
@@ -747,9 +735,7 @@ async def linkml_check(
     return {"ok": not violations, "violations": violations}
 
 
-# ---------------------------------------------------------------------------
 # JSON Mapping Report
-# ---------------------------------------------------------------------------
 
 async def export_mapping_report(db: AsyncSession, study_id: str) -> str:
     """

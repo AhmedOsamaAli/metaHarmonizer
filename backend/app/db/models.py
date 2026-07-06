@@ -33,9 +33,7 @@ from app.db.base import Base
 from app.db.mixins import OptimisticVersionMixin, TimestampMixin
 
 
-# ---------------------------------------------------------------------------
 # Users (auth detail lands in Sprint 3; core columns now)
-# ---------------------------------------------------------------------------
 class User(Base, TimestampMixin):
     __tablename__ = "users"
 
@@ -57,9 +55,7 @@ class User(Base, TimestampMixin):
     )
 
 
-# ---------------------------------------------------------------------------
 # Schema / ontology versioning (reproducibility pins)
-# ---------------------------------------------------------------------------
 class SchemaVersion(Base, TimestampMixin):
     __tablename__ = "schema_versions"
 
@@ -77,9 +73,7 @@ class OntologySnapshot(Base, TimestampMixin):
     is_current: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="false")
 
 
-# ---------------------------------------------------------------------------
 # Studies
-# ---------------------------------------------------------------------------
 class Study(Base, TimestampMixin, OptimisticVersionMixin):
     __tablename__ = "studies"
 
@@ -106,9 +100,7 @@ class Study(Base, TimestampMixin, OptimisticVersionMixin):
     )
 
 
-# ---------------------------------------------------------------------------
 # Column-level mappings (+ version history)
-# ---------------------------------------------------------------------------
 class Mapping(Base, TimestampMixin, OptimisticVersionMixin):
     __tablename__ = "mappings"
 
@@ -159,9 +151,7 @@ class MappingVersion(Base):
     )
 
 
-# ---------------------------------------------------------------------------
 # Value-level ontology mappings
-# ---------------------------------------------------------------------------
 class OntologyMapping(Base, TimestampMixin, OptimisticVersionMixin):
     __tablename__ = "ontology_mappings"
 
@@ -183,9 +173,7 @@ class OntologyMapping(Base, TimestampMixin, OptimisticVersionMixin):
     __table_args__ = (Index("ix_ontology_mappings_study_id", "study_id"),)
 
 
-# ---------------------------------------------------------------------------
 # Append-only audit log (G4)
-# ---------------------------------------------------------------------------
 class AuditEvent(Base):
     """Append-only decision log. No UPDATE/DELETE — enforced by a DB trigger
     in the migration (see spec §4.3 / §6.2)."""
@@ -207,9 +195,7 @@ class AuditEvent(Base):
     __table_args__ = (Index("ix_audit_events_study_id", "study_id"),)
 
 
-# ---------------------------------------------------------------------------
 # Sessions + API tokens (auth; populated in Sprint 3)
-# ---------------------------------------------------------------------------
 class Session(Base):
     __tablename__ = "sessions"
 
@@ -240,9 +226,7 @@ class ApiToken(Base):
     __table_args__ = (CheckConstraint("scope in ('read','write')", name="scope_valid"),)
 
 
-# ---------------------------------------------------------------------------
 # Job runs + idempotency keys (operational contracts)
-# ---------------------------------------------------------------------------
 class JobRun(Base):
     __tablename__ = "job_runs"
 
@@ -304,9 +288,7 @@ class IdempotencyKey(Base):
     )
 
 
-# ---------------------------------------------------------------------------
 # Federation-lite (G1) — signed cross-instance mapping exchange
-# ---------------------------------------------------------------------------
 class FederationImport(Base):
     """One received export bundle, pending local approval (Q10 two-stage)."""
 
