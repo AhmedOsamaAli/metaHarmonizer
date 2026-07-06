@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams } from 'react-router-dom';
 import {
   Check,
@@ -358,8 +359,8 @@ export default function OntologyReview() {
   return (
     <div className="space-y-6">
       {/* Edit Modal (with embedded search) */}
-      {editState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={closeModal}>
+      {editState && createPortal(
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-20" onClick={closeModal}>
           <div className="w-full max-w-lg space-y-4 rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-semibold text-slate-800">Set ontology term</h3>
             {editState.raw && (
@@ -445,7 +446,8 @@ export default function OntologyReview() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <PageHeader

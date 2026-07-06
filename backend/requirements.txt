@@ -42,10 +42,17 @@ httpx==0.28.1
 # Default ML engine: a pre-built wheel of the upstream metaharmonizer package
 # (ENGINE_IMPL=metaharmonizer — see backend/app/engine_adapter/__init__.py).
 #
-# The wheel is built from a specific upstream commit with the data/corpus/
-# directory excluded (those files have ':' in their names which NTFS rejects,
-# so installing directly from git fails on Windows). Building once and
-# vendoring the wheel makes `pip install -r requirements.txt` work everywhere.
+# The wheel is built from a specific upstream commit with the examples/data/
+# and data/corpus/ directories excluded (those files have ':' in their names
+# which NTFS rejects, so installing directly from git fails on Windows).
+# Building once and vendoring the wheel makes `pip install -r requirements.txt`
+# work everywhere.
 #
 # To rebuild after bumping the upstream pin, see backend/vendor/README.md.
-./vendor/metaharmonizer-0.3.0-py3-none-any.whl
+./vendor/metaharmonizer-0.4.0-py3-none-any.whl
+
+# FAISS is no longer bundled with the engine wheel (>=0.4.0 dropped it from
+# deps due to a libomp collision with torch on macOS). The ontology path
+# (OntoMapEngine → FAISS RAG) needs it. pip wheels work on Linux/Windows; on
+# macOS install from conda-forge instead (conda install -c conda-forge faiss-cpu).
+faiss-cpu>=1.11.0

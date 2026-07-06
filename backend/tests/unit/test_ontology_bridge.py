@@ -56,11 +56,14 @@ def test_normalize_engine_rows():
 
 
 class _FakeEngine:
-    """Stand-in for OntoMapEngine.run() returning a deterministic frame."""
+    """Stand-in for OntoMapEngine.run() returning a deterministic frame.
 
-    def __init__(self, *, category, query, **kw):
-        self.category = category
-        self.query = query
+    Uses the engine >=0.4.0 constructor arg names (corpus_category, query_ls).
+    """
+
+    def __init__(self, *, corpus_category, query_ls, **kw):
+        self.category = corpus_category
+        self.query = query_ls
 
     def run(self):
         return pd.DataFrame(

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
   Check,
@@ -856,8 +857,8 @@ export default function MappingReview() {
       )}
 
       {/* Edit Modal */}
-      {editingId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      {editingId !== null && createPortal(
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 pt-20">
           <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Edit Mapping</h3>
             <div>
@@ -902,7 +903,8 @@ export default function MappingReview() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

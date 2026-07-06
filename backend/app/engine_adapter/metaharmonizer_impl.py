@@ -70,6 +70,11 @@ class MetaHarmonizerAdapter:
             mode = "auto" if os.getenv("GEMINI_API_KEY") else "manual"
         self._mode = mode
         self._top_k = top_k
+        # Target schema preset the engine maps against. Default "cbio" (the
+        # 33-field cBioPortal preset bundled in engine >=0.4.0) — the engine's
+        # own default changed to "gdc" (736 fields), so we pin it explicitly to
+        # keep the dashboard's cBioPortal behaviour. Override via env if needed.
+        self._schema = os.getenv("ENGINE_TARGET_SCHEMA", "cbio")
 
     # ------------------------------------------------------------------
     @lru_cache(maxsize=8)
@@ -80,10 +85,14 @@ class MetaHarmonizerAdapter:
         from . import _perf
 
         _perf.install_patches()
-        # Upstream layout (subject to change — adjust here, never in routers):
+        # Upstream layout (engine >=0.4.0): SchemaMapEngine(input_path, schema,
+        # *, top_k, mode, ...). Args renamed from 0.3.0 (clinical_data_path ->
+        # input_path) and a target-schema preset added. Adjust here, never in
+        # routers.
         SchemaMapEngine = pkg.SchemaMapEngine  # type: ignore[attr-defined]
         return SchemaMapEngine(
-            clinical_data_path=csv_path,
+            csv_path,
+            self._schema,
             mode=self._mode,
             top_k=self._top_k,
         )
@@ -154,7 +163,14 @@ class MetaHarmonizerAdapter:
                 "on-demand LLM matching."
             )
         pkg = _require_pkg()
-        LLMMatcher = pkg.LLMMatcher  # type: ignore[attr-defined]
+        # engine >=0.4.0: LLMMatcher is no longer top-level; it lives in the
+        # schema-mapper stage-4 matchers module.
+        try:
+            LLMMatcher = pkg.LLMMatcher  # type: ignore[attr-defined]
+        except AttributeError:
+            from metaharmonizer.models.schema_mapper.matchers.stage4_matchers import (
+                LLMMatcher,
+            )
         engine = self._engine_for(csv_path)
         matcher = LLMMatcher(engine)
         return [

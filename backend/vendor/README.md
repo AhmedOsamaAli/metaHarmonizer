@@ -3,42 +3,42 @@
 Pre-built wheels we install instead of fetching from git, so
 `pip install -r requirements.txt` works on every OS without a special path.
 
-## `metaharmonizer-0.3.0-py3-none-any.whl`
+## `metaharmonizer-0.4.0-py3-none-any.whl`
 
 Built from [`shbrief/MetaHarmonizer`](https://github.com/shbrief/MetaHarmonizer)
-at commit `792eb75d4d81cb90b6480bf4e6226b781f402b11`, with the upstream
-`data/corpus/` directory excluded.
+`main` (v0.4.0, src-layout refactor, PR #81), with only the `src/` package tree
+checked out.
 
-**Why the exclusion**: a few files under `data/corpus/` have `:` in their
-names, which NTFS forbids. Installing `git+https://github.com/...` on
-Windows therefore fails at the checkout step. Excluding that directory
-lets the wheel install cleanly everywhere. The corpus is only consumed by
-upstream's `OntoMapEngine` (FAISS + SQLite knowledge DB), which the
-dashboard does not call today — it uses `SchemaMapEngine` only.
+**Why not `pip install git+...`**: several files under `examples/data/` and
+`data/corpus/` have `:` in their names (e.g.
+`disease_corpus_from_NCIT:C3262.csv`), which NTFS forbids. A full git checkout
+therefore fails on Windows. We check out only `src/` + `pyproject.toml` +
+`README.md` (all the build needs) and build the wheel from that.
+
+**FAISS**: engine >=0.4.0 no longer bundles `faiss-cpu` (libomp clash with
+torch on macOS). `backend/requirements.txt` installs it separately
+(`faiss-cpu>=1.11.0`); on macOS use conda-forge. The ontology path
+(`OntoMapEngine`) needs FAISS; `SchemaMapEngine` does not.
 
 ## Rebuilding after a version bump
 
-When upstream ships a new commit you want to pin:
+When upstream ships a new commit you want to pin (src-layout, >=0.4.0):
 
 ```powershell
-# 1. Pick the new commit SHA
-$SHA = "<new-upstream-commit-sha>"
-$VER = "0.3.0"   # bump if upstream's pyproject version changed
+# 1. Sparse-clone only the package source (avoids the ':' corpus filenames)
+$bd = "$env:TEMP\mh_build"
+Remove-Item $bd -Recurse -Force -ErrorAction SilentlyContinue
+git clone --no-checkout --depth 1 https://github.com/shbrief/MetaHarmonizer.git $bd
+cd $bd
+git checkout HEAD -- src pyproject.toml README.md   # only what the build needs
 
-# 2. Download + extract (skip the corpus)
-$tmp = "$env:TEMP\mh_wheel"
-Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Directory $tmp -Force | Out-Null
-Invoke-WebRequest "https://codeload.github.com/shbrief/MetaHarmonizer/tar.gz/$SHA" -OutFile "$tmp\mh.tar.gz" -UseBasicParsing
-tar -xzf "$tmp\mh.tar.gz" -C $tmp --exclude='*/data/corpus/*'
+# 2. Build the wheel
+backend\.venv\Scripts\python.exe -m pip wheel . --no-deps -w "$env:TEMP\mh_wheel"
 
-# 3. Build the wheel
-backend\venv\Scripts\python.exe -m pip wheel "$tmp\MetaHarmonizer-$SHA" --no-deps -w "$tmp\dist"
+# 3. Drop the new wheel in this directory, remove the old one
+Move-Item "$env:TEMP\mh_wheel\metaharmonizer-*-py3-none-any.whl" backend\vendor\ -Force
 
-# 4. Drop the new wheel in this directory, remove the old one
-Move-Item "$tmp\dist\metaharmonizer-$VER-py3-none-any.whl" backend\vendor\ -Force
-
-# 5. Update the path in backend/requirements.txt if VER changed, commit, push
+# 4. Update the wheel path + version in backend/requirements.txt, commit, push
 ```
 
-Linux/macOS: same flow with `bash`, `curl`/`wget`, and `tar`.
+Linux/macOS: same flow with `bash` and `git`.

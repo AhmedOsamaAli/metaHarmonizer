@@ -125,13 +125,14 @@ def map_values_via_engine(
         category, source = FIELD_ONTOLOGY[field_name]
         uniq = sorted(set(values))
         try:
+            # engine >=0.4.0: category -> corpus_category, query -> query_ls,
+            # test_or_prod dropped (inferred from ground_truth_map).
             engine = OntoMapEngine(
-                category=category,
-                query=uniq,
+                corpus_category=category,
+                query_ls=uniq,
                 ontology_source=source,
                 s2_method="sap-bert",
                 s2_strategy="st",
-                test_or_prod="prod",
             )
             result = engine.run()
         except Exception as exc:  # noqa: BLE001 — fall back on any engine error
