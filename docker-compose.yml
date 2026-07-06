@@ -1,6 +1,9 @@
-# MetaHarmonizer — local development stack.
-# One command brings up Postgres + Redis + API + worker (+ Caddy reverse proxy).
-#   docker compose up        (or: make up)
+# MetaHarmonizer — base stack (prod-safe): Postgres + Redis + API + worker +
+# Caddy (serving the built SPA). Shared by dev and prod.
+#
+#   dev :  docker compose up            # auto-loads docker-compose.override.yml
+#                                        # (code bind-mounts, --reload, host ports)
+#   prod:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 #
 # The same image runs the API and the worker; the `command` differs.
 
@@ -9,12 +12,11 @@ name: metaharmonizer
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-mh}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mh_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-metaharmonizer}
-    ports:
-      - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -25,9 +27,8 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -40,20 +41,18 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     env_file: .env
     environment:
       # Container-internal DSNs override any host-style values in .env.
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
-    ports:
-      - "8000:8000"
     volumes:
-      - ./backend:/app          # live code reload in dev
       - engine_cache:/root/.metaharmonizer
     # Run migrations on startup, then serve (idempotent). Postgres is healthy
     # via depends_on, so a compose-based run needs no separate migrate step.
-    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -70,13 +69,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
     volumes:
-      - ./backend:/app
       - engine_cache:/root/.metaharmonizer
     # arq worker (Sprint 4). Set JOB_MODE=queue so the API enqueues here.
     # Scale concurrency with `docker compose up --scale worker=N`.
@@ -89,15 +88,60 @@ services:
 
   caddy:
     image: caddy:2-alpine
-    ports:
-      - "8080:80"
+    restart: unless-stopped
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - web_dist:/srv:ro          # SPA static assets, published by the `web` service
     depends_on:
       api:
         condition: service_started
+      web:
+        condition: service_completed_successfully
+
+  # One-shot: builds the React SPA and publishes it into the shared `web_dist`
+  # volume, then exits. Caddy serves those assets. Re-run after a frontend change
+  # with `docker compose up --build web`.
+  web:
+    build:
+      context: ./frontend
+    volumes:
+      - web_dist:/srv
+    restart: "no"
+
+  # One-shot: seed a prebuilt knowledge DB into the engine_cache volume before
+  # starting the ontology worker. Opt-in via the `kb` profile:
+  #   docker compose --profile kb run --rm kb-import
+  # Place the archive at ./kb/<KB_ARCHIVE> on the host (default kb.mhkb.tar.gz).
+  kb-import:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    profiles: ["kb"]
+    volumes:
+      - engine_cache:/root/.metaharmonizer
+      - ./kb:/kb:ro
+    command: ["sh", "-c", "python -m metaharmonizer.scripts.knowledge_db import /kb/${KB_ARCHIVE:-kb.mhkb.tar.gz} --force"]
+    restart: "no"
+
+  # One-shot: create the bootstrap admin account. Opt-in via the `seed` profile:
+  #   docker compose --profile seed run --rm seed
+  # Override the identity with SEED_EMAIL / SEED_PASSWORD / SEED_ROLE.
+  seed:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    profiles: ["seed"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
+    command: ["sh", "-c", "python -m scripts.seed_account --email ${SEED_EMAIL:-admin@example.com} --password ${SEED_PASSWORD:-ChangeMe!2026} --role ${SEED_ROLE:-admin}"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
 volumes:
   pg_data:
   redis_data:
   engine_cache:
+  web_dist:

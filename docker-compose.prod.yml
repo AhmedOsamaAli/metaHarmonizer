@@ -1,0 +1,27 @@
+# MetaHarmonizer — production overlay.
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Adds public TLS termination (Caddy on 80/443, automatic Let's Encrypt) and
+# persistent cert storage. Everything else comes from the prod-safe base:
+# no dev bind-mounts, no --reload, no exposed Postgres/Redis ports.
+#
+# Required env (in .env): DOMAIN=harmonizer.example.org, ACME_EMAIL=ops@example.org
+# plus real secrets (JWT_SECRET, POSTGRES_PASSWORD, RESEND_API_KEY, SENTRY_DSN, …).
+
+services:
+  caddy:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - web_dist:/srv:ro
+      - caddy_data:/data          # ACME certs + keys (persist across restarts)
+      - caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+
+volumes:
+  caddy_data:
+  caddy_config:

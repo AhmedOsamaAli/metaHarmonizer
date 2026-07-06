@@ -1,12 +1,24 @@
-# Caddy reverse proxy — dev stub.
-# Fronts the API on http://localhost:8080. In production this gains
-# automatic TLS (Let's Encrypt) + HSTS for the real domain (Sprint: Deployment kit).
+# Caddy reverse proxy — dev stack.
+# Serves the built React SPA and fronts the API on http://localhost:8080.
+#   /api/*, /healthz, /readyz, /metrics  -> FastAPI (api:8000)   (WS upgrades too)
+#   everything else                      -> SPA static files, HTML5 history fallback
+# Production TLS lives in Caddyfile.prod (used by docker-compose.prod.yml).
 
 :80 {
 	encode gzip
 
-	# WebSocket + HTTP both proxy to the API service.
-	reverse_proxy api:8000
+	# Backend: REST + WebSocket (Caddy proxies WS upgrades transparently).
+	@api path /api/* /healthz /readyz /metrics
+	handle @api {
+		reverse_proxy api:8000
+	}
+
+	# Frontend SPA: serve static assets, fall back to index.html for client routes.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
 
 	header {
 		# Minimal hardening even in dev.

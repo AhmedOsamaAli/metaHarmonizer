@@ -1,0 +1,34 @@
+# Caddy — production config (automatic HTTPS via Let's Encrypt).
+# Used by docker-compose.prod.yml. Requires DOMAIN + ACME_EMAIL in the env.
+#   /api/*, /healthz, /readyz, /metrics  -> FastAPI (api:8000)   (WS upgrades too)
+#   everything else                      -> SPA static files, HTML5 history fallback
+
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip
+
+	# HSTS + hardening headers (TLS is on, so HSTS is safe here).
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# Backend: REST + WebSocket.
+	@api path /api/* /healthz /readyz /metrics
+	handle @api {
+		reverse_proxy api:8000
+	}
+
+	# Frontend SPA.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

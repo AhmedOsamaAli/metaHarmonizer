@@ -1,0 +1,35 @@
+# MetaHarmonizer — dev-only overrides (auto-loaded by `docker compose up`).
+#
+# Adds the developer conveniences the prod-safe base intentionally omits:
+#   - live code bind-mounts + uvicorn --reload
+#   - host port exposure for Postgres / Redis / API
+#   - Caddy on :8080 (http, no TLS)
+#
+# Prod skips this file by passing explicit -f flags:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+  api:
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app          # live code reload in dev
+      - engine_cache:/root/.metaharmonizer
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
+
+  worker:
+    volumes:
+      - ./backend:/app
+      - engine_cache:/root/.metaharmonizer
+
+  caddy:
+    ports:
+      - "8080:80"
