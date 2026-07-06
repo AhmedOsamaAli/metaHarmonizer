@@ -1,6 +1,4 @@
-/* ------------------------------------------------------------------ */
-/*  Per-user in-app notifications (bell icon)                          */
-/* ------------------------------------------------------------------ */
+/*  Per-user in-app notifications (bell icon).  */
 /*
  * A lightweight, per-user notification centre. Notifications are raised by
  * other parts of the app (e.g. JobsContext when a harmonization finishes) via

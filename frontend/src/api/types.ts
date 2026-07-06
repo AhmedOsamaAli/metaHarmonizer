@@ -1,6 +1,4 @@
-/* ------------------------------------------------------------------ */
-/*  MetaHarmonizer Dashboard — TypeScript Types                       */
-/* ------------------------------------------------------------------ */
+/*  TypeScript types shared across the dashboard.  */
 
 export interface Study {
     id: string;
@@ -118,9 +116,7 @@ export interface OntologySearchResult {
     score: number;
 }
 
-/* ------------------------------------------------------------------ */
-/*  Overview (home dashboard)                                         */
-/* ------------------------------------------------------------------ */
+/* Overview (home dashboard) */
 
 export interface StudySummary {
     id: string;
@@ -148,9 +144,7 @@ export interface Overview {
     studies: StudySummary[];
 }
 
-/* ------------------------------------------------------------------ */
-/*  Auth                                                              */
-/* ------------------------------------------------------------------ */
+/* Auth */
 
 export type Role = 'curator' | 'admin';
 
@@ -205,9 +199,7 @@ export interface ApiErrorBody {
     };
 }
 
-/* ------------------------------------------------------------------ */
-/*  Audit (admin oversight)                                          */
-/* ------------------------------------------------------------------ */
+/* Audit (admin oversight) */
 
 export interface AuditEvent {
     id: number;

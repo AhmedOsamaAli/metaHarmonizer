@@ -1,7 +1,4 @@
-/* ------------------------------------------------------------------ */
-/*  MetaHarmonizer Dashboard — API Client                             */
-/*  Centralised HTTP layer — every component calls these functions.   */
-/* ------------------------------------------------------------------ */
+// API client — centralised HTTP layer every component calls into.
 
 import { apiFetch, BASE } from './http';
 import type {

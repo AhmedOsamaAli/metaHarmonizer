@@ -1,6 +1,4 @@
-/* ------------------------------------------------------------------ */
-/*  Auth, sessions, API tokens, and admin endpoints                    */
-/* ------------------------------------------------------------------ */
+/*  Auth, sessions, API tokens, and admin endpoints.  */
 
 import { apiFetch, setAccessToken } from './http';
 import type {

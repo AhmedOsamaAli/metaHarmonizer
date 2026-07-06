@@ -1,9 +1,5 @@
-/* ------------------------------------------------------------------ */
-/*  Lightweight delimited-file parser (no dependency).                 */
-/*  Used client-side to preview an upload and list its columns before  */
-/*  it is sent to the backend. Handles quoted fields, escaped quotes,  */
-/*  and newlines inside quotes. Reads only what we need for a preview. */
-/* ------------------------------------------------------------------ */
+// Dependency-free delimited-file parser: previews an upload's columns
+// client-side (handles quoted fields, escaped quotes, embedded newlines).
 
 export interface ParsedPreview {
   columns: string[];

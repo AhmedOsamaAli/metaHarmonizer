@@ -1,6 +1,4 @@
-/* ------------------------------------------------------------------ */
-/*  Job progress over WebSocket (Sprint 4)                            */
-/* ------------------------------------------------------------------ */
+/*  Job progress over WebSocket (Sprint 4).  */
 
 import { apiFetch } from './http';
 import type { JobProgress } from './types';

@@ -1,6 +1,4 @@
-/* ------------------------------------------------------------------ */
-/*  Core HTTP layer — auth header injection + transparent 401 refresh  */
-/* ------------------------------------------------------------------ */
+// Core HTTP layer — auth header injection + transparent 401 refresh.
 
 import type { ApiErrorBody } from './types';
 

@@ -1,6 +1,4 @@
-/* ------------------------------------------------------------------ */
-/*  Study readiness gate                                              */
-/* ------------------------------------------------------------------ */
+/*  Study readiness gate.  */
 /*
  * Review/Ontology/Quality pages must not be opened until a study has finished
  * harmonizing — otherwise the curator sees an empty or half-populated table.

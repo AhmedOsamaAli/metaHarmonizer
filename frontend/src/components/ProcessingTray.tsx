@@ -1,6 +1,4 @@
-/* ------------------------------------------------------------------ */
-/*  Persistent processing tray — docked job-status widget             */
-/* ------------------------------------------------------------------ */
+/*  Persistent processing tray — docked job-status widget.  */
 /*
  * Shows every in-flight and recently-finished harmonization job. Mounted on
  * every authenticated page (via AppLayout) and fed by the app-root JobsProvider,
