@@ -1,358 +1,105 @@
-# 🔬 MetaHarmonizer
+# MetaHarmonizer
 
-**Automated biomedical metadata harmonization platform for cBioPortal-compatible clinical datasets.**
+**Automated harmonization of clinical metadata into standardized, ontology-annotated, cBioPortal-compatible schemas.**
 
-MetaHarmonizer bridges the gap between raw, inconsistent clinical metadata and standardized, ontology-annotated schemas. It combines a multi-stage ML pipeline with an interactive curator review dashboard, enabling researchers to harmonize metadata at scale while maintaining expert oversight.
+MetaHarmonizer maps inconsistent clinical metadata to a curated standard using a multi-stage ML pipeline, and presents the results in an interactive dashboard where curators review, correct, and export them — keeping expert oversight in the loop.
 
-> **GSoC 2026 project** — [Automated Clinical Metadata Harmonization Dashboard](https://github.com/cBioPortal/GSoC/issues/136)
+> GSoC 2026 — [Automated Clinical Metadata Harmonization Dashboard](https://github.com/cBioPortal/GSoC/issues/136)
 
----
+## Why
 
-## The Problem
+Clinical metadata across studies is heterogeneous: the same concept appears as `AGE`, `AGE_AT_DIAGNOSIS`, or `DIAGNOSIS_AGE`; sex as `male` / `M` / `1`; treatments under dozens of synonyms. Manual harmonization does not scale. MetaHarmonizer automates the mapping and surfaces only the decisions that need a human.
 
-cBioPortal hosts 400+ cancer genomics studies with clinical metadata from diverse sources. Cross-study metadata heterogeneity severely limits analysis:
+## How it works
 
-| Issue                     | Examples                                                             |
-| ------------------------- | -------------------------------------------------------------------- |
-| **Attribute naming**      | `AGE`, `AGE_AT_DIAGNOSIS`, `DIAGNOSIS_AGE` — all mean the same thing |
-| **Value encoding**        | Sex recorded as `male`, `M`, `1`, `Male`, `MALE`                     |
-| **Treatment synonyms**    | 24+ variants: `RADIO_THERAPY`, `Rad`, `XRT`, `Radiation`, `RT`       |
-| **Staging inconsistency** | `TUMOR_STAGE_2009`, `AJCC_STAGE`, `STAGE`, `PATHOLOGIC_STAGE`        |
+Two mapping steps, each reviewable:
 
-Manual harmonization does not scale. MetaHarmonizer automates this using a **4-stage cascade pipeline** backed by dictionary matching, ontology resolution, semantic embeddings, and optional LLM inference — then presents results in a curator-friendly dashboard for review and correction.
+1. **Schema mapping** — raw column headers → curated standard fields.
+2. **Ontology mapping** — cell values → ontology terms (NCIt, UBERON, …).
 
----
-
-## Dashboard Pages
-
-### 1. Upload
-
-Upload a CSV or TSV file containing raw clinical metadata. The pipeline automatically processes all columns through the 4-stage cascade and returns results in seconds.
-
-![Upload Page](pics/upload_page.png)
-
----
-
-### 2. Schema Mapping Review
-
-The core curator workspace. Each column mapping displays the suggested standardized field name, confidence score (color-coded), the pipeline stage that produced the match, and up to 4 alternative candidates. Curators can accept, reject, or manually edit any mapping — individually or in batch.
-
-![Schema Mapping Review](pics/schema_mapping.png)
-
----
-
-### 3. Ontology Value Mapping
-
-View how raw cell values within mapped columns are resolved to standard ontology terms from NCIT, UBERON, and OHMI. Curators can search and browse terms with fuzzy matching to verify or override automated assignments.
-
-![Ontology Mapping](pics/ontlogy_mapping.png)
-
----
-
-### 4. Quality Dashboard
-
-Monitor harmonization quality at a glance — KPI cards for overall coverage and confidence, a confidence score histogram showing score distribution, stage breakdown charts revealing which pipeline stages contribute most matches, and review progress tracking.
-
-![Quality Dashboard](pics/quality_dashboard.png)
-
----
-
-### 5. Export
-
-Download results in three formats: harmonized CSV with standardized column names, cBioPortal-compatible TSV with the proper 4-line header format for direct ingestion, and a JSON audit report capturing every mapping decision and curator action.
-
-![Export](pics/export.png)
-
----
+Both run through a four-stage cascade (exact dictionary → alias → semantic embedding → optional LLM), stopping at the first high-confidence match. Low-confidence and unmapped items are ordered risky-first for curator review.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   React Frontend                     │
-│  Upload → Review → Ontology → Quality → Export       │
-│  (TypeScript, Tailwind CSS, Recharts)                │
-└──────────────────────┬──────────────────────────────┘
-                       │ REST API (JSON)
-┌──────────────────────▼──────────────────────────────┐
-│                 FastAPI Backend                       │
-│  Routers: auth, harmonize, mappings, ontology,       │
-│           quality, export, admin, audit, tokens, ws  │
-│  Services: harmonizer (engine wrapper), analytics,   │
-│            exporter                                  │
-│  Auth: JWT access/refresh, RBAC, email verification  │
-│  Data: PostgreSQL (SQLAlchemy async) · Redis (jobs)  │
-└──────────────────────┬──────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────┐
-│         engine_adapter (EngineProtocol)              │
-│  Selectable impl via ENGINE_IMPL env var:            │
-│   - metaharmonizer  (default, pip-installed upstream)│
-│   - mock            (deterministic, used in tests)   │
-│  Single seam: only this dir may import upstream      │
-└──────────────────────┬──────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────┐
-│        upstream metaharmonizer package                │
-│  SchemaMapEngine (4-stage cascade)                   │
-│  SentenceTransformer (all-MiniLM-L6-v2) embeddings   │
-│  NCI EVS API integration, dictionary + fuzzy match   │
-└─────────────────────────────────────────────────────┘
+React SPA ──REST/WS──> FastAPI ──> PostgreSQL + Redis
+                          │
+                          └─> engine_adapter (EngineProtocol)
+                                 └─> metaharmonizer engine  |  mock (tests)
 ```
 
----
+Only `backend/app/engine_adapter/` may import the upstream `metaharmonizer` package — the ML engine sits behind a single, swappable seam (`ENGINE_IMPL=metaharmonizer|mock`).
 
-## Tech Stack
+## Tech stack
 
-| Layer         | Technology                                                       |
-| ------------- | ---------------------------------------------------------------- |
-| **Frontend**  | React 18, TypeScript, Tailwind CSS, TanStack Query, Recharts     |
-| **Backend**   | FastAPI, Pydantic v2, SQLAlchemy (async), Alembic, Uvicorn       |
-| **Data**      | PostgreSQL 16 · Redis 7 (job queue / arq, rate limiting, WS)     |
-| **Auth**      | JWT access/refresh, Argon2id, RBAC, email verification (Resend)  |
-| **ML Engine** | SentenceTransformer (`all-MiniLM-L6-v2`), RapidFuzz, NCI EVS API |
+- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, TanStack Query
+- **Backend:** FastAPI, Pydantic v2, SQLAlchemy (async), Alembic
+- **Data:** PostgreSQL 16, Redis 7 (jobs via arq, rate limiting, WebSockets)
+- **Auth:** JWT access/refresh, Argon2id, RBAC, email verification
+- **Engine:** `metaharmonizer` (SapBERT/MiniLM embeddings, NCI EVS, optional Gemini)
 
----
+## Quick start
 
-## Pipeline Stages
-
-Provided by the upstream `metaharmonizer` package, wrapped behind `EngineProtocol`.
-
-| Stage       | Method                              | Description                                                                                          |
-| ----------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Stage 1** | Exact dictionary match              | Direct case-insensitive match against the curated standard-field list.                               |
-| **Stage 2** | Alias match                         | Looks up known synonyms in `curated_fields_source_latest_with_flags.csv`.                            |
-| **Stage 3** | Semantic match                      | SentenceTransformer (`all-MiniLM-L6-v2`) cosine similarity over field names and value samples.       |
-| **Stage 4** | LLM query rewrite + FAISS re-search | Optional Gemini call to rewrite ambiguous queries, then re-rank. Off unless `GOOGLE_API_KEY` is set. |
-
-Columns flow through stages sequentially. A high-confidence match at any stage skips later stages. Unmapped columns surface in the curator review for manual override or on-demand LLM rematch.
-
----
-
-## Quick Start
-
-The stack is **FastAPI + Postgres 16 + Redis 7** (backend) and **React + Vite** (frontend), with JWT auth.
-
-### Prerequisites
-
-- Python 3.11+
-- Node.js 18+
-- PostgreSQL 16 and Redis 7 (step 2 sets these up for you per-OS)
-
-### 1. Clone + configure
+Requires Docker (or Postgres 16 + Redis 7 locally), Python 3.12+, Node 20+.
 
 ```bash
 git clone https://github.com/AhmedOsamaAli/metaHarmonizer.git
 cd metaHarmonizer
-cp .env.example .env
+cp .env.example .env        # set ALLOWED_EMAIL_DOMAINS and JWT_SECRET
 ```
 
-The defaults in `.env.example` use the standard Postgres/Redis ports, so on
-**macOS/Linux no edits are required**. The only value you'd tweak for your own
-setup:
+**Full stack (Docker):**
 
 ```bash
-ALLOWED_EMAIL_DOMAINS=example.com   # who may register; empty = signup closed
+docker compose up --build      # SPA + API + worker + Postgres + Redis behind Caddy
 ```
 
-> Register with any `@example.com` email. The **first** account becomes the
-> **admin**; everyone after is a curator (an admin can promote them later).
+Open http://localhost:8080. The **first** account to register becomes the admin; later accounts are curators.
 
-### 2. Start Postgres + Redis
-
-**macOS / Linux** — easiest is to run just the two data services in Docker (the
-app itself still runs natively in steps 3–4; these are tiny Alpine images, no ML
-build):
+**Backend only (native):**
 
 ```bash
 docker compose up -d postgres redis
-```
-
-This starts them on the standard ports with the exact `mh` / `metaharmonizer`
-credentials the default `.env` expects — nothing to edit.
-
-Prefer no Docker? Install natively with Homebrew and create the role + database:
-
-```bash
-brew install postgresql@16 redis
-brew services start postgresql@16
-brew services start redis
-psql postgres -c "CREATE ROLE mh LOGIN PASSWORD 'mh_dev_password' SUPERUSER;"
-createdb -O mh metaharmonizer
-```
-
-**Windows** — portable services, no install or admin rights:
-
-```powershell
-scripts/dev_services.ps1 setup    # one-time: downloads portable Postgres + Redis, creates the DB
-scripts/dev_services.ps1 start
-```
-
-These use `:5433` / `:6380`; set the matching `DATABASE_URL` / `REDIS_URL` lines
-noted in `.env.example`.
-
-### 3. Backend
-
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate              # Windows: .venv\Scripts\activate
+cd backend && python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-
-alembic upgrade head                  # create the DB schema (one-off after schema changes)
-uvicorn app.main:app --reload --port 8000
+alembic upgrade head
+uvicorn app.main:app --reload --port 8000     # set ENGINE_IMPL=mock for instant, ML-free startup
 ```
 
-The upstream `metaharmonizer` engine installs from a pre-built wheel under
-[backend/vendor/](backend/vendor/README.md), so it works on Windows, Linux and
-macOS with no special steps. First boot warms an ML model (~1–2 min); set
-`ENGINE_IMPL=mock` in `.env` for instant, ML-free startup during development.
-
-### 4. Frontend
+**Frontend only (native):**
 
 ```bash
-cd frontend
-npm install
-npm run dev
+cd frontend && npm install && npm run dev      # proxies /api to :8000
 ```
 
-The dev server proxies `/api` to `http://localhost:8000`, so no frontend config
-is needed.
+Interactive API reference (OpenAPI/Swagger): `http://localhost:8000/docs`.
 
-### First run
+## Configuration
 
-1. Open the frontend → **Create an account** (email must match `ALLOWED_EMAIL_DOMAINS`).
-2. The **first** user becomes **admin**; later users are curators.
-3. Sign in and upload a study.
+`.env.example` is the annotated catalogue. Key variables:
 
-| Service            | URL                        |
-| ------------------ | -------------------------- |
-| Frontend           | http://localhost:5173      |
-| Backend API        | http://localhost:8000      |
-| API Docs (Swagger) | http://localhost:8000/docs |
-| Health / Readiness | http://localhost:8000/healthz · http://localhost:8000/readyz |
+| Variable | Required | Description |
+| --- | :---: | --- |
+| `JWT_SECRET` | yes | Signs tokens (boot fails if < 32 bytes). |
+| `DATABASE_URL` | yes | `postgresql+asyncpg://…` DSN. |
+| `REDIS_URL` | yes | Jobs, rate limits, WS tickets. |
+| `ALLOWED_EMAIL_DOMAINS` | yes | Signup allow-list; empty = registration closed. |
+| `ENGINE_IMPL` | | `metaharmonizer` (default) or `mock`. |
+| `GEMINI_API_KEY` | | Enables the optional Stage-4 LLM rematch. |
 
----
+Migrations are managed by Alembic and are not auto-applied — run `alembic upgrade head` after schema changes.
 
-## Environment Variables
+## Testing
 
-`.env.example` is the canonical, commented catalogue — copy it to `.env`. The
-most important variables:
-
-| Variable                | Required | Default          | Description                                                                 |
-| ----------------------- | :------: | ---------------- | --------------------------------------------------------------------------- |
-| `JWT_SECRET`            | ✅       | —                | Signs access/refresh tokens. **Boot fails if < 32 bytes.**                  |
-| `DATABASE_URL`          | ✅       | local Postgres   | `postgresql+asyncpg://…` DSN.                                               |
-| `REDIS_URL`             | ✅       | local Redis      | Job queue + rate-limit + WS ticket store.                                   |
-| `ALLOWED_EMAIL_DOMAINS` | ✅       | _(empty)_        | Comma-separated signup allow-list. Empty → registration closed.            |
-| `ENGINE_IMPL`           |          | `metaharmonizer` | `mock` switches to the deterministic, ML-free engine (tests/fast dev).      |
-| `JOB_MODE`              |          | `inline`         | `inline` (just uvicorn) or `queue` (arq workers via Redis).                 |
-| `GEMINI_API_KEY`        |          | —                | Enables the engine's optional Stage-4 LLM rematch.                          |
-| `CORS_ORIGINS`          |          | localhost        | Allowed web origins (no wildcards in prod).                                 |
-
-Migrations are managed by **Alembic** and are **not** auto-applied — run
-`alembic upgrade head` after pulling changes that touch the schema.
-
-
----
-
-## API Reference
-
-**Schema Mapping**
-
-| Endpoint                                  | Method | Description                                               |
-| ----------------------------------------- | ------ | --------------------------------------------------------- |
-| `/api/v1/harmonize`                       | POST   | Upload file and run harmonization pipeline                |
-| `/api/v1/harmonize/{job_id}`              | GET    | Poll job status and results                               |
-| `/api/v1/studies`                         | GET    | List all studies                                          |
-| `/api/v1/mappings/{study_id}`             | GET    | Get all column mappings for a study                       |
-| `/api/v1/mappings/{study_id}/suggestions` | GET    | Low-confidence/unmapped columns with alternatives         |
-| `/api/v1/mappings/{id}/accept`            | POST   | Accept a mapping                                          |
-| `/api/v1/mappings/{id}/reject`            | POST   | Reject a mapping                                          |
-| `/api/v1/mappings/{id}/edit`              | POST   | Manually override a mapping                               |
-| `/api/v1/mappings/{id}/llm`               | POST   | Trigger on-demand LLM rematch (requires `GEMINI_API_KEY`) |
-| `/api/v1/mappings/batch`                  | POST   | Batch accept/reject mappings                              |
-
-**Ontology Value Mapping**
-
-| Endpoint                                | Method | Description                                |
-| --------------------------------------- | ------ | ------------------------------------------ |
-| `/api/v1/ontology/search`               | GET    | Fuzzy search across NCIT/UBERON/OHMI terms |
-| `/api/v1/ontology/mappings/{study_id}`  | GET    | Get all value-level ontology mappings      |
-| `/api/v1/ontology/mappings/{id}/accept` | POST   | Accept an ontology assignment              |
-| `/api/v1/ontology/mappings/{id}/reject` | POST   | Reject an ontology assignment              |
-| `/api/v1/ontology/mappings/{id}`        | PATCH  | Curator override with custom term/ID       |
-
-**Quality & Export**
-
-| Endpoint                               | Method | Description                                   |
-| -------------------------------------- | ------ | --------------------------------------------- |
-| `/api/v1/quality/{study_id}`           | GET    | Coverage, confidence, stage breakdown         |
-| `/api/v1/quality/{study_id}/evaluate`  | POST   | F1/precision/recall vs ground-truth CSV       |
-| `/api/v1/export/{study_id}/harmonized` | GET    | Harmonized CSV with standardized column names |
-| `/api/v1/export/{study_id}/cbioportal` | GET    | cBioPortal-compatible TSV (4-line header)     |
-| `/api/v1/export/{study_id}/report`     | GET    | JSON audit report                             |
-
----
-
-## Project Structure
-
-```
-metaHarmonizer/
-├── backend/
-│   ├── app/
-│   │   ├── main.py              # FastAPI app entry point
-│   │   ├── models.py            # Pydantic request/response schemas
-│   │   ├── core/                # settings, security, email, deps, jobs
-│   │   ├── db/                  # SQLAlchemy models, session, base
-│   │   ├── repositories/        # async data access (studies, mappings, …)
-│   │   ├── routers/             # API route handlers
-│   │   ├── services/            # Dashboard-owned helpers (ontology, IDs)
-│   │   └── engine_adapter/      # ONLY layer allowed to import upstream
-│   │       ├── protocol.py      # EngineProtocol contract
-│   │       ├── metaharmonizer_impl.py  # Wraps pip-installed upstream pkg
-│   │       └── mock_impl.py     # Deterministic engine for tests
-│   ├── alembic/                 # Database migrations
-│   ├── data/
-│   │   ├── schema/              # Curated dicts shipped to the engine
-│   │   └── uploads/             # User-uploaded CSVs (gitignored)
-│   └── requirements.txt
-├── frontend/
-│   ├── src/
-│   │   ├── App.tsx              # Main app with routing
-│   │   ├── pages/               # Upload, Review, Ontology, Quality, Export
-│   │   ├── components/          # Reusable UI components
-│   │   └── api/                 # Typed HTTP client
-│   └── package.json
-├── pics/                        # Dashboard screenshots
-├── metadata_samples/            # Reference & sample data
-└── README.md
+```bash
+cd backend && pytest        # runs against Postgres + Redis
+cd frontend && npm test     # Vitest
 ```
 
----
-
-## Sample Data
-
-| File                                | Description                                                       |
-| ----------------------------------- | ----------------------------------------------------------------- |
-| `metadata_samples/curated_meta.csv` | Reference schema — 37 standardized columns with ontology term IDs |
-| `metadata_samples/new_meta.csv`     | Raw metadata — 131 heterogeneous columns from multiple studies    |
-
----
-
-## Performance
-
-| Metric                                      | Value                                                             |
-| ------------------------------------------- | ----------------------------------------------------------------- |
-| Upload-to-results (141 columns)             | **< 2 second**                                                    |
-| Cold start (original, incl. model download) | ~235 seconds                                                      |
-| Cold start (model cached, NCI enabled)      | ~120 seconds                                                      |
-| Optimization                                | 99%+ latency reduction via engine caching, background pre-warming |
-
----
+CI (GitHub Actions) runs the backend suite against ephemeral Postgres/Redis, the frontend build + tests, and the engine-boundary check on every push.
 
 ## Acknowledgments
 
-- [MetaHarmonizer Engine](https://github.com/shbrief/MetaHarmonizer) — Core ML pipeline for schema mapping
-- [cBioPortal](https://www.cbioportal.org/) — Target schema standard for cancer genomics
-- [NCI Thesaurus (NCIt)](https://ncithesaurus.nci.nih.gov/) — Biomedical ontology for value normalization
+- [MetaHarmonizer engine](https://github.com/shbrief/MetaHarmonizer) — the ML harmonization pipeline
+- [cBioPortal](https://www.cbioportal.org/) — target schema for cancer genomics
+- [NCI Thesaurus](https://ncithesaurus.nci.nih.gov/) — biomedical ontology
