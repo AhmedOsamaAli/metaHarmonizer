@@ -13,7 +13,8 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import actor_label, current_user, require_role
-from app.core.queue import enqueue_harmonize
+from app.core.errors import ServiceUnavailableError
+from app.core.queue import enqueue_harmonize, has_capacity
 from app.core.settings import settings
 from app.core.storage import get_storage
 from app.core.uploads import check_upload_size
@@ -124,6 +125,12 @@ async def harmonize_study(
     mode = _validate_mode(mode)
     suffix = _validate_suffix(file.filename)
     onto_cols = [c.strip() for c in (ontology_columns or "").split(",") if c.strip()]
+
+    # Backpressure: refuse before doing any work (upload/parse) when the queue is full.
+    if not await has_capacity():
+        raise ServiceUnavailableError(
+            "The harmonization queue is at capacity. Please retry shortly."
+        )
 
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     study_id = generate_study_id(file.filename)

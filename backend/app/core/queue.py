@@ -24,6 +24,23 @@ _inline_tasks: set[asyncio.Task] = set()
 _arq_pool = None
 
 
+async def has_capacity() -> bool:
+    """Backpressure gate: True if a new harmonize job can be accepted now.
+
+    Queue mode: reject when the pending arq queue is deeper than
+    ``job_max_queue_depth`` (fail-open on a Redis hiccup so a blip can't wedge
+    uploads). Inline mode: cap concurrent in-process jobs at ``max_inline_jobs``.
+    """
+    if settings.job_mode == "queue":
+        try:
+            pool = await _get_arq_pool()
+            depth = await pool.zcard("arq:queue")
+        except Exception:
+            return True
+        return depth < settings.job_max_queue_depth
+    return len(_inline_tasks) < settings.max_inline_jobs
+
+
 async def _get_arq_pool():
     global _arq_pool
     if _arq_pool is None:

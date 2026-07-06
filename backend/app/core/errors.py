@@ -14,6 +14,7 @@ class AppError(Exception):
 
     code: str = "INTERNAL_ERROR"
     status_code: int = 500
+    retry_after: int | None = None
 
     def __init__(self, message: str, *, details: dict | None = None) -> None:
         super().__init__(message)
@@ -36,6 +37,17 @@ class NotFoundError(AppError):
 class ValidationError(AppError):
     code = "VALIDATION_ERROR"
     status_code = 422
+
+
+class ServiceUnavailableError(AppError):
+    """Transient overload / dependency outage — the caller should retry (503)."""
+
+    code = "SERVICE_UNAVAILABLE"
+    status_code = 503
+
+    def __init__(self, message: str, *, details: dict | None = None, retry_after: int | None = 30) -> None:
+        super().__init__(message, details=details)
+        self.retry_after = retry_after
 
 
 def error_envelope(
