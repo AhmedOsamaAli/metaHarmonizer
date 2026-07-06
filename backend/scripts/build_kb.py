@@ -63,22 +63,26 @@ def _build_one(category: str, source: str, seed: str) -> int:
 
 
 def _verify_outputs(category: str, source: str) -> None:
-    """Completeness check: a FAISS index + its ids sidecar must exist and be
-    non-empty for this category. Catches a build that died mid-way (partial KB),
-    which the export CLI's checksums alone would not detect."""
+    """Completeness check: the ST corpus FAISS index plus its ids sidecar must
+    exist and be non-empty for this category. Catches a build that died mid-way
+    (partial KB), which the export CLI's checksums alone would not detect.
+
+    Only the ST corpus index carries a ``.index.ids.npy`` sidecar; the auxiliary
+    synonym index keeps its row ids in the SQLite synonym table, so it is checked
+    for non-emptiness only (no sidecar requirement)."""
     from metaharmonizer import _paths
 
     faiss_dir = _paths.FAISS_INDEX_DIR
-    matches = [
-        p for p in faiss_dir.glob(f"*_{source}_{category}*.index")
+    corpus = [
+        p for p in faiss_dir.glob(f"st_*_{source}_{category}*.index")
         if p.stat().st_size > 0
     ]
-    if not matches:
+    if not corpus:
         raise RuntimeError(
-            f"no non-empty FAISS index for {category}/{source} under {faiss_dir} "
-            "— build did not complete."
+            f"no non-empty ST corpus FAISS index for {category}/{source} under "
+            f"{faiss_dir} — build did not complete."
         )
-    for idx in matches:
+    for idx in corpus:
         ids = idx.with_suffix(".index.ids.npy")
         if not ids.exists() or ids.stat().st_size == 0:
             raise RuntimeError(f"missing/empty ids sidecar for {idx.name} — partial build.")
