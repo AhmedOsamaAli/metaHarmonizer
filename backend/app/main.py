@@ -70,13 +70,13 @@ app.add_middleware(MetricsMiddleware)
 # Rate-limit + idempotency (spec §6.4); fail-open if Redis is unavailable.
 install_limits(app)
 
-# CORS — origins from settings (no wildcards in production).
+# CORS — restricted origins (no wildcards in production) + explicit methods/headers.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
 )
 
 # Register routers

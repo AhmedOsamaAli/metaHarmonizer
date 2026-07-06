@@ -14,8 +14,12 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# The value shipped in .env.example — rejected at boot so a real deployment can
+# never run with a publicly-known signing key.
+_PLACEHOLDER_JWT_SECRET = "change-me-in-prod-min-32-bytes-long-string"
 
 
 class Settings(BaseSettings):
@@ -58,8 +62,8 @@ class Settings(BaseSettings):
     # ── Auth / security ─────────────────────────────────────────────────────
     auth_mode: Literal["jwt", "none"] = "jwt"
     jwt_secret: str = Field(
-        default="change-me-in-prod-min-32-bytes-long-string",
-        description="HMAC signing key; must be >= 32 bytes when AUTH_MODE=jwt.",
+        default=_PLACEHOLDER_JWT_SECRET,
+        description="HMAC signing key; must be >= 32 bytes and changed from the default when AUTH_MODE=jwt.",
     )
     access_ttl_min: int = 15
     refresh_ttl_days: int = 30
@@ -123,11 +127,26 @@ class Settings(BaseSettings):
     @field_validator("jwt_secret")
     @classmethod
     def _jwt_secret_strength(cls, v: str, info) -> str:
-        # Only enforce length when JWT auth is actually in use.
+        # Only enforce when JWT auth is actually in use.
         mode = info.data.get("auth_mode", "jwt")
-        if mode == "jwt" and len(v.encode("utf-8")) < 32:
-            raise ValueError("JWT_SECRET must be at least 32 bytes when AUTH_MODE=jwt")
+        if mode == "jwt":
+            if v == _PLACEHOLDER_JWT_SECRET:
+                raise ValueError(
+                    "JWT_SECRET is still the shipped default — set a strong random value "
+                    "(e.g. `python -c \"import secrets;print(secrets.token_urlsafe(48))\"`)."
+                )
+            if len(v.encode("utf-8")) < 32:
+                raise ValueError("JWT_SECRET must be at least 32 bytes when AUTH_MODE=jwt")
         return v
+
+    @model_validator(mode="after")
+    def _auto_secure_cookie(self):
+        # An HTTPS deployment must send the refresh cookie as Secure; enable it
+        # automatically so a prod instance can't accidentally leak it over the
+        # wire because COOKIE_SECURE was forgotten.
+        if self.app_base_url.lower().startswith("https://") and not self.cookie_secure:
+            object.__setattr__(self, "cookie_secure", True)
+        return self
 
     @field_validator("llm_threshold")
     @classmethod

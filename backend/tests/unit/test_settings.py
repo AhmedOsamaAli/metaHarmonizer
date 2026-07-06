@@ -18,6 +18,25 @@ def test_short_jwt_secret_allowed_when_auth_disabled():
     assert s.auth_mode == "none"
 
 
+def test_default_jwt_secret_rejected_in_jwt_mode():
+    # The value shipped in .env.example must never boot a real deployment.
+    with pytest.raises(ValidationError):
+        Settings(_env_file=None, auth_mode="jwt",
+                 jwt_secret="change-me-in-prod-min-32-bytes-long-string")
+
+
+def test_cookie_secure_auto_enabled_on_https():
+    s = Settings(_env_file=None, jwt_secret="x" * 32,
+                 app_base_url="https://harmonizer.example.org", cookie_secure=False)
+    assert s.cookie_secure is True
+
+
+def test_cookie_secure_stays_off_on_http():
+    s = Settings(_env_file=None, jwt_secret="x" * 32,
+                 app_base_url="http://localhost:5173", cookie_secure=False)
+    assert s.cookie_secure is False
+
+
 def test_llm_threshold_out_of_range_rejected():
     with pytest.raises(ValidationError):
         Settings(_env_file=None, jwt_secret="x" * 32, llm_threshold=1.5)
