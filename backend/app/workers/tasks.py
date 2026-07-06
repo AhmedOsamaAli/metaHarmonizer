@@ -27,6 +27,7 @@ from app.core.jobs import (
     notify_user,
     publish_progress,
 )
+from app.core.storage import get_storage
 from app.db.session import SessionLocal
 from app.engine_adapter import get_engine
 from app.repositories import jobs as jobs_repo
@@ -97,42 +98,43 @@ def _run_pipeline(
     Returns the raw engine results; persistence happens back on the event loop
     via async repositories (a worker thread can't use the async session)."""
     sep = "\t" if suffix in (".tsv", ".txt") else ","
-    raw_df = pd.read_csv(file_path, sep=sep, low_memory=False)
+    with get_storage().local(file_path) as local_csv:
+        raw_df = pd.read_csv(local_csv, sep=sep, low_memory=False)
 
-    engine = get_engine()
-    scope = {c.strip() for c in (ontology_columns or []) if c and c.strip()}
+        engine = get_engine()
+        scope = {c.strip() for c in (ontology_columns or []) if c and c.strip()}
 
-    schema_results: list[dict] = []
-    onto_results: list[dict] = []
+        schema_results: list[dict] = []
+        onto_results: list[dict] = []
 
-    # Schema mapping is needed for every mode except a pure ontology run with no
-    # work — even "ontology" needs it to resolve each column's curated field so
-    # the value pass routes to the right vocabulary (consistent with "both").
-    schema_all: list[dict] = []
-    if mode in ("both", "schema", "ontology"):
-        curated_df = pd.read_csv(curated_path, low_memory=False)
-        schema_all = engine.harmonize_schema(raw_df, curated_df, csv_path=file_path)
+        # Schema mapping is needed for every mode except a pure ontology run with
+        # no work — even "ontology" needs it to resolve each column's curated
+        # field so the value pass routes to the right vocabulary.
+        schema_all: list[dict] = []
+        if mode in ("both", "schema", "ontology"):
+            curated_df = pd.read_csv(curated_path, low_memory=False)
+            schema_all = engine.harmonize_schema(raw_df, curated_df, csv_path=str(local_csv))
 
-    # Only "both" and "schema" expose the schema mappings to the curator.
-    if mode in ("both", "schema"):
-        schema_results = schema_all
+        # Only "both" and "schema" expose the schema mappings to the curator.
+        if mode in ("both", "schema"):
+            schema_results = schema_all
 
-    if mode in ("both", "ontology"):
-        schema_for_onto = schema_all
-        if scope:
-            schema_for_onto = [
-                m for m in schema_all if m.get("raw_column") in scope
-            ]
-        onto_results = engine.map_values(raw_df, schema_for_onto) or []
+        if mode in ("both", "ontology"):
+            schema_for_onto = schema_all
+            if scope:
+                schema_for_onto = [
+                    m for m in schema_all if m.get("raw_column") in scope
+                ]
+            onto_results = engine.map_values(raw_df, schema_for_onto) or []
 
-    return {
-        "schema_results": schema_results,
-        "onto_results": onto_results,
-        "mode": mode,
-        "columns": len(schema_results),
-        "rows": int(len(raw_df)),
-        "ontology_values": len(onto_results),
-    }
+        return {
+            "schema_results": schema_results,
+            "onto_results": onto_results,
+            "mode": mode,
+            "columns": len(schema_results),
+            "rows": int(len(raw_df)),
+            "ontology_values": len(onto_results),
+        }
 
 
 async def run_harmonize(

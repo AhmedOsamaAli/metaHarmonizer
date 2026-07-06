@@ -55,6 +55,7 @@ class Settings(BaseSettings):
 
     # ── Object storage ──────────────────────────────────────────────────────
     object_store_url: str = "file:///app/data/objects"
+    object_store_endpoint: str | None = None   # S3-compatible endpoint (e.g. R2)
     r2_bucket: str | None = None
     r2_key: str | None = None
     r2_secret: str | None = None

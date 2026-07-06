@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.core.storage import get_storage
 from app.repositories import studies as studies_repo
 from app.services.exporter import (
     export_cbioportal,
@@ -35,18 +36,19 @@ async def _load_raw_df(
     if not study:
         raise HTTPException(status_code=404, detail="Study not found")
 
-    path = study.get("file_path")
-    if not path or not Path(path).exists():
+    key = study.get("file_path")
+    storage = get_storage()
+    if not key or not storage.exists(key):
         raise HTTPException(status_code=404, detail="Original data file not found")
 
-    suffix = Path(path).suffix.lower()
+    suffix = Path(key).suffix.lower()
     sep = "\t" if suffix in (".tsv", ".txt") else ","
     # Exporting is the "done" signal — mark the study so it's cleaned up at the
-    # next logout (the user can still export every other format first). A
-    # pre-export validation check passes ``mark_export=False``.
+    # next logout. A pre-export validation check passes ``mark_export=False``.
     if mark_export:
         await studies_repo.mark_exported(db, study_id)
-    return pd.read_csv(path, sep=sep, low_memory=False)
+    with storage.local(key) as local_csv:
+        return pd.read_csv(local_csv, sep=sep, low_memory=False)
 
 
 @router.get("/{study_id}/harmonized")

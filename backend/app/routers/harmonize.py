@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import actor_label, current_user, require_role
 from app.core.queue import enqueue_harmonize
 from app.core.settings import settings
+from app.core.storage import get_storage
 from app.core.uploads import check_upload_size
 from app.db.models import User
 from app.db.session import get_db
@@ -137,12 +138,20 @@ async def harmonize_study(
         save_path.unlink(missing_ok=True)
         raise
 
+    # Persist the upload to object storage; the DB stores the object key. On a
+    # remote backend the local temp is no longer needed.
+    file_key = f"{study_id}{suffix}"
+    storage = get_storage()
+    storage.store(file_key, save_path)
+    if storage.scheme != "file":
+        save_path.unlink(missing_ok=True)
+
     study_name = Path(file.filename).stem
     await studies_repo.create_study(
         db_session,
         study_id=study_id,
         name=study_name,
-        file_path=str(save_path),
+        file_path=file_key,
         row_count=len(shape_df),
         column_count=len(shape_df.columns),
         owner_id=getattr(user, "id", None),
@@ -158,7 +167,7 @@ async def harmonize_study(
     await enqueue_harmonize(
         job_id=job_id,
         study_id=study_id,
-        file_path=str(save_path),
+        file_path=file_key,
         suffix=suffix,
         curated_path=str(curated_path),
         owner_id=getattr(user, "id", None),

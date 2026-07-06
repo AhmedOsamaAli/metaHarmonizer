@@ -200,13 +200,15 @@ async def llm_rematch(
         raise HTTPException(status_code=404, detail="Study CSV not found")
 
     from app.engine_adapter import get_engine
+    from app.core.storage import get_storage
 
     engine = get_engine()
     try:
-        suggestions = engine.llm_match(
-            csv_path=study["file_path"],
-            raw_column=mapping["raw_column"],
-        )
+        with get_storage().local(study["file_path"]) as local_csv:
+            suggestions = engine.llm_match(
+                csv_path=str(local_csv),
+                raw_column=mapping["raw_column"],
+            )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
