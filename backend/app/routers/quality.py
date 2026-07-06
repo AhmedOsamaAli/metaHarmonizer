@@ -19,14 +19,15 @@ from app.models import QualityMetrics
 from app.repositories import mappings as mappings_repo
 from app.repositories import studies as studies_repo
 from app.services.analytics import compute_quality_metrics
+from app.services.mapping_evaluation import evaluate_accuracy
 
 router = APIRouter(prefix="/api/v1/quality", tags=["quality"])
 
-# Canonical path to the engine evaluation directory (absolute, resolved at import time)
+# Engine evaluation directories, resolved at import time.
 _BACKEND_DIR = Path(__file__).resolve().parents[2]  # backend/
 _EVAL_DIRS = [
-    _BACKEND_DIR.parent / "engine" / "data" / "schema_mapping_eval",  # engine/data/schema_mapping_eval/
-    _BACKEND_DIR / "data" / "schema_mapping_eval",                     # backend/data/schema_mapping_eval/
+    _BACKEND_DIR.parent / "engine" / "data" / "schema_mapping_eval",
+    _BACKEND_DIR / "data" / "schema_mapping_eval",
 ]
 
 
@@ -141,6 +142,7 @@ async def evaluate_mapping_accuracy(
             detail="ground_truth dict is empty — nothing to evaluate."
         )
 
-    result = await mappings_repo.compute_mapping_accuracy(db, study_id, ground_truth)
+    mappings = await mappings_repo.get_mappings(db, study_id)
+    result = evaluate_accuracy(study_id, mappings, ground_truth)
     result["ground_truth_source"] = source
     return result

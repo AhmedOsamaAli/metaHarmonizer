@@ -1,21 +1,7 @@
-"""
-MetaHarmonizerAdapter — wraps the upstream pip-installable
-``metaharmonizer`` package (https://github.com/shbrief/MetaHarmonizer).
+"""MetaHarmonizerAdapter — wraps the upstream ``metaharmonizer`` package.
 
-THIS IS THE ONLY FILE IN THE PROJECT ALLOWED TO ``import metaharmonizer``.
-The pre-commit hook ``scripts/check_engine_boundary.py`` enforces that.
-
-To enable this adapter:
-
-  1. Add the dependency (commit-pinned) to ``backend/requirements.txt``::
-
-       metaharmonizer @ git+https://github.com/shbrief/MetaHarmonizer@<sha>
-
-  2. ``pip install -r backend/requirements.txt``
-  3. Set ``ENGINE_IMPL=metaharmonizer`` in the environment.
-
-Until step 1 is done this module raises a clear error on first use; the
-default ``VendoredAdapter`` keeps the app running.
+The ONLY file allowed to ``import metaharmonizer`` (enforced by
+``scripts/check_engine_boundary.py``). Selected via ``ENGINE_IMPL=metaharmonizer``.
 """
 
 from __future__ import annotations
@@ -37,10 +23,8 @@ _INSTALL_HINT = (
     "to backend/requirements.txt, then `pip install -r backend/requirements.txt`."
 )
 
-# Upstream looks for schema files (ncit_descendants.json, field_value_dict.json,
-# curated_fields*.csv) under ``$METAHARMONIZER_DATA_DIR/schema/``. If the host
-# hasn't set the env var, fall back to the dashboard-owned copy at
-# ``backend/data/`` so a fresh checkout works without manual config.
+# Upstream reads schema files under ``$METAHARMONIZER_DATA_DIR/schema/``; fall
+# back to the dashboard-owned copy so a fresh checkout works without config.
 def _ensure_upstream_data_dir() -> None:
     if os.environ.get("METAHARMONIZER_DATA_DIR"):
         return
@@ -65,30 +49,21 @@ class MetaHarmonizerAdapter:
     name = "metaharmonizer"
 
     def __init__(self, *, mode: str | None = None, top_k: int = 5):
-        # Mode is "auto" (LLM enabled when GEMINI_API_KEY present) or "manual".
         if mode is None:
             mode = "auto" if os.getenv("GEMINI_API_KEY") else "manual"
         self._mode = mode
         self._top_k = top_k
-        # Target schema preset the engine maps against. Default "cbio" (the
-        # 33-field cBioPortal preset bundled in engine >=0.4.0) — the engine's
-        # own default changed to "gdc" (736 fields), so we pin it explicitly to
-        # keep the dashboard's cBioPortal behaviour. Override via env if needed.
+        # Pin "cbio" (33-field cBioPortal preset); the engine's own default is
+        # "gdc" (736 fields). Override via ENGINE_TARGET_SCHEMA.
         self._schema = os.getenv("ENGINE_TARGET_SCHEMA", "cbio")
 
     # ------------------------------------------------------------------
     @lru_cache(maxsize=8)
     def _engine_for(self, csv_path: str):
         pkg = _require_pkg()
-        # Install perf patches (shared model + persistent NCI cache) before the
-        # first engine is constructed so every study benefits. Idempotent.
         from . import _perf
 
         _perf.install_patches()
-        # Upstream layout (engine >=0.4.0): SchemaMapEngine(input_path, schema,
-        # *, top_k, mode, ...). Args renamed from 0.3.0 (clinical_data_path ->
-        # input_path) and a target-schema preset added. Adjust here, never in
-        # routers.
         SchemaMapEngine = pkg.SchemaMapEngine  # type: ignore[attr-defined]
         return SchemaMapEngine(
             csv_path,
@@ -111,8 +86,7 @@ class MetaHarmonizerAdapter:
             raise ValueError("metaharmonizer adapter requires csv_path")
         engine = self._engine_for(csv_path)
         raw = engine.run_schema_mapping()
-        # Persist any new NCI EVS lookups so the next study (and the next
-        # process) reuses them instead of re-hitting the network.
+        # Persist new NCI EVS lookups so later studies reuse them.
         from . import _perf
 
         _perf.save_nci_cache()
@@ -123,14 +97,11 @@ class MetaHarmonizerAdapter:
         raw_df: pd.DataFrame,
         schema_mappings: list[dict[str, Any]],
     ) -> list[dict[str, Any]]:
-        # Value-to-ontology mapping (F-11). For the categories the engine ships
-        # first-class (NCIt-disease, UBERON-bodysite, NCIt-treatment) and only
-        # when the operator opts in (``ONTOLOGY_ENGINE=1``), route through the
-        # upstream ``OntoMapEngine`` (FAISS over the ontology corpus). Every
-        # other field — and any engine failure / missing corpus — falls back to
-        # the dashboard's curated dictionary so behaviour is unchanged by
-        # default and never breaks. EFO / HANCESTRO are intentionally NOT here:
-        # they need engine-team support (registry root / new category).
+        # Value-to-ontology mapping (F-11). Route the engine's first-class
+        # categories (NCIt-disease, UBERON-bodysite, NCIt-treatment) through
+        # OntoMapEngine when ONTOLOGY_ENGINE=1; otherwise (and on any failure or
+        # missing corpus) fall back to the curated dictionary. EFO/HANCESTRO
+        # need engine-team support and are intentionally excluded.
         from app.services.harmonizer import run_ontology_mapping
 
         from . import _ontology
@@ -163,8 +134,7 @@ class MetaHarmonizerAdapter:
                 "on-demand LLM matching."
             )
         pkg = _require_pkg()
-        # engine >=0.4.0: LLMMatcher is no longer top-level; it lives in the
-        # schema-mapper stage-4 matchers module.
+        # engine >=0.4.0: LLMMatcher moved to the stage-4 matchers module.
         try:
             LLMMatcher = pkg.LLMMatcher  # type: ignore[attr-defined]
         except AttributeError:
@@ -187,9 +157,7 @@ class MetaHarmonizerAdapter:
 
         _perf.install_patches()
         _perf.warm_model()
-        # Warm the NCI EVS cache over a representative sample so the FIRST real
-        # upload doesn't pay the cold-cache network cost (~90s of rate-limited
-        # API calls). Runs once; results persist to disk across restarts.
+        # Warm the NCI EVS cache so the first upload skips ~90s of cold API calls.
         self._warm_nci_cache()
 
     def _warm_nci_cache(self) -> None:
@@ -213,8 +181,6 @@ class MetaHarmonizerAdapter:
 
     @staticmethod
     def _default_warm_sample() -> Path | None:
-        # backend/app/engine_adapter/metaharmonizer_impl.py → repo root is
-        # parents[3]; the curated metadata samples live under metadata_samples/.
         here = Path(__file__).resolve()
         candidate = here.parents[3] / "metadata_samples" / "new_meta.csv"
         return candidate if candidate.exists() else None

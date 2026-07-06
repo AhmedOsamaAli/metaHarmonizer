@@ -6,10 +6,7 @@ Handles file upload, triggers the harmonization pipeline, and returns results.
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
-
-logger = logging.getLogger(__name__)
 
 import pandas as pd
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile

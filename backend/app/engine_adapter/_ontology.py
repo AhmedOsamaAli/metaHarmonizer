@@ -1,18 +1,9 @@
 """Real-engine ontology value mapping (F-11, app side).
 
-Routes value→ontology mapping through the upstream ``OntoMapEngine`` (FAISS +
-SQLite over the ontology corpus) for the categories the engine ships as
-first-class today, and falls back to the dashboard's curated dictionary for
-everything else (or when the engine corpus / API key isn't available).
-
-Boundary: this module lives under ``engine_adapter/`` and is the only place
-allowed to touch the upstream ontology engine. It uses the engine's *public*
-API (no fork), so EFO / HANCESTRO are deliberately NOT added here — those need
-engine-team support (a registry root for EFO, a new category for HANCESTRO).
-
-Opt-in: the engine path runs only when ``ONTOLOGY_ENGINE=1``. Default keeps the
-deterministic dictionary behaviour so existing deployments are unchanged until
-the ontology KB is pre-built (needs ``UMLS_API_KEY`` for NCIt / OLS access).
+Routes value→ontology mapping through the upstream ``OntoMapEngine`` for the
+engine's first-class categories, falling back to the curated dictionary
+otherwise. Opt-in via ``ONTOLOGY_ENGINE=1``. EFO/HANCESTRO are excluded (they
+need engine-team support). Only this module may touch the ontology engine.
 """
 
 from __future__ import annotations
@@ -26,9 +17,8 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-# Dashboard field name (lower) → engine ontology (category, source). Only the
-# tuples the installed engine ships as first-class are listed; anything else
-# falls through to the curated-dictionary path.
+# Dashboard field name (lower) → engine ontology (category, source), limited to
+# the engine's first-class tuples; anything else uses the dictionary fallback.
 FIELD_ONTOLOGY: dict[str, tuple[str, str]] = {
     "disease": ("disease", "ncit"),
     "target_condition": ("disease", "ncit"),
@@ -56,11 +46,10 @@ def _to_score(value: Any) -> float:
 def _normalize_engine_rows(
     field_name: str, result: "pd.DataFrame"
 ) -> list[dict[str, Any]]:
-    """Map an ``OntoMapEngine.run()`` result frame to our ontology DTO rows.
+    """Map an ``OntoMapEngine.run()`` frame to our ontology DTO rows.
 
-    Defensive about column names so a minor upstream rename degrades to a
-    lower-confidence row rather than crashing (the contract test guards the
-    schema-mapping side; ontology output is newer/less pinned).
+    Defensive about column names so an upstream rename degrades to a
+    lower-confidence row rather than crashing.
     """
     rows: list[dict[str, Any]] = []
     records = result.to_dict(orient="records") if result is not None else []
@@ -97,10 +86,9 @@ def map_values_via_engine(
 ) -> tuple[list[dict[str, Any]], set[str]]:
     """Map supported fields' values through ``OntoMapEngine``.
 
-    Returns ``(rows, handled_fields)`` — the ontology rows produced by the
-    engine and the set of field names it covered (so the caller can fall back to
-    the dictionary for the rest). Any per-category failure is logged and that
-    category is left to the fallback (``handled_fields`` excludes it).
+    Returns ``(rows, handled_fields)`` — the ontology rows and the set of field
+    names the engine covered, so the caller can fall back to the dictionary for
+    the rest. A per-category failure is logged and left to the fallback.
     """
     OntoMapEngine = getattr(pkg, "OntoMapEngine", None)
     if OntoMapEngine is None:
@@ -125,8 +113,6 @@ def map_values_via_engine(
         category, source = FIELD_ONTOLOGY[field_name]
         uniq = sorted(set(values))
         try:
-            # engine >=0.4.0: category -> corpus_category, query -> query_ls,
-            # test_or_prod dropped (inferred from ground_truth_map).
             engine = OntoMapEngine(
                 corpus_category=category,
                 query_ls=uniq,

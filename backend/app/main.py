@@ -27,11 +27,9 @@ init_sentry()
 async def lifespan(app: FastAPI):
     """Pre-warm the ML engine on startup. The database schema is managed by
     Alembic migrations (run before boot), so there's no runtime DDL here."""
-    # Pre-warm the selected engine in a background thread so the server
-    # starts accepting requests immediately.  The engine loads the
-    # SentenceTransformer model (~90 MB) and dictionaries once, and warms the
-    # persistent NCI EVS cache over a bundled sample so the first real upload
-    # doesn't pay the cold-cache network cost; subsequent uploads reuse both.
+    # Pre-warm the engine in a background thread (loads the ~90 MB
+    # SentenceTransformer + dicts and warms the NCI cache) so the server
+    # accepts requests immediately and the first upload isn't cold.
     def _warm():
         from app.engine_adapter import get_engine
         get_engine().pre_warm()
