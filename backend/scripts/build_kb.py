@@ -51,11 +51,34 @@ def _build_one(category: str, source: str, seed: str) -> int:
     )
     result = engine.run()
     n = len(result) if result is not None else 0
+    _verify_outputs(category, source)
     logger.info(
         "built %s/%s in %.1fs (seed query mapped %d row(s))",
         category, source, time.perf_counter() - t0, n,
     )
     return n
+
+
+def _verify_outputs(category: str, source: str) -> None:
+    """Completeness check: a FAISS index + its ids sidecar must exist and be
+    non-empty for this category. Catches a build that died mid-way (partial KB),
+    which the export CLI's checksums alone would not detect."""
+    from metaharmonizer import _paths
+
+    faiss_dir = _paths.FAISS_INDEX_DIR
+    matches = [
+        p for p in faiss_dir.glob(f"*_{source}_{category}*.index")
+        if p.stat().st_size > 0
+    ]
+    if not matches:
+        raise RuntimeError(
+            f"no non-empty FAISS index for {category}/{source} under {faiss_dir} "
+            "— build did not complete."
+        )
+    for idx in matches:
+        ids = idx.with_suffix(".index.ids.npy")
+        if not ids.exists() or ids.stat().st_size == 0:
+            raise RuntimeError(f"missing/empty ids sidecar for {idx.name} — partial build.")
 
 
 def main(argv: list[str] | None = None) -> int:
