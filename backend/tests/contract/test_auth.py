@@ -1,8 +1,8 @@
 """Auth slice-1 tests: register (domain gate, bootstrap admin), login, /me.
 
-Runs against the dev Postgres on an isolated app instance; skips if Postgres
-is unreachable. Uses a unique domain per run so the bootstrap-admin assertion
-is deterministic regardless of existing rows.
+Runs against the isolated ``*_test`` database (truncated between tests), so the
+bootstrap-admin path (first user = auto-verified admin) is deterministic.
+Skips if Postgres is unreachable.
 """
 
 from __future__ import annotations
