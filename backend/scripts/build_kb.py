@@ -26,12 +26,15 @@ import logging
 import sys
 import time
 
-# (category, ontology_source, seed_query) — the seed just drives one run so the
-# full corpus builds; the mapping result is discarded.
+# (category, ontology_source, seed_query) — the seed drives one run so the full
+# corpus AND the FAISS index build. It must NOT be an exact ontology label,
+# otherwise Stage 1 short-circuits and Stage 2 (which builds the FAISS index) is
+# skipped, leaving an index-less KB. A deliberately non-label probe forces Stage 2.
+_PROBE = "kb build probe do not match"
 LAUNCH_TUPLES = [
-    ("disease", "ncit", "breast cancer"),
-    ("bodysite", "uberon", "lung"),
-    ("treatment", "ncit", "chemotherapy"),
+    ("disease", "ncit", _PROBE),
+    ("bodysite", "uberon", _PROBE),
+    ("treatment", "ncit", _PROBE),
 ]
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
