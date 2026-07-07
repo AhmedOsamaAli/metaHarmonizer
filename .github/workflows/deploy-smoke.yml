@@ -1,0 +1,94 @@
+name: deploy-smoke
+
+# Verifies the self-host deployment shape (U15): the docker-compose stack
+# builds, boots, runs migrations, and serves an authenticated request — the
+# packaging layer that can't be exercised on a dev box without Docker.
+#
+# Uses ENGINE_IMPL=mock so the container wiring (Postgres + Redis + API +
+# worker + migrations + auth) is validated without pulling the ~700 MB ML
+# models or the offline KB bundle. The real engine is covered separately by
+# the native backend suite; this job proves the *deployment*, not the ML.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docker-compose.yml"
+      - "backend/**"
+      - ".github/workflows/deploy-smoke.yml"
+  pull_request:
+    paths:
+      - "docker-compose.yml"
+      - "backend/**"
+      - ".github/workflows/deploy-smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  compose-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Minimal env the api/worker/seed services read via `env_file: .env`.
+      - name: Write .env
+        run: |
+          cat > .env <<'EOF'
+          ENGINE_IMPL=mock
+          JOB_MODE=queue
+          AUTH_MODE=jwt
+          HIBP_CHECK=false
+          JWT_SECRET=ci-smoke-secret-key-at-least-32-bytes-long!!
+          ALLOWED_EMAIL_DOMAINS=example.com
+          SEED_EMAIL=admin@example.com
+          SEED_PASSWORD=CiSmoke!2026
+          SEED_ROLE=admin
+          EOF
+
+      # CI-only override: publish the API port so the runner can reach it.
+      - name: Write CI compose override
+        run: |
+          cat > docker-compose.ci.yml <<'EOF'
+          services:
+            api:
+              ports:
+                - "8000:8000"
+          EOF
+
+      - name: Build API image
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build api
+
+      - name: Start stack (postgres, redis, api, worker)
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d postgres redis api worker
+
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS http://localhost:8000/healthz >/dev/null 2>&1; then
+              echo "API healthy"; exit 0
+            fi
+            sleep 3
+          done
+          echo "API did not become healthy"; exit 1
+
+      - name: Seed bootstrap admin
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm seed
+
+      - name: Smoke — login returns a token
+        run: |
+          set -e
+          code=$(curl -s -o resp.json -w '%{http_code}' \
+            -X POST http://localhost:8000/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"admin@example.com","password":"CiSmoke!2026"}')
+          echo "login HTTP $code"
+          cat resp.json
+          test "$code" = "200"
+          grep -q 'access_token' resp.json
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --tail 200
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
