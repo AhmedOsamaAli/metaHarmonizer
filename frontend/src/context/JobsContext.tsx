@@ -83,6 +83,43 @@ const FINISHED_TTL_MS = 24 * 60 * 60 * 1000;
 
 const isTerminal = (p: JobPhase) => p === 'done' || p === 'failed' || p === 'cancelled';
 
+/**
+ * Fire an OS-level notification for a finished job, but only when the tab is
+ * backgrounded — the spec's "navigate away and be alerted when it's done" case.
+ * When the tab is focused the in-app toast + bell already cover it. Fully
+ * feature-detected and permission-gated; a no-op if unsupported or not granted.
+ */
+function maybeBrowserNotify(title: string, body: string, href?: string): void {
+    try {
+        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+        if (typeof document !== 'undefined' && !document.hidden) return;
+        const n = new Notification(title, { body });
+        if (href) {
+            n.onclick = () => {
+                try {
+                    window.focus();
+                    window.location.assign(href);
+                } catch {
+                    /* non-fatal */
+                }
+            };
+        }
+    } catch {
+        /* Notifications unavailable — the in-app bell still fired. */
+    }
+}
+
+/** Best-effort, one-shot permission prompt when a long job begins. */
+function requestNotifyPermission(): void {
+    try {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+            void Notification.requestPermission();
+        }
+    } catch {
+        /* non-fatal */
+    }
+}
+
 function loadPersisted(key: string | null): TrackedJob[] {
     if (!key) return [];
     try {
@@ -158,6 +195,9 @@ export function JobsProvider({ children }: { children: ReactNode }) {
     }, [jobs, userId]);
 
     const track = useCallback<JobsContextValue['track']>((input) => {
+        // A harmonize can run for minutes; ask once so we can alert at the OS
+        // level if the curator switches tabs while it runs.
+        requestNotifyPermission();
         setJobs((prev) => {
             const existing = prev.find((j) => j.studyId === input.studyId);
             const base: TrackedJob = {
@@ -243,6 +283,11 @@ export function JobsProvider({ children }: { children: ReactNode }) {
                         body: `${job.studyName} is ready for review.`,
                         href: `/review/${job.studyId}`,
                     });
+                    maybeBrowserNotify(
+                        'Harmonization complete',
+                        `${job.studyName} is ready for review.`,
+                        `/review/${job.studyId}`,
+                    );
                     qc.invalidateQueries({ queryKey: ['studies'] });
                     qc.invalidateQueries({ queryKey: ['overview'] });
                 } else if (job.phase === 'failed') {
@@ -252,6 +297,10 @@ export function JobsProvider({ children }: { children: ReactNode }) {
                         title: 'Harmonization failed',
                         body: `${job.studyName} could not be harmonized. Please try again.`,
                     });
+                    maybeBrowserNotify(
+                        'Harmonization failed',
+                        `${job.studyName} could not be harmonized.`,
+                    );
                 } else if (job.phase === 'cancelled') {
                     toast(`Harmonization cancelled — ${job.studyName}`);
                     notify({
