@@ -13,9 +13,14 @@ The merged view (built-in + admin) is what the schema mapper actually uses.
 
 from __future__ import annotations
 
+import importlib.util
+import logging
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 _ALIAS_DIR = Path(__file__).resolve().parents[2] / "data" / "schema" / "aliases"
 _ADMIN_ALIAS = _ALIAS_DIR / "current.alias.csv"
@@ -26,17 +31,57 @@ def _schema_name() -> str:
     return os.getenv("ENGINE_TARGET_SCHEMA", "cbio")
 
 
+@lru_cache(maxsize=1)
+def _bundled_schema_dir() -> Path | None:
+    """Locate the engine's bundled preset-schema directory *without importing*
+    the ``metaharmonizer`` package.
+
+    ``importlib.util.find_spec`` resolves the package location without executing
+    its ``__init__`` — critical, because importing the engine drags in
+    ``sentence_transformers``/torch (~15s), which would otherwise freeze the
+    event loop on the first admin-page load (even on the mock backend).
+    """
+    try:
+        spec = importlib.util.find_spec("metaharmonizer")
+        if not spec or not spec.origin:
+            return None
+        d = Path(spec.origin).parent / "_bundled_data" / "schema"
+        return d if d.is_dir() else None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _preset_target_schema_path() -> Path | None:
+    d = _bundled_schema_dir()
+    if not d:
+        return None
+    p = d / f"{_schema_name()}_target_attrs.csv"
+    return p if p.exists() else None
+
+
+def _preset_alias_path() -> Path | None:
+    d = _bundled_schema_dir()
+    if not d:
+        return None
+    matches = sorted(d.glob(f"{_schema_name()}_target_attrs_alias*.csv"))
+    return matches[0] if matches else None
+
+
 def schema_field_names() -> list[str]:
-    """Valid target field names for the active schema preset (for validation)."""
+    """Valid target field names for the active schema preset (for validation).
+
+    Reads the bundled schema CSV directly — no engine import.
+    """
     try:
         import pandas as pd
 
-        from metaharmonizer.models.schema_mapper import config as cfg
-
-        preset = cfg.resolve_schema_preset(_schema_name())
-        df = pd.read_csv(preset["target_schema_path"])
+        path = _preset_target_schema_path()
+        if not path:
+            return []
+        df = pd.read_csv(path)
         return sorted(df["field_name"].dropna().astype(str).unique().tolist())
     except Exception:  # noqa: BLE001 — never break the admin page over this
+        logger.warning("schema_field_names: could not read preset schema", exc_info=True)
         return []
 
 
@@ -49,16 +94,6 @@ def _read_csv(path):
         except Exception:  # noqa: BLE001
             return pd.DataFrame(columns=["source", "field_name"])
     return pd.DataFrame(columns=["source", "field_name"])
-
-
-def _preset_alias_path():
-    try:
-        from metaharmonizer.models.schema_mapper import config as cfg
-
-        preset = cfg.resolve_schema_preset(_schema_name())
-        return preset.get("alias_dict_path")
-    except Exception:  # noqa: BLE001
-        return None
 
 
 def alias_entries(query: str | None = None, limit: int = 500) -> dict[str, Any]:
