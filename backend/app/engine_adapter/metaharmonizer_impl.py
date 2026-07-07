@@ -58,20 +58,67 @@ class MetaHarmonizerAdapter:
         self._schema = os.getenv("ENGINE_TARGET_SCHEMA", "cbio")
 
     # ------------------------------------------------------------------
-    @staticmethod
-    def _alias_dict_path() -> str | None:
-        """Admin-uploaded column-name alias dictionary, if present.
+    def _alias_dict_path(self) -> str | None:
+        """Column-name alias dictionary path for the schema mapper.
 
-        Written by ``POST /admin/schema-aliases`` in the engine's long
-        ``source,field_name`` format. Overrides the preset's bundled aliases.
+        With no admin upload, returns ``None`` so the engine uses the preset's
+        bundled alias dictionary. When an admin has uploaded aliases (written by
+        ``POST /admin/schema-aliases`` in long ``source,field_name`` form), the
+        upload is **merged** with the preset's built-in aliases — augmenting,
+        not replacing them — and the merged file's path is returned. Uploaded
+        rows win on any conflicting alias.
         """
         from pathlib import Path
 
-        p = (
-            Path(__file__).resolve().parents[2]
-            / "data" / "schema" / "aliases" / "current.alias.csv"
+        base = Path(__file__).resolve().parents[2] / "data" / "schema" / "aliases"
+        admin = base / "current.alias.csv"
+        if not admin.exists():
+            return None
+
+        merged = base / "merged.alias.csv"
+        try:
+            if not merged.exists() or merged.stat().st_mtime < admin.stat().st_mtime:
+                self._build_merged_alias(admin, merged)
+            return str(merged)
+        except Exception:  # noqa: BLE001 — never break harmonize over aliases
+            return str(admin)  # fall back to admin-only
+
+    def _build_merged_alias(self, admin_path, merged_path) -> None:
+        """Concatenate the preset's bundled aliases with the admin upload,
+        de-duplicating by (normalized) alias so an upload augments the built-ins."""
+        from pathlib import Path
+
+        import pandas as pd
+
+        _require_pkg()
+        frames = []
+        try:
+            from metaharmonizer.models.schema_mapper import config as cfg
+
+            preset = cfg.resolve_schema_preset(self._schema)
+            preset_path = preset.get("alias_dict_path") if preset else None
+            if preset_path and Path(preset_path).exists():
+                frames.append(pd.read_csv(preset_path))
+        except Exception:  # noqa: BLE001 — preset unavailable → admin-only merge
+            pass
+
+        admin_df = pd.read_csv(admin_path)  # columns: source, field_name
+        if "is_numeric_field" not in admin_df.columns:
+            admin_df["is_numeric_field"] = ""
+        frames.append(admin_df)
+
+        out = pd.concat(frames, ignore_index=True)
+        # De-dup on the (alias, field) pair — never on alias alone: the engine
+        # supports one alias mapping to several fields, so collapsing by alias
+        # would silently drop built-in coverage. keep="last" lets an uploaded
+        # row win an exact-pair clash.
+        out["_k"] = out["source"].astype(str).str.strip().str.lower()
+        out = (
+            out.drop_duplicates(subset=["_k", "field_name"], keep="last")
+            .drop(columns=["_k"])
         )
-        return str(p) if p.exists() else None
+        merged_path.parent.mkdir(parents=True, exist_ok=True)
+        out.to_csv(merged_path, index=False)
 
     @lru_cache(maxsize=8)
     def _engine_for(self, csv_path: str):

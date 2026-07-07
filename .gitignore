@@ -69,6 +69,8 @@ docs/meeting-prep.md
 
 # Local-only schema-version uploads (runtime artifacts)
 backend/data/schema/versions/
+# Admin-uploaded alias dictionary (runtime; source + merged copy)
+backend/data/schema/aliases/
 
 # Logs
 *.log
