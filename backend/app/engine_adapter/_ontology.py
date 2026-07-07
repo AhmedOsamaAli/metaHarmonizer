@@ -11,11 +11,24 @@ from __future__ import annotations
 import logging
 import math
 import os
+from functools import lru_cache
 from typing import Any
 
 import pandas as pd
 
 logger = logging.getLogger(__name__)
+
+
+@lru_cache(maxsize=1)
+def _auto_accept_threshold() -> float:
+    """Confidence at/above which a mapping is auto-accepted (env-tunable per the
+    spec's auto-accept / flag-for-review bands; ``AUTO_ACCEPT_THRESHOLD``)."""
+    try:
+        from app.core.settings import settings
+
+        return float(settings.auto_accept_threshold)
+    except Exception:  # noqa: BLE001 — never fail mapping over a config read
+        return 0.9
 
 # Dashboard field name (lower) → engine ontology (category, source), limited to
 # the engine's first-class tuples; anything else uses the dictionary fallback.
@@ -73,7 +86,7 @@ def _normalize_engine_rows(
                 "ontology_term": None if term_missing else str(term),
                 "ontology_id": None if ont_id is None else str(ont_id),
                 "confidence_score": round(score, 4),
-                "status": "accepted" if score >= 0.90 else "pending",
+                "status": "accepted" if score >= _auto_accept_threshold() else "pending",
             }
         )
     return rows

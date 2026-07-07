@@ -17,6 +17,18 @@ import pandas as pd
 from .types import EngineHealth
 
 
+@lru_cache(maxsize=1)
+def _auto_accept_threshold() -> float:
+    """Confidence at/above which a mapping is auto-accepted (env-tunable per the
+    spec's auto-accept / flag-for-review bands; ``AUTO_ACCEPT_THRESHOLD``)."""
+    try:
+        from app.core.settings import settings
+
+        return float(settings.auto_accept_threshold)
+    except Exception:  # noqa: BLE001 — never fail mapping over a config read
+        return 0.9
+
+
 _INSTALL_HINT = (
     "The 'metaharmonizer' package is not installed. Add\n"
     "  metaharmonizer @ git+https://github.com/shbrief/MetaHarmonizer@<sha>\n"
@@ -321,7 +333,7 @@ class MetaHarmonizerAdapter:
         stage = "unmapped" if MetaHarmonizerAdapter._is_missing(stage_raw) else str(stage_raw)
         if stage == "invalid":
             status = "rejected"
-        elif confidence >= 0.90:
+        elif confidence >= _auto_accept_threshold():
             status = "accepted"
         else:
             status = "pending"

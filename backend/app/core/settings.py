@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     engine_impl: Literal["metaharmonizer", "mock"] = "metaharmonizer"
     method_model_yaml: str | None = None
     llm_threshold: float = 0.5
+    # Confidence at/above which a mapping is auto-accepted; below it the mapping
+    # is flagged for review ("pending"). Env-tunable per the spec's auto-accept /
+    # flag-for-review bands (configurable via env var + restart).
+    auto_accept_threshold: float = 0.9
     gemini_api_key: str | None = None
     umls_api_key: str | None = None
 
@@ -158,6 +162,13 @@ class Settings(BaseSettings):
     def _threshold_range(cls, v: float) -> float:
         if not 0.0 <= v <= 1.0:
             raise ValueError("LLM_THRESHOLD must be between 0.0 and 1.0")
+        return v
+
+    @field_validator("auto_accept_threshold")
+    @classmethod
+    def _auto_accept_range(cls, v: float) -> float:
+        if not 0.0 <= v <= 1.0:
+            raise ValueError("AUTO_ACCEPT_THRESHOLD must be between 0.0 and 1.0")
         return v
 
     # ── Derived helpers ─────────────────────────────────────────────────────
