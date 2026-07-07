@@ -83,3 +83,7 @@ docs/
 
 # Local KB build output (large; built offline, distributed via the export CLI)
 backend/kb_build/
+backend/kb_import_test/
+backend/kb_build_*.log
+# Packaged KB archives (large; ship out-of-band, not via git)
+*.mhkb.tar.gz
