@@ -87,3 +87,7 @@ backend/kb_import_test/
 backend/kb_build_*.log
 # Packaged KB archives (large; ship out-of-band, not via git)
 *.mhkb.tar.gz
+*_offline_bundle.tar.gz
+# E2E smoke-test artifacts
+backend/e2e_server.log
+backend/scripts/e2e_export_*.csv

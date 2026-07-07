@@ -113,7 +113,10 @@ services:
   # One-shot: seed a prebuilt knowledge DB into the engine_cache volume before
   # starting the ontology worker. Opt-in via the `kb` profile:
   #   docker compose --profile kb run --rm kb-import
-  # Place the archive at ./kb/<KB_ARCHIVE> on the host (default kb.mhkb.tar.gz).
+  # Place the bundle at ./kb/<KB_ARCHIVE> on the host (default
+  # kb_offline_bundle.tar.gz, produced by `python -m scripts.package_kb`). The
+  # bundle carries the engine KB *and* the corpus CSVs the ontology engine loads
+  # at runtime, so a fresh instance never re-downloads ontologies from NCI/OLS.
   kb-import:
     build:
       context: ./backend
@@ -122,7 +125,7 @@ services:
     volumes:
       - engine_cache:/root/.metaharmonizer
       - ./kb:/kb:ro
-    command: ["sh", "-c", "python -m metaharmonizer.scripts.knowledge_db import /kb/${KB_ARCHIVE:-kb.mhkb.tar.gz} --force"]
+    command: ["sh", "-c", "python -m scripts.seed_kb /kb/${KB_ARCHIVE:-kb_offline_bundle.tar.gz} --force"]
     restart: "no"
 
   # One-shot: create the bootstrap admin account. Opt-in via the `seed` profile:
