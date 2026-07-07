@@ -335,6 +335,8 @@ async def add_alias_entry(
 
     try:
         schema_dicts.add_alias(body.source, body.field_name)
+    except schema_dicts.AliasExists as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     await audit_repo.add_audit_entry(
@@ -344,6 +346,26 @@ async def add_alias_entry(
     )
     await db.commit()
     return {"ok": True}
+
+
+@router.get("/schema-aliases/export")
+async def export_alias_dict(
+    scope: str = "merged",
+    _admin: User = Depends(require_role("admin")),
+):
+    """Download the alias dictionary as CSV. ``scope=merged`` (built-in + admin)
+    or ``scope=custom`` (admin-added only)."""
+    from fastapi import Response
+
+    from app.engine_adapter import schema_dicts
+
+    scope = scope if scope in ("merged", "custom") else "merged"
+    csv_text = schema_dicts.export_csv(scope)
+    return Response(
+        content=csv_text,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="aliases_{scope}.csv"'},
+    )
 
 
 @router.delete("/schema-aliases/entry")

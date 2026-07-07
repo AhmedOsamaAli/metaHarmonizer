@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2 } from 'lucide-react';
+import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
@@ -27,6 +27,7 @@ import {
   adminListAliasEntries,
   adminAddAlias,
   adminDeleteAlias,
+  adminExportAliases,
 } from '../api/auth';
 import type { SchemaDiff, LearnedCandidate, AliasEntry } from '../api/auth';
 import type { Role, User } from '../api/types';
@@ -762,14 +763,38 @@ function AliasDictCard() {
 
         {/* Browse + search */}
         <div>
-          <div className="relative mb-2 max-w-xs">
-            <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search aliases or fields…"
-              className="w-full rounded border border-slate-200 py-1.5 pl-8 pr-2 text-sm focus:border-primary-400 focus:outline-none"
-            />
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <div className="relative max-w-xs flex-1">
+              <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search aliases or fields…"
+                className="w-full rounded border border-slate-200 py-1.5 pl-8 pr-2 text-sm focus:border-primary-400 focus:outline-none"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                adminExportAliases('merged').catch(() => toast.error('Export failed'))
+              }
+              className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+              title="Download the full (built-in + custom) alias dictionary as CSV"
+            >
+              <Download className="h-4 w-4" />
+              Export all
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                adminExportAliases('custom').catch(() => toast.error('Export failed'))
+              }
+              className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+              title="Download only the admin-added (custom) aliases as CSV"
+            >
+              <Download className="h-4 w-4" />
+              Export custom
+            </button>
           </div>
           {entries.isLoading ? (
             <LoadingBlock />

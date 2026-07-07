@@ -138,27 +138,72 @@ def alias_entries(query: str | None = None, limit: int = 500) -> dict[str, Any]:
     return {"total": total, "returned": min(total, limit), "entries": rows[:limit]}
 
 
+class AliasExists(Exception):
+    """Raised when adding an alias that already exists (built-in or custom)."""
+
+
+def _pair_exists(src: str, fld: str) -> str | None:
+    """Return 'built-in' / 'custom' if the (alias, field) pair already exists,
+    else ``None``. Checks both layers so duplicates are reported, not silently
+    swallowed."""
+    import pandas as pd
+
+    src_l, fld_s = src.strip().lower(), fld.strip()
+    for df, label in ((_read_csv(_ADMIN_ALIAS), "custom"),
+                      (_read_csv(_preset_alias_path()), "built-in")):
+        if not len(df):
+            continue
+        hit = (
+            df["source"].astype(str).str.strip().str.lower() == src_l
+        ) & (df["field_name"].astype(str).str.strip() == fld_s)
+        if hit.any():
+            return label
+    return None
+
+
 def add_alias(source: str, field_name: str) -> None:
-    """Append one admin alias (idempotent). Invalidates the merged cache."""
+    """Append one admin alias. Raises :class:`AliasExists` if the (alias, field)
+    pair is already present (built-in or custom), so callers can report it."""
     import pandas as pd
 
     src, fld = (source or "").strip(), (field_name or "").strip()
     if not src or not fld:
         raise ValueError("Both source and field_name are required.")
 
+    where = _pair_exists(src, fld)
+    if where:
+        raise AliasExists(f"'{src}' → '{fld}' already exists ({where}).")
+
     df = _read_csv(_ADMIN_ALIAS)
-    if len(df):
-        dup = (
-            df["source"].astype(str).str.strip().str.lower() == src.lower()
-        ) & (df["field_name"].astype(str).str.strip() == fld)
-        if dup.any():
-            return
     df = pd.concat(
         [df, pd.DataFrame([{"source": src, "field_name": fld}])], ignore_index=True
     )
     _ALIAS_DIR.mkdir(parents=True, exist_ok=True)
     df.to_csv(_ADMIN_ALIAS, index=False)
     _invalidate()
+
+
+def export_csv(scope: str = "merged") -> str:
+    """Return the alias dictionary as CSV text (``source,field_name``).
+
+    ``scope='merged'`` (default) exports built-in + admin; ``scope='custom'``
+    exports only the admin-added aliases.
+    """
+    import io
+
+    import pandas as pd
+
+    if scope == "custom":
+        df = _read_csv(_ADMIN_ALIAS)[["source", "field_name"]] if _ADMIN_ALIAS.exists() \
+            else pd.DataFrame(columns=["source", "field_name"])
+    else:
+        rows = alias_entries(limit=10**9)["entries"]
+        df = pd.DataFrame(
+            [{"source": r["source"], "field_name": r["field_name"]} for r in rows]
+        )
+    buf = io.StringIO()
+    df.to_csv(buf, index=False)
+    return buf.getvalue()
 
 
 def remove_alias(source: str, field_name: str) -> bool:

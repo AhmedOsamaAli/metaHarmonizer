@@ -1,6 +1,6 @@
 /*  Auth, sessions, API tokens, and admin endpoints.  */
 
-import { apiFetch, setAccessToken } from './http';
+import { apiFetch, setAccessToken, BASE, getAccessToken } from './http';
 import type {
     ApiTokenCreated,
     ApiTokenInfo,
@@ -324,4 +324,22 @@ export async function adminAddAlias(source: string, fieldName: string): Promise<
 export async function adminDeleteAlias(source: string, fieldName: string): Promise<{ ok: boolean }> {
     const params = new URLSearchParams({ source, field_name: fieldName });
     return apiFetch(`/admin/schema-aliases/entry?${params}`, { method: 'DELETE' });
+}
+
+/** Download the alias dictionary as a CSV file (authenticated fetch → blob). */
+export async function adminExportAliases(scope: 'merged' | 'custom' = 'merged'): Promise<void> {
+    const token = getAccessToken();
+    const res = await fetch(`${BASE}/admin/schema-aliases/export?scope=${scope}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Export failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `aliases_${scope}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
 }
