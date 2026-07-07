@@ -167,38 +167,34 @@ async def export_harmonized_csv(
     """
     mappings = await mappings_repo.get_mappings(db, study_id)
 
-    rename_map: dict[str, str] = {}
-    keep_cols: list[str] = []
-
+    # One source column per target field: accepted beats pending, then higher
+    # confidence wins. Prevents duplicate headers when several source columns
+    # map to the same field — a CSV/cBioPortal file can't carry duplicate
+    # column names, and the losers are near-duplicate suggestions anyway.
+    best_by_target: dict[str, tuple[tuple[int, float], str]] = {}
     for m in mappings:
         raw = m["raw_column"]
-        if m["status"] == "accepted":
+        if raw not in raw_df.columns:
+            continue
+        status = m["status"]
+        if status == "accepted":
             target = m.get("curator_field") or m.get("matched_field")
-            if target and raw in raw_df.columns:
-                rename_map[raw] = target
-                keep_cols.append(raw)
-        elif m["status"] == "pending" and m["matched_field"]:
-            # Include pending but mapped columns with original matched field
-            rename_map[raw] = m["matched_field"]
-            keep_cols.append(raw)
+        elif status == "pending":
+            target = m.get("matched_field")
+        else:  # rejected / unmapped → excluded
+            target = None
+        if not target:
+            continue
+        rank = (1 if status == "accepted" else 0, float(m.get("confidence_score") or 0.0))
+        current = best_by_target.get(target)
+        if current is None or rank > current[0]:
+            best_by_target[target] = (rank, raw)
 
-    if not keep_cols:
-        # Fallback: include all mapped columns
-        for m in mappings:
-            raw = m["raw_column"]
-            if m["matched_field"] and raw in raw_df.columns:
-                rename_map[raw] = m["matched_field"]
-                keep_cols.append(raw)
+    rename_map: dict[str, str] = {raw: target for target, (_r, raw) in best_by_target.items()}
+    # Preserve original column order for a stable, diff-friendly output.
+    keep_cols = [c for c in raw_df.columns if c in rename_map]
 
-    # Deduplicate keep_cols preserving order
-    seen: set[str] = set()
-    unique_keep: list[str] = []
-    for c in keep_cols:
-        if c not in seen:
-            seen.add(c)
-            unique_keep.append(c)
-
-    out_df = raw_df[unique_keep].rename(columns=rename_map)
+    out_df = raw_df[keep_cols].rename(columns=rename_map)
 
     # Value-level rewrite (U5): for each output column, replace accepted raw
     # values with their confirmed ontology term so the table carries resolved

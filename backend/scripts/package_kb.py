@@ -47,6 +47,12 @@ _SCHEMA_CACHE = _BACKEND / "data" / "nci_schema_cache.json"
 # HuggingFace hub cache so the schema mapper loads it offline.
 _SCHEMA_HF_DIR = "models--sentence-transformers--all-MiniLM-L6-v2"
 
+# Alternate-framework weight files sentence-transformers (PyTorch) never loads
+# when a ``model.safetensors`` is present — pure dead weight in an offline bundle.
+_REDUNDANT_WEIGHTS = frozenset({
+    "pytorch_model.bin", "flax_model.msgpack", "tf_model.h5", "rust_model.ot",
+})
+
 
 def _engine_export(dest: Path) -> None:
     """Invoke the engine's KB export CLI to produce kb.mhkb.tar.gz."""
@@ -75,17 +81,46 @@ def _is_download_temp(path: Path, root: Path) -> bool:
     return path.name.endswith((".lock", ".metadata"))
 
 
+def _method_keys() -> set[str]:
+    """Embedding-method directory names the engine actually loads (the keys of
+    ``method_model.yaml``). Used to skip stray/duplicate model dirs — e.g. a
+    manual ``sapbert_local`` copy the loader never reads. Read without importing
+    torch. Empty set means "couldn't resolve" → bundle everything (safe)."""
+    try:
+        import yaml
+        from importlib.util import find_spec
+
+        spec = find_spec("metaharmonizer")
+        locs = getattr(spec, "submodule_search_locations", None) if spec else None
+        if locs:
+            yml = Path(list(locs)[0]) / "models" / "method_model.yaml"
+            if yml.exists():
+                return set(yaml.safe_load(yml.read_text(encoding="utf-8")) or {})
+    except Exception:
+        pass
+    return set()
+
+
 def _model_cache_files() -> tuple[Path | None, list[Path]]:
-    """Engine ontology models under ``MODEL_CACHE_DIR`` (e.g. ``sap-bert``),
-    excluding HF download scratch. Returns ``(root, files)``."""
+    """Engine ontology models under ``MODEL_CACHE_DIR`` (e.g. ``sap-bert``).
+    Keeps only dirs that map to a configured embedding method, drops HF download
+    scratch, and prefers ``model.safetensors`` over the duplicate
+    ``pytorch_model.bin``. Returns ``(root, files)``."""
     from metaharmonizer._paths import MODEL_CACHE_DIR
 
     if not MODEL_CACHE_DIR.exists():
         return None, []
-    files = [
-        p for p in MODEL_CACHE_DIR.rglob("*")
-        if p.is_file() and not _is_download_temp(p, MODEL_CACHE_DIR)
-    ]
+    keys = _method_keys()
+    files: list[Path] = []
+    for p in MODEL_CACHE_DIR.rglob("*"):
+        if not p.is_file() or _is_download_temp(p, MODEL_CACHE_DIR):
+            continue
+        top = p.relative_to(MODEL_CACHE_DIR).parts[0]
+        if keys and top not in keys:
+            continue  # stray/duplicate model dir — the loader never reads it
+        if p.name in _REDUNDANT_WEIGHTS and (p.parent / "model.safetensors").exists():
+            continue  # safetensors is preferred; other-framework weights are dead
+        files.append(p)
     return MODEL_CACHE_DIR, files
 
 
