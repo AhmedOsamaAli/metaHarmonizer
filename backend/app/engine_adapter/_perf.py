@@ -56,6 +56,31 @@ _nci_term2code: dict[str, Any] = {}       # normalized term -> code | None
 _nci_code2category: dict[str, Any] = {}   # code -> [category, ...] | None
 _nci_lock = threading.Lock()
 _nci_loaded = False
+# Keys already persisted to the shared store, so each flush only writes deltas.
+_nci_persisted_terms: set[str] = set()
+_nci_persisted_codes: set[str] = set()
+
+# Shared store (Redis) keys. When Redis is reachable the cache is shared across
+# every api/worker process and survives restarts/redeploys; the JSON file above
+# stays as a local fallback for single-process / no-Redis dev.
+_REDIS_TERM_KEY = "mh:nci:schema:term2code"
+_REDIS_CAT_KEY = "mh:nci:schema:code2category"
+_NEG = "\x00"  # sentinel for a cached negative lookup (term -> no code)
+
+
+def _redis_sync():
+    """Best-effort sync Redis client from settings; ``None`` if unavailable."""
+    try:
+        import redis  # redis-py ships a sync client alongside redis.asyncio
+
+        from app.core.settings import settings
+
+        return redis.Redis.from_url(
+            settings.redis_url, decode_responses=True,
+            socket_connect_timeout=2, socket_timeout=2,
+        )
+    except Exception:
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -117,6 +142,41 @@ def warm_model() -> None:
 # ---------------------------------------------------------------------------
 # Patch 2: persistent, shared NCI cache
 # ---------------------------------------------------------------------------
+def _load_from_redis() -> bool:
+    """Seed the in-memory dicts from the shared Redis store. Returns success."""
+    client = _redis_sync()
+    if client is None:
+        return False
+    try:
+        terms = client.hgetall(_REDIS_TERM_KEY) or {}
+        cats = client.hgetall(_REDIS_CAT_KEY) or {}
+    except Exception:
+        return False
+    for term, code in terms.items():
+        _nci_term2code[term] = None if code == _NEG else code
+        _nci_persisted_terms.add(term)
+    for code, cat_json in cats.items():
+        try:
+            _nci_code2category[code] = json.loads(cat_json)
+        except Exception:
+            continue
+        _nci_persisted_codes.add(code)
+    return True
+
+
+def _load_from_disk() -> None:
+    try:
+        if _NCI_CACHE_PATH.exists():
+            raw = json.loads(_NCI_CACHE_PATH.read_text(encoding="utf-8"))
+            if isinstance(raw.get("term2code"), dict):
+                _nci_term2code.update(raw["term2code"])
+            if isinstance(raw.get("code2category"), dict):
+                _nci_code2category.update(raw["code2category"])
+    except Exception:
+        # A corrupt cache must never break harmonization; start empty.
+        pass
+
+
 def _load_nci_cache() -> None:
     global _nci_loaded
     if _nci_loaded:
@@ -124,25 +184,43 @@ def _load_nci_cache() -> None:
     with _nci_lock:
         if _nci_loaded:
             return
-        try:
-            if _NCI_CACHE_PATH.exists():
-                raw = json.loads(_NCI_CACHE_PATH.read_text(encoding="utf-8"))
-                if isinstance(raw.get("term2code"), dict):
-                    _nci_term2code.update(raw["term2code"])
-                if isinstance(raw.get("code2category"), dict):
-                    _nci_code2category.update(raw["code2category"])
-        except Exception:
-            # A corrupt cache must never break harmonization; start empty.
-            pass
+        # Prefer the shared store; fall back to the local file when Redis is
+        # unreachable (single-process dev). Load both so a machine that warmed
+        # its file cache still contributes on first Redis flush.
+        _load_from_redis()
+        _load_from_disk()
         _nci_loaded = True
 
 
-def save_nci_cache() -> None:
-    """Atomically flush the shared NCI cache to disk (best-effort)."""
-    if not _nci_loaded:
+def _flush_to_redis() -> None:
+    """Write only the new (unpersisted) entries to the shared Redis store."""
+    new_terms = {k: v for k, v in _nci_term2code.items() if k not in _nci_persisted_terms}
+    new_cats = {k: v for k, v in _nci_code2category.items() if k not in _nci_persisted_codes}
+    if not new_terms and not new_cats:
+        return
+    client = _redis_sync()
+    if client is None:
         return
     try:
-        with _nci_lock:
+        if new_terms:
+            client.hset(_REDIS_TERM_KEY,
+                        mapping={k: (_NEG if v is None else v) for k, v in new_terms.items()})
+        if new_cats:
+            client.hset(_REDIS_CAT_KEY,
+                        mapping={k: json.dumps(v) for k, v in new_cats.items()})
+    except Exception:
+        return
+    _nci_persisted_terms.update(new_terms)
+    _nci_persisted_codes.update(new_cats)
+
+
+def save_nci_cache() -> None:
+    """Flush the shared NCI cache to Redis (shared) and the local file (fallback)."""
+    if not _nci_loaded:
+        return
+    with _nci_lock:
+        _flush_to_redis()
+        try:
             payload = {
                 "term2code": _nci_term2code,
                 "code2category": _nci_code2category,
@@ -151,8 +229,8 @@ def save_nci_cache() -> None:
             tmp = _NCI_CACHE_PATH.with_suffix(".json.tmp")
             tmp.write_text(json.dumps(payload), encoding="utf-8")
             os.replace(tmp, _NCI_CACHE_PATH)
-    except Exception:
-        pass
+        except Exception:
+            pass
 
 
 def _patch_nci_client() -> None:
