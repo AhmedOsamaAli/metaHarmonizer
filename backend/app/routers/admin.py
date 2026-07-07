@@ -282,6 +282,9 @@ async def upload_schema_aliases(
     out = pd.DataFrame(rows, columns=["source", "field_name"]).drop_duplicates()
     out.to_csv(ALIAS_FILE, index=False)
 
+    from app.engine_adapter import schema_dicts
+
+    schema_dicts._invalidate()  # rebuild merged dict + engine on next harmonize
     await audit_repo.add_audit_entry(
         db, study_id=None, action="schema_alias_upload",
         new_value=f"{len(out)} aliases / {out['field_name'].nunique()} fields",
@@ -293,6 +296,78 @@ async def upload_schema_aliases(
         "alias_count": int(len(out)),
         "field_count": int(out["field_name"].nunique()),
     }
+
+
+@router.get("/schema-fields")
+async def list_schema_fields(_admin: User = Depends(require_role("admin"))) -> dict:
+    """Valid target field names for the active schema (for alias validation)."""
+    from app.engine_adapter import schema_dicts
+
+    return {"fields": schema_dicts.schema_field_names()}
+
+
+@router.get("/schema-aliases/entries")
+async def list_alias_entries(
+    q: str | None = None,
+    limit: int = 500,
+    _admin: User = Depends(require_role("admin")),
+) -> dict:
+    """Search the merged alias dictionary (built-in + admin). Built-in rows are
+    read-only; admin rows can be removed."""
+    from app.engine_adapter import schema_dicts
+
+    return schema_dicts.alias_entries(q, min(max(limit, 1), 2000))
+
+
+class _AliasEntry(BaseModel):
+    source: str
+    field_name: str
+
+
+@router.post("/schema-aliases/entry", status_code=201)
+async def add_alias_entry(
+    body: _AliasEntry,
+    admin: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Manually add one alias (nickname → canonical field)."""
+    from app.engine_adapter import schema_dicts
+
+    try:
+        schema_dicts.add_alias(body.source, body.field_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    await audit_repo.add_audit_entry(
+        db, study_id=None, action="schema_alias_add",
+        new_value=f"{body.source} -> {body.field_name}",
+        actor_id=admin.id, curator=actor_label(admin),
+    )
+    await db.commit()
+    return {"ok": True}
+
+
+@router.delete("/schema-aliases/entry")
+async def delete_alias_entry(
+    source: str,
+    field_name: str,
+    admin: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Remove one admin alias (built-ins cannot be removed)."""
+    from app.engine_adapter import schema_dicts
+
+    if not schema_dicts.remove_alias(source, field_name):
+        raise HTTPException(
+            status_code=404,
+            detail="Alias not found in the admin layer (built-ins can't be removed).",
+        )
+    await audit_repo.add_audit_entry(
+        db, study_id=None, action="schema_alias_remove",
+        new_value=f"{source} -> {field_name}",
+        actor_id=admin.id, curator=actor_label(admin),
+    )
+    await db.commit()
+    return {"ok": True}
 
 
 @router.post("/schema-versions/{version_id}/promote")

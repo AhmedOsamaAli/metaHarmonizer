@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit } from 'lucide-react';
+import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
@@ -23,8 +23,12 @@ import {
   adminPromoteLearned,
   adminGetAliases,
   adminUploadAliases,
+  adminSchemaFields,
+  adminListAliasEntries,
+  adminAddAlias,
+  adminDeleteAlias,
 } from '../api/auth';
-import type { SchemaDiff, LearnedCandidate } from '../api/auth';
+import type { SchemaDiff, LearnedCandidate, AliasEntry } from '../api/auth';
 import type { Role, User } from '../api/types';
 
 const ROLES: Role[] = ['curator', 'admin'];
@@ -597,19 +601,32 @@ function LearnedDecisionsCard() {
 }
 
 // Column-name alias dictionary: admins upload a two-column CSV (field, comma-
-// separated aliases) that teaches the schema mapper the nicknames for each
-// field. Converted server-side to the engine's long format and applied on the
-// next harmonize.
+// separated aliases), or browse/search/add/remove individual aliases. Merged
+// with the engine's built-in dictionary and applied on the next harmonize.
 function AliasDictCard() {
   const qc = useQueryClient();
   const status = useQuery({ queryKey: ['admin', 'schema-aliases'], queryFn: adminGetAliases });
+  const fields = useQuery({ queryKey: ['admin', 'schema-fields'], queryFn: adminSchemaFields });
   const fileRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [query, setQuery] = useState('');
+  const [addSource, setAddSource] = useState('');
+  const [addField, setAddField] = useState('');
+
+  const entries = useQuery({
+    queryKey: ['admin', 'alias-entries', query],
+    queryFn: () => adminListAliasEntries(query, 500),
+  });
+
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ['admin', 'schema-aliases'] });
+    qc.invalidateQueries({ queryKey: ['admin', 'alias-entries'] });
+  };
 
   const uploadM = useMutation({
     mutationFn: () => adminUploadAliases(file!),
     onSuccess: (s) => {
-      qc.invalidateQueries({ queryKey: ['admin', 'schema-aliases'] });
+      refresh();
       toast.success(`Loaded ${s.alias_count} aliases across ${s.field_count} fields`);
       setFile(null);
       if (fileRef.current) fileRef.current.value = '';
@@ -617,26 +634,52 @@ function AliasDictCard() {
     onError: (e: any) => toast.error(e?.message ?? 'Could not upload aliases'),
   });
 
+  const addM = useMutation({
+    mutationFn: () => adminAddAlias(addSource.trim(), addField.trim()),
+    onSuccess: () => {
+      refresh();
+      toast.success('Alias added');
+      setAddSource('');
+      setAddField('');
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Could not add alias'),
+  });
+
+  const delM = useMutation({
+    mutationFn: (e: AliasEntry) => adminDeleteAlias(e.source, e.field_name),
+    onSuccess: () => {
+      refresh();
+      toast.success('Alias removed');
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Could not remove alias'),
+  });
+
+  const fieldList = fields.data?.fields ?? [];
+  const unknownField = addField.trim() !== '' && !fieldList.includes(addField.trim());
+  const rows = entries.data?.entries ?? [];
+
   return (
     <Card>
       <CardHeader
         icon={<Layers className="h-4 w-4" />}
         title="Column-name aliases"
-        description="Two columns: a canonical field and a comma-separated list of its aliases (nicknames). Teaches the schema mapper to recognise messy headers. Applied on the next harmonize."
+        description="Nicknames that teach the schema mapper to recognise messy headers. Uploads and manual edits are merged with the engine's built-in dictionary and applied on the next harmonize."
       />
-      <CardBody className="space-y-3">
+      <CardBody className="space-y-4">
         <div className="text-sm text-slate-600">
           {status.data?.present ? (
             <span>
-              Active dictionary: <strong>{status.data.alias_count}</strong> aliases across{' '}
-              <strong>{status.data.field_count}</strong> fields.
+              Custom dictionary: <strong>{status.data.alias_count}</strong> admin aliases across{' '}
+              <strong>{status.data.field_count}</strong> fields — merged with the built-ins.
             </span>
           ) : (
             <span className="text-slate-400">
-              No alias dictionary uploaded — the schema mapper uses its built-in aliases.
+              No custom aliases yet — the schema mapper uses its built-in dictionary.
             </span>
           )}
         </div>
+
+        {/* Bulk upload */}
         <form
           className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3"
           onSubmit={(e) => {
@@ -646,7 +689,7 @@ function AliasDictCard() {
         >
           <div>
             <label htmlFor="alias-file" className="block text-xs font-medium text-slate-500">
-              Alias CSV (field, aliases)
+              Bulk upload — CSV (field, comma-separated aliases)
             </label>
             <input
               id="alias-file"
@@ -657,17 +700,126 @@ function AliasDictCard() {
               className="mt-1 text-sm file:mr-2 file:rounded file:border-0 file:bg-primary-50 file:px-2 file:py-1 file:text-primary-700"
             />
           </div>
-          <Button
-            type="submit"
-            loading={uploadM.isPending}
-            disabled={!file}
-            icon={<Upload className="h-4 w-4" />}
-          >
-            Upload aliases
+          <Button type="submit" loading={uploadM.isPending} disabled={!file} icon={<Upload className="h-4 w-4" />}>
+            Upload
           </Button>
         </form>
+
+        {/* Add one */}
+        <form
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (addSource.trim() && addField.trim()) addM.mutate();
+          }}
+        >
+          <div>
+            <label htmlFor="alias-source" className="block text-xs font-medium text-slate-500">
+              Alias (nickname)
+            </label>
+            <input
+              id="alias-source"
+              value={addSource}
+              onChange={(e) => setAddSource(e.target.value)}
+              placeholder="e.g. patient_sex"
+              className="mt-1 w-40 rounded border border-slate-200 px-2 py-1.5 text-sm focus:border-primary-400 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label htmlFor="alias-field" className="block text-xs font-medium text-slate-500">
+              Canonical field
+            </label>
+            <input
+              id="alias-field"
+              list="schema-fields-list"
+              value={addField}
+              onChange={(e) => setAddField(e.target.value)}
+              placeholder="e.g. sex"
+              className={`mt-1 w-40 rounded border px-2 py-1.5 text-sm focus:outline-none ${
+                unknownField ? 'border-amber-400' : 'border-slate-200 focus:border-primary-400'
+              }`}
+            />
+            <datalist id="schema-fields-list">
+              {fieldList.map((f) => (
+                <option key={f} value={f} />
+              ))}
+            </datalist>
+          </div>
+          <Button
+            type="submit"
+            loading={addM.isPending}
+            disabled={!addSource.trim() || !addField.trim()}
+            icon={<Plus className="h-4 w-4" />}
+          >
+            Add
+          </Button>
+          {unknownField && (
+            <span className="text-xs text-amber-600">
+              &ldquo;{addField.trim()}&rdquo; isn&rsquo;t a known schema field — the mapper will ignore it.
+            </span>
+          )}
+        </form>
+
+        {/* Browse + search */}
+        <div>
+          <div className="relative mb-2 max-w-xs">
+            <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search aliases or fields…"
+              className="w-full rounded border border-slate-200 py-1.5 pl-8 pr-2 text-sm focus:border-primary-400 focus:outline-none"
+            />
+          </div>
+          {entries.isLoading ? (
+            <LoadingBlock />
+          ) : rows.length === 0 ? (
+            <p className="py-6 text-center text-sm text-slate-400">No aliases match.</p>
+          ) : (
+            <div className="max-h-72 overflow-y-auto rounded-lg border border-slate-100">
+              <table className="w-full text-sm">
+                <thead className="sticky top-0 bg-slate-50">
+                  <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
+                    <th className="px-3 py-2">Alias</th>
+                    <th className="px-3 py-2">Field</th>
+                    <th className="px-3 py-2">Source</th>
+                    <th className="px-3 py-2 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={`${r.source}::${r.field_name}`} className="border-t border-slate-50">
+                      <td className="px-3 py-1.5 font-mono text-xs text-slate-700">{r.source}</td>
+                      <td className="px-3 py-1.5 text-slate-700">{r.field_name}</td>
+                      <td className="px-3 py-1.5">
+                        <Badge tone={r.builtin ? 'slate' : 'primary'}>{r.builtin ? 'built-in' : 'custom'}</Badge>
+                      </td>
+                      <td className="px-3 py-1.5 text-right">
+                        {r.builtin ? (
+                          <span className="text-xs text-slate-300">—</span>
+                        ) : (
+                          <button
+                            title="Remove alias"
+                            onClick={() => delM.mutate(r)}
+                            className="rounded p-1 text-rose-500 hover:bg-rose-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="mt-1 text-xs text-slate-400">
+            Showing {entries.data?.returned ?? 0} of {entries.data?.total ?? 0}. Built-ins are read-only; custom rows can be removed.
+          </p>
+        </div>
+
         <p className="text-xs text-slate-400">
-          Example row: <code className="rounded bg-slate-100 px-1">SEX,&quot;gender,patient_sex,gender_at_birth&quot;</code>
+          Bulk row example: <code className="rounded bg-slate-100 px-1">SEX,&quot;gender,patient_sex,gender_at_birth&quot;</code>
         </p>
       </CardBody>
     </Card>

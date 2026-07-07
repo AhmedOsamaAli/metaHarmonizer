@@ -293,3 +293,35 @@ export async function adminUploadAliases(file: File): Promise<AliasStatus> {
     form.append('file', file);
     return apiFetch<AliasStatus>('/admin/schema-aliases', { method: 'POST', body: form });
 }
+
+export interface AliasEntry {
+    source: string;
+    field_name: string;
+    builtin: boolean;
+}
+
+export async function adminSchemaFields(): Promise<{ fields: string[] }> {
+    return apiFetch<{ fields: string[] }>('/admin/schema-fields');
+}
+
+export async function adminListAliasEntries(
+    q = '',
+    limit = 500,
+): Promise<{ total: number; returned: number; entries: AliasEntry[] }> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (q) params.set('q', q);
+    return apiFetch(`/admin/schema-aliases/entries?${params}`);
+}
+
+export async function adminAddAlias(source: string, fieldName: string): Promise<{ ok: boolean }> {
+    return apiFetch('/admin/schema-aliases/entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source, field_name: fieldName }),
+    });
+}
+
+export async function adminDeleteAlias(source: string, fieldName: string): Promise<{ ok: boolean }> {
+    const params = new URLSearchParams({ source, field_name: fieldName });
+    return apiFetch(`/admin/schema-aliases/entry?${params}`, { method: 'DELETE' });
+}
