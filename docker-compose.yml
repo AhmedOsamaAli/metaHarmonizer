@@ -48,8 +48,12 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
+      # Load embedding models from the seeded caches only — never the network.
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
     volumes:
       - engine_cache:/root/.metaharmonizer
+      - hf_cache:/root/.cache/huggingface   # schema model (all-MiniLM-L6-v2), seeded offline
       - corpus_data:/app/data/corpus       # seeded ontology corpus (kb-import writes, api/worker read)
       - uploads:/app/data/uploads          # shared with the worker so queue mode can read uploads
     # Run migrations on startup, then serve (idempotent). Postgres is healthy
@@ -77,8 +81,12 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
+      # Load embedding models from the seeded caches only — never the network.
+      HF_HUB_OFFLINE: "1"
+      TRANSFORMERS_OFFLINE: "1"
     volumes:
       - engine_cache:/root/.metaharmonizer
+      - hf_cache:/root/.cache/huggingface   # schema model, same cache as the API
       - corpus_data:/app/data/corpus       # same corpus volume as the API
       - uploads:/app/data/uploads          # same volume as the API — reads the uploaded file
     # arq worker (Sprint 4). Set JOB_MODE=queue so the API enqueues here.
@@ -130,6 +138,7 @@ services:
       METAHARMONIZER_DATA_DIR: /app/data
     volumes:
       - engine_cache:/root/.metaharmonizer
+      - hf_cache:/root/.cache/huggingface   # seed the schema model into the shared HF cache
       - corpus_data:/app/data/corpus       # seed the corpus into the shared volume api/worker read
       - ./kb:/kb:ro
     command: ["sh", "-c", "python -m scripts.seed_kb /kb/${KB_ARCHIVE:-kb_offline_bundle.tar.gz} --force"]
@@ -157,5 +166,6 @@ volumes:
   redis_data:
   engine_cache:
   corpus_data:
+  hf_cache:
   web_dist:
   uploads:

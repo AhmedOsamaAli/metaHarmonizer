@@ -64,6 +64,37 @@ def _import_kb(kb_archive: Path, force: bool) -> None:
     subprocess.run(cmd, check=True)
 
 
+def _hf_hub_root() -> Path:
+    """The HuggingFace hub cache root to install the schema model into.
+    Honours ``HF_HOME``; falls back to ``~/.cache/huggingface``."""
+    if os.environ.get("HF_HOME"):
+        return Path(os.environ["HF_HOME"]) / "hub"
+    return Path.home() / ".cache" / "huggingface" / "hub"
+
+
+def _install_tree(src_root: Path, dst_root: Path, force: bool, *, label: str) -> None:
+    """Copy a bundled directory tree into ``dst_root``, preserving layout.
+    Existing files are kept unless ``--force`` (models are immutable, so a
+    present tree is normally already correct)."""
+    if not src_root.exists():
+        return
+    files = [p for p in src_root.rglob("*") if p.is_file()]
+    if not files:
+        return
+    copied = 0
+    for p in files:
+        dst = dst_root / p.relative_to(src_root)
+        if dst.exists() and not force:
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(p, dst)
+        copied += 1
+    if copied:
+        print(f"[seed] {label}: installed {copied} file(s) -> {dst_root}")
+    else:
+        print(f"[seed] {label}: already present at {dst_root} (use --force to overwrite)")
+
+
 def seed(bundle: Path, *, force: bool) -> int:
     if not bundle.exists():
         print(f"[seed] bundle not found: {bundle}", file=sys.stderr)
@@ -105,6 +136,15 @@ def seed(bundle: Path, *, force: bool) -> int:
                 _SCHEMA_CACHE_DEST.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src_cache, _SCHEMA_CACHE_DEST)
                 print(f"[seed] schema cache -> {_SCHEMA_CACHE_DEST}")
+
+        # Engine ontology models (e.g. sap-bert) -> MODEL_CACHE_DIR, so the
+        # ontology stage loads embeddings from disk under HF_HUB_OFFLINE=1.
+        from metaharmonizer._paths import MODEL_CACHE_DIR
+
+        _install_tree(tmp_path / "model_cache", MODEL_CACHE_DIR, force, label="model")
+
+        # Schema model (all-MiniLM-L6-v2) -> HuggingFace hub cache.
+        _install_tree(tmp_path / "hf_hub", _hf_hub_root(), force, label="hf-model")
 
     print("[seed] done — instance is seeded for offline operation.")
     return 0
