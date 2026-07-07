@@ -25,6 +25,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -171,6 +172,56 @@ class OntologyMapping(Base, TimestampMixin, OptimisticVersionMixin):
     reviewed_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
 
     __table_args__ = (Index("ix_ontology_mappings_study_id", "study_id"),)
+
+
+# Two-layer curation KB (ADR-0002 — learned curator decisions)
+class LearnedDecision(Base, TimestampMixin):
+    """Remembered curator decisions reused across studies.
+
+    A ``personal`` row applies only for its owning curator; a ``shared`` row
+    (admin-promoted, ``owner_id`` NULL) applies for everyone. When both match,
+    the personal row wins for that curator. ``source_key`` is a normalized
+    lookup key: the raw column name for ``kind='schema'`` and
+    ``'field_name::normalized_raw_value'`` for ``kind='ontology'``.
+    """
+
+    __tablename__ = "learned_decisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    scope: Mapped[str] = mapped_column(String(10), nullable=False)  # personal|shared
+    owner_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+    kind: Mapped[str] = mapped_column(String(10), nullable=False)  # schema|ontology
+    source_key: Mapped[str] = mapped_column(Text, nullable=False)
+    decision: Mapped[str] = mapped_column(String(10), nullable=False)  # accept|reject
+    target_field: Mapped[str | None] = mapped_column(Text)
+    target_term: Mapped[str | None] = mapped_column(Text)
+    target_id: Mapped[str | None] = mapped_column(String(100))
+    origin_study_id: Mapped[str | None] = mapped_column(String(64))
+    support_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
+    promoted_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+    __table_args__ = (
+        # Partial unique indexes: NULL owner_id on shared rows would defeat a
+        # plain composite UNIQUE (NULLs compare distinct), so scope them.
+        Index(
+            "uq_learned_personal", "owner_id", "kind", "source_key",
+            unique=True, postgresql_where=text("scope = 'personal'"),
+        ),
+        Index(
+            "uq_learned_shared", "kind", "source_key",
+            unique=True, postgresql_where=text("scope = 'shared'"),
+        ),
+        Index("ix_learned_decisions_lookup", "kind", "source_key"),
+        CheckConstraint("scope in ('personal','shared')", name="learned_scope_valid"),
+        CheckConstraint("kind in ('schema','ontology')", name="learned_kind_valid"),
+        CheckConstraint("decision in ('accept','reject')", name="learned_decision_valid"),
+    )
 
 
 # Append-only audit log (G4)

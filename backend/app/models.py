@@ -88,6 +88,7 @@ class OntologyEditRequest(BaseModel):
     new_term: str
     new_id: Optional[str] = None
     note: str = ""
+    remember: bool = False  # ADR-0002: remember for the curator's future studies
 
 
 class OntologySearchResult(BaseModel):

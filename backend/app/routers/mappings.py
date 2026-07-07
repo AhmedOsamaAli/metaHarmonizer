@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import actor_label as _actor_label, require_role
@@ -18,6 +18,7 @@ from app.models import (
     MappingOut,
 )
 from app.repositories import audit as audit_repo
+from app.repositories import learned_decisions as ld_repo
 from app.repositories import mappings as mappings_repo
 from app.repositories import studies as studies_repo
 from app.services import active_learning
@@ -56,6 +57,7 @@ async def get_review_queue(study_id: str, db: AsyncSession = Depends(get_db)):
 @router.post("/{mapping_id}/accept", response_model=MappingOut)
 async def accept_mapping(
     mapping_id: int,
+    remember: bool = Query(False, description="Remember this decision for the curator's future studies (ADR-0002)."),
     user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -79,6 +81,13 @@ async def accept_mapping(
         actor_id=user.id,
         curator=_actor_label(user),
     )
+    if remember and mapping.get("raw_column"):
+        await ld_repo.record_personal(
+            db, owner_id=user.id, kind="schema",
+            source_key=ld_repo.schema_key(mapping["raw_column"]),
+            decision="accept", target_field=mapping.get("matched_field"),
+            origin_study_id=mapping["study_id"],
+        )
     await db.commit()
     return result
 
@@ -117,6 +126,7 @@ async def reject_mapping(
 async def edit_mapping(
     mapping_id: int,
     body: MappingEditRequest,
+    remember: bool = Query(False, description="Remember this decision for the curator's future studies (ADR-0002)."),
     user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -145,6 +155,13 @@ async def edit_mapping(
         actor_id=user.id,
         curator=_actor_label(user),
     )
+    if remember and mapping.get("raw_column"):
+        await ld_repo.record_personal(
+            db, owner_id=user.id, kind="schema",
+            source_key=ld_repo.schema_key(mapping["raw_column"]),
+            decision="accept", target_field=body.new_field,
+            origin_study_id=mapping["study_id"],
+        )
     await db.commit()
     return result
 

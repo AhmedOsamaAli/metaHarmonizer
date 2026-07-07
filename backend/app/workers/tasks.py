@@ -194,7 +194,15 @@ async def run_harmonize(
                 await ontology_repo.insert_ontology_mappings(
                     session, study_id, onto_results
                 )
+            # Pre-apply the curator's remembered decisions (ADR-0002 read path).
+            await session.flush()
+            from app.services.learned_apply import apply_learned_decisions
+
+            n_kb = await apply_learned_decisions(session, study_id, owner_id)
             await session.commit()
+        if n_kb:
+            logger.info("kb: pre-applied %d learned decision(s) for study %s",
+                        n_kb, study_id)
 
         await _emit(study_id, stage="ontology", message="Resolving ontology terms", pct=90)
         await _set_status(study_id, "review")

@@ -13,6 +13,7 @@ from app.core.deps import actor_label as _actor_label, require_role
 from app.db.session import get_db
 from app.models import OntologyEditRequest, OntologyMappingOut, OntologySearchResult
 from app.repositories import audit as audit_repo
+from app.repositories import learned_decisions as ld_repo
 from app.repositories import ontology as ontology_repo
 from app.repositories import studies as studies_repo
 from app.services.harmonizer import ONTOLOGY_MAP, _STATIC_NCIT, _load_field_value_dict
@@ -207,6 +208,7 @@ async def suggest_ontology_terms(
 @router.post("/mappings/{mapping_id}/accept", response_model=OntologyMappingOut)
 async def accept_ontology_mapping(
     mapping_id: int,
+    remember: bool = Query(False, description="Remember this decision for the curator's future studies (ADR-0002)."),
     user=Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -226,6 +228,13 @@ async def accept_ontology_mapping(
         actor_id=user.id,
         curator=_actor_label(user),
     )
+    if remember and result.get("field_name") and result.get("raw_value"):
+        await ld_repo.record_personal(
+            db, owner_id=user.id, kind="ontology",
+            source_key=ld_repo.ontology_key(result["field_name"], result["raw_value"]),
+            decision="accept", target_term=result.get("ontology_term"),
+            target_id=result.get("ontology_id"), origin_study_id=result["study_id"],
+        )
     await db.commit()
     return result
 
@@ -298,5 +307,12 @@ async def edit_ontology_mapping(
         actor_id=user.id,
         curator=_actor_label(user),
     )
+    if body.remember and result.get("field_name") and result.get("raw_value"):
+        await ld_repo.record_personal(
+            db, owner_id=user.id, kind="ontology",
+            source_key=ld_repo.ontology_key(result["field_name"], result["raw_value"]),
+            decision="accept", target_term=body.new_term,
+            target_id=resolved_id, origin_study_id=result["study_id"],
+        )
     await db.commit()
     return result

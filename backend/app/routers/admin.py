@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import ForbiddenError, actor_label, require_role
@@ -20,6 +21,7 @@ from app.core.errors import NotFoundError
 from app.db.models import SchemaVersion, User
 from app.db.session import get_db
 from app.repositories import audit as audit_repo
+from app.repositories import learned_decisions as ld_repo
 from app.repositories import schema_versions as schema_repo
 from app.repositories import sessions as sessions_repo
 from app.repositories import users as users_repo
@@ -269,3 +271,50 @@ async def diff_schema_versions(
         "to": {"id": new.id, "label": new.label},
         **result,
     }
+
+
+# ── Two-layer curation KB promotion (ADR-0002, Q10 two-stage approval) ────────
+class PromoteRequest(BaseModel):
+    kind: str          # 'schema' | 'ontology'
+    source_key: str
+    decision: str      # 'accept' | 'reject'
+    target_field: str | None = None
+    target_term: str | None = None
+    target_id: str | None = None
+
+
+@router.get("/learned-decisions/candidates")
+async def learned_promotion_candidates(
+    min_support: int = 1,
+    _admin: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Promotion queue: personal decisions with agreement analytics (distinct
+    curators, total support), excluding entries already promoted to shared."""
+    candidates = await ld_repo.promotion_candidates(db, min_support=min_support)
+    return {"count": len(candidates), "candidates": candidates}
+
+
+@router.post("/learned-decisions/promote")
+async def promote_learned_decision(
+    body: PromoteRequest,
+    admin: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Promote a personal decision to the shared layer so it applies for every
+    curator. Personal rows are left intact and keep overriding the shared
+    baseline for their owner (ADR-0002 precedence)."""
+    if body.kind not in ("schema", "ontology") or body.decision not in ("accept", "reject"):
+        raise HTTPException(status_code=422, detail="Invalid kind or decision.")
+    row = await ld_repo.promote(
+        db, kind=body.kind, source_key=body.source_key, decision=body.decision,
+        admin_id=admin.id, target_field=body.target_field,
+        target_term=body.target_term, target_id=body.target_id,
+    )
+    await audit_repo.add_audit_entry(
+        db, study_id=None, action="kb_promote",
+        new_value=f"{body.kind}:{body.source_key}",
+        actor_id=admin.id, curator=actor_label(admin),
+    )
+    await db.commit()
+    return {"promoted": row}
