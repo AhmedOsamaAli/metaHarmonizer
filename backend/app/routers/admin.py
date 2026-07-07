@@ -9,6 +9,8 @@ routes remain reachable for local development.
 
 from __future__ import annotations
 
+import io
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,6 +33,10 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
 # New schema CSVs are stored alongside the seed curated file.
 SCHEMA_STORE = Path(__file__).resolve().parent.parent.parent / "data" / "schema" / "versions"
+# Admin-uploaded column-name alias dictionary (engine long format), read by the
+# engine adapter when constructing the schema mapper.
+ALIAS_STORE = Path(__file__).resolve().parent.parent.parent / "data" / "schema" / "aliases"
+ALIAS_FILE = ALIAS_STORE / "current.alias.csv"
 
 
 @router.get("/users", response_model=list[UserOut])
@@ -219,6 +225,74 @@ async def upload_schema_version(
     )
     await db.commit()
     return {"id": version.id, "label": version.label, "is_current": version.is_current}
+
+
+@router.get("/schema-aliases")
+async def get_schema_aliases(_admin: User = Depends(require_role("admin"))) -> dict:
+    """Status of the current column-name alias dictionary."""
+    if not ALIAS_FILE.exists():
+        return {"present": False, "alias_count": 0, "field_count": 0}
+    import pandas as pd
+
+    df = pd.read_csv(ALIAS_FILE)
+    return {
+        "present": True,
+        "alias_count": int(len(df)),
+        "field_count": int(df["field_name"].nunique()) if "field_name" in df else 0,
+    }
+
+
+@router.post("/schema-aliases", status_code=201)
+async def upload_schema_aliases(
+    file: UploadFile = File(...),
+    admin: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Upload a column-name alias dictionary as **two columns**: the canonical
+    field and a comma- (or pipe-) separated list of aliases. Converted to the
+    engine's long ``source,field_name`` format and applied by the schema mapper
+    on the next harmonize. Replaces any existing alias dictionary."""
+    if not file.filename or not file.filename.lower().endswith((".csv", ".tsv", ".txt")):
+        raise HTTPException(status_code=400, detail="A .csv file is required.")
+
+    import pandas as pd
+
+    raw = await file.read()
+    try:
+        df = pd.read_csv(io.BytesIO(raw))
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"Could not parse CSV: {exc}")
+    if df.shape[1] < 2:
+        raise HTTPException(status_code=422, detail="Expected two columns: field, aliases.")
+
+    field_col, alias_col = df.columns[0], df.columns[1]
+    rows: list[tuple[str, str]] = []
+    for _, r in df.iterrows():
+        field = str(r[field_col]).strip()
+        if not field or field.lower() == "nan":
+            continue
+        for alias in re.split(r"[,|;]", str(r[alias_col] or "")):
+            alias = alias.strip()
+            if alias and alias.lower() != "nan":
+                rows.append((alias, field))
+    if not rows:
+        raise HTTPException(status_code=422, detail="No aliases found in the file.")
+
+    ALIAS_STORE.mkdir(parents=True, exist_ok=True)
+    out = pd.DataFrame(rows, columns=["source", "field_name"]).drop_duplicates()
+    out.to_csv(ALIAS_FILE, index=False)
+
+    await audit_repo.add_audit_entry(
+        db, study_id=None, action="schema_alias_upload",
+        new_value=f"{len(out)} aliases / {out['field_name'].nunique()} fields",
+        actor_id=admin.id, curator=actor_label(admin),
+    )
+    await db.commit()
+    return {
+        "present": True,
+        "alias_count": int(len(out)),
+        "field_count": int(out["field_name"].nunique()),
+    }
 
 
 @router.post("/schema-versions/{version_id}/promote")

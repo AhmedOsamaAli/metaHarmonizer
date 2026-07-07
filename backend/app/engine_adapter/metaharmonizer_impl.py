@@ -58,6 +58,21 @@ class MetaHarmonizerAdapter:
         self._schema = os.getenv("ENGINE_TARGET_SCHEMA", "cbio")
 
     # ------------------------------------------------------------------
+    @staticmethod
+    def _alias_dict_path() -> str | None:
+        """Admin-uploaded column-name alias dictionary, if present.
+
+        Written by ``POST /admin/schema-aliases`` in the engine's long
+        ``source,field_name`` format. Overrides the preset's bundled aliases.
+        """
+        from pathlib import Path
+
+        p = (
+            Path(__file__).resolve().parents[2]
+            / "data" / "schema" / "aliases" / "current.alias.csv"
+        )
+        return str(p) if p.exists() else None
+
     @lru_cache(maxsize=8)
     def _engine_for(self, csv_path: str):
         pkg = _require_pkg()
@@ -70,6 +85,7 @@ class MetaHarmonizerAdapter:
             self._schema,
             mode=self._mode,
             top_k=self._top_k,
+            alias_dict_path=self._alias_dict_path(),
         )
 
     # ------------------------------------------------------------------
