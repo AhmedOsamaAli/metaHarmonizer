@@ -16,7 +16,7 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 import app.db.session as db_session
-from app.db.models import Mapping, OntologyMapping, Study, User
+from app.db.models import LearnedDecision, Mapping, OntologyMapping, Study, User
 from app.repositories import learned_decisions as ld_repo
 from app.services.learned_apply import apply_learned_decisions
 
@@ -152,3 +152,37 @@ async def test_apply_learned_decisions_prefills_pending(kb_db):
         )).scalar_one()
         assert o.status == "accepted"
         assert o.curator_id == "UBERON:0001988"
+
+
+async def test_concurrent_promote_is_idempotent(kb_db):
+    """Two admins promoting the same candidate at once must not create a
+    duplicate shared row — the partial unique index + INSERT..ON CONFLICT DO
+    UPDATE make promotion an atomic upsert (no explicit locking needed)."""
+    import asyncio
+
+    async with kb_db() as s:
+        admin_id = await _mk_user(s, f"cadm_{uuid.uuid4().hex[:6]}@example.com")
+        await s.commit()
+
+    key = f"race::{uuid.uuid4().hex[:8]}"
+
+    async def promote_once():
+        async with kb_db() as s:
+            await ld_repo.promote(
+                s, kind="ontology", source_key=key, decision="accept",
+                admin_id=admin_id, target_term="feces", target_id="UBERON:0001988",
+            )
+            await s.commit()
+
+    # Fire several concurrent promotions of the *same* candidate.
+    await asyncio.gather(*[promote_once() for _ in range(5)])
+
+    async with kb_db() as s:
+        n = (await s.execute(
+            sa.select(sa.func.count()).select_from(LearnedDecision).where(
+                LearnedDecision.scope == "shared",
+                LearnedDecision.kind == "ontology",
+                LearnedDecision.source_key == key,
+            )
+        )).scalar_one()
+    assert n == 1  # exactly one shared row — no duplicate despite the race

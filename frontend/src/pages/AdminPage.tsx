@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2, Download } from 'lucide-react';
+import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2, Download, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
@@ -541,6 +541,18 @@ function LearnedDecisionsCard() {
         icon={<BrainCircuit className="h-4 w-4" />}
         title="Learned decisions — promotion queue"
         description="Curators' remembered decisions. Promote one to the shared layer to apply it for every curator on future studies (two-stage approval)."
+        action={
+          <button
+            type="button"
+            onClick={() => candidates.refetch()}
+            disabled={candidates.isFetching}
+            className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            title="Refresh the queue and agreement stats (another admin may have promoted something)"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${candidates.isFetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        }
       />
       <CardBody>
         {candidates.isLoading ? (
