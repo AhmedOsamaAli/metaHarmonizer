@@ -50,6 +50,7 @@ services:
       METAHARMONIZER_DATA_DIR: /app/data
     volumes:
       - engine_cache:/root/.metaharmonizer
+      - corpus_data:/app/data/corpus       # seeded ontology corpus (kb-import writes, api/worker read)
       - uploads:/app/data/uploads          # shared with the worker so queue mode can read uploads
     # Run migrations on startup, then serve (idempotent). Postgres is healthy
     # via depends_on, so a compose-based run needs no separate migrate step.
@@ -78,6 +79,7 @@ services:
       METAHARMONIZER_DATA_DIR: /app/data
     volumes:
       - engine_cache:/root/.metaharmonizer
+      - corpus_data:/app/data/corpus       # same corpus volume as the API
       - uploads:/app/data/uploads          # same volume as the API — reads the uploaded file
     # arq worker (Sprint 4). Set JOB_MODE=queue so the API enqueues here.
     # Scale concurrency with `docker compose up --scale worker=N`.
@@ -122,8 +124,13 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     profiles: ["kb"]
+    environment:
+      # Match the api/worker data root so seed_kb installs the corpus where they
+      # read it (/app/data/corpus), not the engine's default (~/.metaharmonizer).
+      METAHARMONIZER_DATA_DIR: /app/data
     volumes:
       - engine_cache:/root/.metaharmonizer
+      - corpus_data:/app/data/corpus       # seed the corpus into the shared volume api/worker read
       - ./kb:/kb:ro
     command: ["sh", "-c", "python -m scripts.seed_kb /kb/${KB_ARCHIVE:-kb_offline_bundle.tar.gz} --force"]
     restart: "no"
@@ -149,5 +156,6 @@ volumes:
   pg_data:
   redis_data:
   engine_cache:
+  corpus_data:
   web_dist:
   uploads:
