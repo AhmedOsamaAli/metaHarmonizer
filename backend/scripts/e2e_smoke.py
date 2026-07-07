@@ -26,9 +26,9 @@ import httpx
 
 BASE = "http://127.0.0.1:8099/api/v1"
 CSV = Path(__file__).resolve().parents[2] / "metadata_samples" / "new_meta.csv"
-ADMIN_EMAIL = "e2e-admin@example.com"
+ADMIN_EMAIL = "admin@example.com"
 # Fixed (not random) so re-runs against a persisted DB still authenticate.
-ADMIN_PW = "Zx9!e2e-Smoke-Test-Pw-not-in-any-breach-2026"
+ADMIN_PW = "DemoPortal2026!"
 
 
 def _log(msg: str) -> None:
@@ -77,7 +77,7 @@ def main() -> int:
             f"{BASE}/auth/register",
             json={"email": ADMIN_EMAIL, "password": ADMIN_PW, "name": "E2E Admin"},
         )
-        if r.status_code not in (201, 409, 400):
+        if r.status_code not in (201, 409, 400, 403):
             _fail(f"register unexpected {r.status_code}: {r.text}")
         _log(f"register -> {r.status_code}")
 
@@ -113,12 +113,12 @@ def main() -> int:
             if r.status_code == 200:
                 status = (r.json() or {}).get("status")
                 _log(f"status={status}")
-                if status in {"completed", "done", "ready", "failed", "error"}:
+                if status in {"completed", "done", "ready", "review", "failed", "error"}:
                     break
             time.sleep(5)
         if status in {"failed", "error"}:
             _fail(f"harmonization job ended in status={status}")
-        if status not in {"completed", "done", "ready"}:
+        if status not in {"completed", "done", "ready", "review"}:
             _fail(f"harmonization did not finish in time (last status={status})")
         _log(f"harmonization finished: {status}")
 

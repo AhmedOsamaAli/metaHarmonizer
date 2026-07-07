@@ -12,6 +12,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,25 @@ from pathlib import Path
 
 _BACKEND = Path(__file__).resolve().parents[1]
 _SCHEMA_CACHE_DEST = _BACKEND / "data" / "nci_schema_cache.json"
+
+
+def _align_data_dir_with_adapter() -> None:
+    """Point ``METAHARMONIZER_DATA_DIR`` at ``backend/data`` when unset.
+
+    Must mirror ``engine_adapter.metaharmonizer_impl._ensure_upstream_data_dir``:
+    the running server relocates the engine's data root to ``backend/data`` when
+    the bundled schema files live there, which also moves
+    ``corpus/retrieved_ontologies/``. If seeding used the engine's *default*
+    root (``~/.metaharmonizer``) the corpus would land where the server never
+    looks, and the first harmonization would rebuild it from the network. Set
+    the same env var here **before** importing ``metaharmonizer._paths`` so the
+    corpus is installed where the server actually reads it.
+    """
+    if os.environ.get("METAHARMONIZER_DATA_DIR"):
+        return
+    backend_data = _BACKEND / "data"
+    if (backend_data / "schema" / "ncit_descendants.json").exists():
+        os.environ["METAHARMONIZER_DATA_DIR"] = str(backend_data)
 
 
 def _safe_extract(tar: tarfile.TarFile, dest: Path) -> None:
@@ -49,6 +69,7 @@ def seed(bundle: Path, *, force: bool) -> int:
         print(f"[seed] bundle not found: {bundle}", file=sys.stderr)
         return 1
 
+    _align_data_dir_with_adapter()
     from metaharmonizer._paths import RETRIEVED_ONTOLOGIES_DIR
 
     with tempfile.TemporaryDirectory() as tmp:

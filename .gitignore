@@ -48,6 +48,9 @@ backend/data/nci_cache.json
 backend/data/nci_schema_cache.json
 !backend/data/uploads/.gitkeep
 
+# Seeded ontology corpus (large; installed by scripts.seed_kb from the offline bundle)
+backend/data/corpus/
+
 # Generated evaluation outputs (timestamped runs)
 backend/data/schema_mapping_eval/*_s[0-9]_*_manual_*.csv
 
