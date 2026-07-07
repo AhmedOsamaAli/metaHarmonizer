@@ -18,6 +18,7 @@ Exit code 0 = every stage passed; non-zero = a stage failed (details printed).
 
 from __future__ import annotations
 
+import os
 import sys
 import time
 from pathlib import Path
@@ -25,7 +26,9 @@ from pathlib import Path
 import httpx
 
 BASE = "http://127.0.0.1:8099/api/v1"
-CSV = Path(__file__).resolve().parents[2] / "metadata_samples" / "new_meta.csv"
+# Default sample; override with E2E_CSV to stress-test other/bigger datasets.
+_DEFAULT_CSV = Path(__file__).resolve().parents[2] / "metadata_samples" / "new_meta.csv"
+CSV = Path(os.getenv("E2E_CSV", str(_DEFAULT_CSV)))
 ADMIN_EMAIL = "admin@example.com"
 # Fixed (not random) so re-runs against a persisted DB still authenticate.
 ADMIN_PW = "DemoPortal2026!"
