@@ -14,6 +14,7 @@ import io
 import json
 import re
 import zipfile
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -688,6 +689,61 @@ async def export_labeled_dataset(
     writer = csv.DictWriter(buf, fieldnames=LABELED_FIELDNAMES, lineterminator="\n")
     writer.writeheader()
     for r in rows:
+        writer.writerow(r)
+    return buf.getvalue()
+
+
+# Global labeled dataset (G9/U16 — nightly corpus of every confirmed mapping)
+
+GLOBAL_LABELED_FIELDNAMES = ["study_id", *LABELED_FIELDNAMES]
+
+
+async def _load_study_raw_df(study: dict[str, Any]) -> pd.DataFrame:
+    """Best-effort load of a study's uploaded file; empty frame if it's gone
+    (sample-value context is then omitted, but the confirmed labels still ship)."""
+    from app.core.storage import get_storage
+
+    key = study.get("file_path")
+    storage = get_storage()
+    if not key or not storage.exists(key):
+        return pd.DataFrame()
+    sep = "\t" if Path(key).suffix.lower() in (".tsv", ".txt") else ","
+    try:
+        with storage.local(key) as local_csv:
+            return pd.read_csv(local_csv, sep=sep, low_memory=False)
+    except Exception:  # noqa: BLE001 — a broken file must not abort the nightly dump
+        return pd.DataFrame()
+
+
+async def export_all_labeled(db: AsyncSession, fmt: str = "csv") -> str:
+    """Every study's curator-confirmed mappings as one labeled dataset (G9/U16).
+
+    Same row shape as the per-study export, prefixed with ``study_id``. Only
+    accepted decisions are emitted. Per-study failures are skipped so one bad
+    study can't abort the whole corpus."""
+    studies = await studies_repo.list_studies(db, owner_id=None)
+    all_rows: list[dict[str, Any]] = []
+    for study in studies:
+        sid = study.get("id")
+        if not sid:
+            continue
+        try:
+            raw_df = await _load_study_raw_df(study)
+            rows = await _labeled_rows(db, sid, raw_df)
+        except Exception:  # noqa: BLE001
+            continue
+        for r in rows:
+            all_rows.append({"study_id": sid, **r})
+
+    if fmt == "jsonl":
+        return "\n".join(json.dumps(r, default=str) for r in all_rows) + (
+            "\n" if all_rows else ""
+        )
+
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=GLOBAL_LABELED_FIELDNAMES, lineterminator="\n")
+    writer.writeheader()
+    for r in all_rows:
         writer.writerow(r)
     return buf.getvalue()
 

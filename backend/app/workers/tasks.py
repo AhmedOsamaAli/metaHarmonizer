@@ -271,3 +271,32 @@ def _max_attempts() -> int:
     from app.core.settings import settings
 
     return settings.job_max_attempts
+
+
+async def nightly_labeled_export() -> dict:
+    """Write the global labeled dataset (G9/U16) to ``backend/data/exports/labeled/``.
+
+    Dumps every study's curator-confirmed schema + ontology mappings as a dated
+    CSV and JSONL plus a stable ``labeled-latest.*`` pointer, so a consumer can
+    pull the confirmed-mapping corpus without recomputing. Runs nightly via the
+    arq cron; safe to invoke manually. Never raises — a failure is logged."""
+    import datetime as _dt
+    from pathlib import Path
+
+    from app.services.exporter import export_all_labeled
+
+    out_dir = Path(__file__).resolve().parents[2] / "data" / "exports" / "labeled"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stamp = _dt.date.today().isoformat()
+    written: dict[str, str] = {}
+    try:
+        async with SessionLocal() as session:
+            for ext in ("csv", "jsonl"):
+                content = await export_all_labeled(session, ext)
+                (out_dir / f"labeled-{stamp}.{ext}").write_text(content, encoding="utf-8")
+                (out_dir / f"labeled-latest.{ext}").write_text(content, encoding="utf-8")
+                written[ext] = str(out_dir / f"labeled-{stamp}.{ext}")
+        logger.info("nightly_labeled_export wrote %s", written)
+    except Exception:  # noqa: BLE001 — a scheduled job must not crash the worker
+        logger.exception("nightly_labeled_export failed")
+    return written

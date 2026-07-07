@@ -14,9 +14,12 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.core.deps import require_role
 from app.core.storage import get_storage
+from app.db.models import User
 from app.repositories import studies as studies_repo
 from app.services.exporter import (
+    export_all_labeled,
     export_cbioportal,
     export_cbioportal_study,
     export_harmonized_csv,
@@ -26,6 +29,29 @@ from app.services.exporter import (
 )
 
 router = APIRouter(prefix="/api/v1/export", tags=["export"])
+
+
+@router.get("/labeled")
+async def export_all_labeled_endpoint(
+    format: str = "csv",
+    _user: User = Depends(require_role("curator")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Pull the global labeled dataset — every study's curator-confirmed schema
+    and ontology mappings as one corpus (G9/U16). ``format=csv`` (default) or
+    ``jsonl``. This is the same artifact the nightly job persists.
+    """
+    fmt = format.lower()
+    if fmt not in ("csv", "jsonl"):
+        raise HTTPException(status_code=400, detail="format must be 'csv' or 'jsonl'")
+    content = await export_all_labeled(db, fmt)
+    media = "text/csv" if fmt == "csv" else "application/x-ndjson"
+    ext = "csv" if fmt == "csv" else "jsonl"
+    return PlainTextResponse(
+        content=content,
+        media_type=media,
+        headers={"Content-Disposition": f"attachment; filename=labeled_all.{ext}"},
+    )
 
 
 async def _load_raw_df(

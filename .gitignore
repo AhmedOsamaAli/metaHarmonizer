@@ -51,6 +51,9 @@ backend/data/nci_schema_cache.json
 # Seeded ontology corpus (large; installed by scripts.seed_kb from the offline bundle)
 backend/data/corpus/
 
+# Nightly labeled-dataset dumps (generated artifacts, G9/U16)
+backend/data/exports/
+
 # Generated evaluation outputs (timestamped runs)
 backend/data/schema_mapping_eval/*_s[0-9]_*_manual_*.csv
 

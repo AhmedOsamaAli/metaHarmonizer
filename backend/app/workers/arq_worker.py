@@ -16,10 +16,11 @@ from __future__ import annotations
 
 import logging
 
+from arq import cron
 from arq.connections import RedisSettings
 
 from app.core.settings import settings
-from app.workers.tasks import run_harmonize
+from app.workers.tasks import nightly_labeled_export, run_harmonize
 
 logger = logging.getLogger("app.worker")
 
@@ -27,6 +28,11 @@ logger = logging.getLogger("app.worker")
 async def harmonize_job(ctx, **kwargs) -> None:
     """arq entry point — delegates to the shared task implementation."""
     await run_harmonize(**kwargs)
+
+
+async def nightly_labeled_export_job(ctx) -> None:
+    """Cron entry point — persist the global labeled dataset (G9/U16)."""
+    await nightly_labeled_export()
 
 
 async def _startup(ctx) -> None:
@@ -42,6 +48,10 @@ async def _startup(ctx) -> None:
 class WorkerSettings:
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     functions = [harmonize_job]
+    cron_jobs = [
+        # Nightly labeled-dataset dump (G9/U16), 02:30 server time.
+        cron(nightly_labeled_export_job, hour=2, minute=30, run_at_startup=False),
+    ]
     on_startup = _startup
     max_jobs = 4                         # concurrent jobs per worker process
     job_timeout = settings.job_hard_timeout_sec
