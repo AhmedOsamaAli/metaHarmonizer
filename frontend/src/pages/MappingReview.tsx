@@ -24,7 +24,9 @@ import PageHeader from '../components/ui/PageHeader';
 import StudyPicker from '../components/StudyPicker';
 import StudyGate, { isStudyReady } from '../components/StudyGate';
 import CompleteStudyButton from '../components/CompleteStudyButton';
+import RememberToggle from '../components/RememberToggle';
 import { useStudies } from '../hooks/queries';
+import { useRememberDecisions } from '../hooks/useRememberDecisions';
 import {
   getStudyMappings,
   acceptMapping,
@@ -181,6 +183,8 @@ export default function MappingReview() {
   const showToast = (message: string, type: 'success' | 'error' = 'success') =>
     type === 'success' ? toast.success(message) : toast.error(message);
 
+  const [remember] = useRememberDecisions();
+
   // Status filter
 
   // Filter + sort
@@ -245,7 +249,7 @@ export default function MappingReview() {
 
   const handleAccept = async (id: number) => {
     try {
-      const m = await acceptMapping(id);
+      const m = await acceptMapping(id, remember);
       updateMapping(m);
       showToast(`Accepted: ${m.raw_column} → ${m.curator_field || m.matched_field}`);
     } catch {
@@ -264,7 +268,7 @@ export default function MappingReview() {
   const handleEditSubmit = async () => {
     if (editingId === null) return;
     try {
-      const m = await editMapping(editingId, editField, editNote);
+      const m = await editMapping(editingId, editField, editNote, remember);
       updateMapping(m);
       showToast(`Edited: ${m.raw_column} → ${editField}`);
     } catch {
@@ -444,21 +448,24 @@ export default function MappingReview() {
       <PageHeader
         title="Schema mapping review"
         actions={
-          selected.size > 0 ? (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-600">{selected.size} selected</span>
-              <button onClick={() => handleBatch('accepted')} className="btn bg-emerald-600 text-white btn-sm hover:bg-emerald-700">
-                <Check className="h-3.5 w-3.5" />
-                Accept all
-              </button>
-              <button onClick={() => handleBatch('rejected')} className="btn-danger btn-sm">
-                <X className="h-3.5 w-3.5" />
-                Reject all
-              </button>
-            </div>
-          ) : selectedId ? (
-            <CompleteStudyButton studyId={selectedId} studyName={selectedStudy?.name} size="sm" redirectTo="/review" />
-          ) : undefined
+          <div className="flex items-center gap-2">
+            <RememberToggle />
+            {selected.size > 0 ? (
+              <>
+                <span className="text-sm font-medium text-slate-600">{selected.size} selected</span>
+                <button onClick={() => handleBatch('accepted')} className="btn bg-emerald-600 text-white btn-sm hover:bg-emerald-700">
+                  <Check className="h-3.5 w-3.5" />
+                  Accept all
+                </button>
+                <button onClick={() => handleBatch('rejected')} className="btn-danger btn-sm">
+                  <X className="h-3.5 w-3.5" />
+                  Reject all
+                </button>
+              </>
+            ) : selectedId ? (
+              <CompleteStudyButton studyId={selectedId} studyName={selectedStudy?.name} size="sm" redirectTo="/review" />
+            ) : null}
+          </div>
         }
       />
 

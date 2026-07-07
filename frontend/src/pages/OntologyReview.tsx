@@ -28,12 +28,14 @@ import {
   suggestOntologyTerms,
 } from '../api/client';
 import { useStudies } from '../hooks/queries';
+import { useRememberDecisions } from '../hooks/useRememberDecisions';
 import ConfidenceBadge from '../components/ConfidenceBadge';
 import StatusBadge from '../components/StatusBadge';
 import PageHeader from '../components/ui/PageHeader';
 import StudyPicker from '../components/StudyPicker';
 import StudyGate, { isStudyReady } from '../components/StudyGate';
 import CompleteStudyButton from '../components/CompleteStudyButton';
+import RememberToggle from '../components/RememberToggle';
 import { Card, CardBody } from '../components/ui/Card';
 import type { OntologyMapping, OntologySearchResult } from '../api/types';
 
@@ -87,9 +89,11 @@ export default function OntologyReview() {
   const patch = (updated: OntologyMapping) =>
     setOntoMappings((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
 
+  const [remember] = useRememberDecisions();
+
   const handleAccept = async (id: number) => {
     setBusy((b) => ({ ...b, [id]: true }));
-    try { patch(await acceptOntologyMapping(id)); } catch { /* ignore */ }
+    try { patch(await acceptOntologyMapping(id, remember)); } catch { /* ignore */ }
     finally { setBusy((b) => ({ ...b, [id]: false })); }
   };
 
@@ -120,7 +124,11 @@ export default function OntologyReview() {
       return nb;
     });
     try {
-      const updated = await Promise.all(ids.map((id) => editOntologyMapping(id, term, ontId)));
+      // All ids share the same (field, value) → same learned-decision key, so
+      // only remember once (idx 0) to avoid inflating the support_count.
+      const updated = await Promise.all(
+        ids.map((id, idx) => editOntologyMapping(id, term, ontId, remember && idx === 0)),
+      );
       updated.forEach(patch);
       // Clear any suggestion entries for these rows.
       setSuggestions((prev) => {
@@ -453,7 +461,14 @@ export default function OntologyReview() {
       <PageHeader
         title="Ontology review"
         description="Curate the controlled-vocabulary terms the engine assigned to each categorical value."
-        actions={selectedId ? <CompleteStudyButton studyId={selectedId} studyName={selectedStudy?.name} size="sm" redirectTo="/ontology" /> : undefined}
+        actions={
+          <div className="flex items-center gap-2">
+            <RememberToggle />
+            {selectedId ? (
+              <CompleteStudyButton studyId={selectedId} studyName={selectedStudy?.name} size="sm" redirectTo="/ontology" />
+            ) : null}
+          </div>
+        }
       />
 
       {loading ? (

@@ -243,3 +243,53 @@ export async function adminDiffSchemaVersions(
     const params = new URLSearchParams({ from_id: String(fromId), to_id: String(toId) });
     return apiFetch<SchemaDiff>(`/admin/schema-versions/diff?${params}`);
 }
+
+// ── Learned-decision KB (ADR-0002) promotion queue ───────────────────────────
+export interface LearnedCandidate {
+    kind: 'schema' | 'ontology';
+    source_key: string;
+    decision: 'accept' | 'reject';
+    target_field: string | null;
+    target_term: string | null;
+    target_id: string | null;
+    curators: number;
+    support: number;
+}
+
+export async function adminListLearnedCandidates(
+    minSupport = 1,
+): Promise<{ count: number; candidates: LearnedCandidate[] }> {
+    return apiFetch(`/admin/learned-decisions/candidates?min_support=${minSupport}`);
+}
+
+export async function adminPromoteLearned(c: {
+    kind: string;
+    source_key: string;
+    decision: string;
+    target_field?: string | null;
+    target_term?: string | null;
+    target_id?: string | null;
+}): Promise<{ promoted: unknown }> {
+    return apiFetch('/admin/learned-decisions/promote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(c),
+    });
+}
+
+// ── Column-name alias dictionary (schema-mapper aliases) ─────────────────────
+export interface AliasStatus {
+    present: boolean;
+    alias_count: number;
+    field_count: number;
+}
+
+export async function adminGetAliases(): Promise<AliasStatus> {
+    return apiFetch<AliasStatus>('/admin/schema-aliases');
+}
+
+export async function adminUploadAliases(file: File): Promise<AliasStatus> {
+    const form = new FormData();
+    form.append('file', file);
+    return apiFetch<AliasStatus>('/admin/schema-aliases', { method: 'POST', body: form });
+}

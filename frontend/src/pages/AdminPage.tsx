@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare } from 'lucide-react';
+import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
@@ -19,8 +19,12 @@ import {
   adminSetRole,
   adminUploadSchemaVersion,
   adminDiffSchemaVersions,
+  adminListLearnedCandidates,
+  adminPromoteLearned,
+  adminGetAliases,
+  adminUploadAliases,
 } from '../api/auth';
-import type { SchemaDiff } from '../api/auth';
+import type { SchemaDiff, LearnedCandidate } from '../api/auth';
 import type { Role, User } from '../api/types';
 
 const ROLES: Role[] = ['curator', 'admin'];
@@ -243,6 +247,8 @@ export default function AdminPage() {
       </Card>
 
       <SchemaVersionsCard />
+      <AliasDictCard />
+      <LearnedDecisionsCard />
     </div>
   );
 }
@@ -490,6 +496,179 @@ function SchemaVersionsCard() {
             )}
           </div>
         )}
+      </CardBody>
+    </Card>
+  );
+}
+
+// Two-layer curation KB (ADR-0002): shared promotion queue. All admins see the
+// same queue; promoting a personal decision publishes it to the shared layer so
+// it applies for every curator. Idempotent, so concurrent admins are safe.
+function LearnedDecisionsCard() {
+  const qc = useQueryClient();
+  const candidates = useQuery({
+    queryKey: ['admin', 'learned-candidates'],
+    queryFn: () => adminListLearnedCandidates(1),
+  });
+
+  const promoteM = useMutation({
+    mutationFn: (c: LearnedCandidate) =>
+      adminPromoteLearned({
+        kind: c.kind,
+        source_key: c.source_key,
+        decision: c.decision,
+        target_field: c.target_field,
+        target_term: c.target_term,
+        target_id: c.target_id,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin', 'learned-candidates'] });
+      toast.success('Promoted to the shared knowledge base');
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Could not promote decision'),
+  });
+
+  const rows = candidates.data?.candidates ?? [];
+
+  return (
+    <Card>
+      <CardHeader
+        icon={<BrainCircuit className="h-4 w-4" />}
+        title="Learned decisions — promotion queue"
+        description="Curators' remembered decisions. Promote one to the shared layer to apply it for every curator on future studies (two-stage approval)."
+      />
+      <CardBody>
+        {candidates.isLoading ? (
+          <LoadingBlock />
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon={<BrainCircuit className="h-6 w-6" />}
+            title="Nothing to promote yet"
+            description="Personal decisions curators choose to remember will appear here with agreement analytics."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+                  <th className="px-2 py-2">Kind</th>
+                  <th className="px-2 py-2">Key</th>
+                  <th className="px-2 py-2">Decision → target</th>
+                  <th className="px-2 py-2 text-center">Curators</th>
+                  <th className="px-2 py-2 text-center">Confirmations</th>
+                  <th className="px-2 py-2 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((c) => (
+                  <tr key={`${c.kind}:${c.source_key}`} className="border-b border-slate-50">
+                    <td className="px-2 py-2">
+                      <Badge tone={c.kind === 'schema' ? 'primary' : 'slate'}>{c.kind}</Badge>
+                    </td>
+                    <td className="px-2 py-2 font-mono text-xs text-slate-600">{c.source_key}</td>
+                    <td className="px-2 py-2 text-slate-700">
+                      {c.decision === 'reject'
+                        ? 'reject'
+                        : `accept → ${c.target_field ?? c.target_term ?? ''}${
+                            c.target_id ? ` (${c.target_id})` : ''
+                          }`}
+                    </td>
+                    <td className="px-2 py-2 text-center font-semibold text-slate-700">{c.curators}</td>
+                    <td className="px-2 py-2 text-center text-slate-600">{c.support}</td>
+                    <td className="px-2 py-2 text-right">
+                      <Button
+                        size="sm"
+                        loading={promoteM.isPending && promoteM.variables?.source_key === c.source_key}
+                        onClick={() => promoteM.mutate(c)}
+                        icon={<CheckCheck className="h-3.5 w-3.5" />}
+                      >
+                        Promote
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+// Column-name alias dictionary: admins upload a two-column CSV (field, comma-
+// separated aliases) that teaches the schema mapper the nicknames for each
+// field. Converted server-side to the engine's long format and applied on the
+// next harmonize.
+function AliasDictCard() {
+  const qc = useQueryClient();
+  const status = useQuery({ queryKey: ['admin', 'schema-aliases'], queryFn: adminGetAliases });
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+
+  const uploadM = useMutation({
+    mutationFn: () => adminUploadAliases(file!),
+    onSuccess: (s) => {
+      qc.invalidateQueries({ queryKey: ['admin', 'schema-aliases'] });
+      toast.success(`Loaded ${s.alias_count} aliases across ${s.field_count} fields`);
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = '';
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Could not upload aliases'),
+  });
+
+  return (
+    <Card>
+      <CardHeader
+        icon={<Layers className="h-4 w-4" />}
+        title="Column-name aliases"
+        description="Two columns: a canonical field and a comma-separated list of its aliases (nicknames). Teaches the schema mapper to recognise messy headers. Applied on the next harmonize."
+      />
+      <CardBody className="space-y-3">
+        <div className="text-sm text-slate-600">
+          {status.data?.present ? (
+            <span>
+              Active dictionary: <strong>{status.data.alias_count}</strong> aliases across{' '}
+              <strong>{status.data.field_count}</strong> fields.
+            </span>
+          ) : (
+            <span className="text-slate-400">
+              No alias dictionary uploaded — the schema mapper uses its built-in aliases.
+            </span>
+          )}
+        </div>
+        <form
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (file) uploadM.mutate();
+          }}
+        >
+          <div>
+            <label htmlFor="alias-file" className="block text-xs font-medium text-slate-500">
+              Alias CSV (field, aliases)
+            </label>
+            <input
+              id="alias-file"
+              ref={fileRef}
+              type="file"
+              accept=".csv,.tsv,.txt"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="mt-1 text-sm file:mr-2 file:rounded file:border-0 file:bg-primary-50 file:px-2 file:py-1 file:text-primary-700"
+            />
+          </div>
+          <Button
+            type="submit"
+            loading={uploadM.isPending}
+            disabled={!file}
+            icon={<Upload className="h-4 w-4" />}
+          >
+            Upload aliases
+          </Button>
+        </form>
+        <p className="text-xs text-slate-400">
+          Example row: <code className="rounded bg-slate-100 px-1">SEX,&quot;gender,patient_sex,gender_at_birth&quot;</code>
+        </p>
       </CardBody>
     </Card>
   );
