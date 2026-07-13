@@ -30,6 +30,7 @@ from app.core.jobs import (
 from app.core.storage import get_storage
 from app.db.session import SessionLocal
 from app.engine_adapter import get_engine
+from app.repositories import audit as audit_repo
 from app.repositories import jobs as jobs_repo
 from app.repositories import mappings as mappings_repo
 from app.repositories import ontology as ontology_repo
@@ -203,6 +204,32 @@ async def run_harmonize(
         if n_kb:
             logger.info("kb: pre-applied %d learned decision(s) for study %s",
                         n_kb, study_id)
+
+        # Record the engine bundle that produced this study (reproducibility /
+        # G4): engine version + loaded models go to the append-only audit log so
+        # "what produced this mapping?" is always answerable. Best-effort:
+        # provenance must never fail an otherwise-good harmonize.
+        try:
+            health = get_engine().health()
+            async with SessionLocal() as session:
+                await audit_repo.add_audit_entry(
+                    session,
+                    study_id=study_id,
+                    action="harmonize.completed",
+                    actor_id=owner_id,
+                    new_value=f"{health.name} {health.version}",
+                    details={
+                        "engine": health.name,
+                        "engine_version": health.version,
+                        "models": health.loaded_models,
+                        "mode": mode,
+                    },
+                )
+                await session.commit()
+        except Exception:  # noqa: BLE001 — provenance is best-effort
+            logger.warning(
+                "engine-bundle provenance not recorded for study %s", study_id, exc_info=True
+            )
 
         await _emit(study_id, stage="ontology", message="Resolving ontology terms", pct=90)
         await _set_status(study_id, "review")

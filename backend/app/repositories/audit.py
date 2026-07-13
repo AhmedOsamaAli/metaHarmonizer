@@ -45,10 +45,15 @@ async def add_audit_entry(
     new_value: str | None = None,
     actor_id: int | None = None,
     curator: str | None = None,
+    details: dict | None = None,
 ) -> None:
     """Record one decision. ``actor_id`` is the authoritative "who" (the user's
     id, used by admin oversight); ``curator`` is an optional display label kept
-    in ``details`` for human-readable rows."""
+    in ``details`` for human-readable rows. ``details`` may carry extra
+    structured provenance (e.g. the engine bundle that produced a study)."""
+    merged: dict | None = dict(details) if details else None
+    if curator:
+        merged = {**(merged or {}), "curator": curator}
     db.add(
         AuditEvent(
             study_id=study_id,
@@ -57,7 +62,7 @@ async def add_audit_entry(
             mapping_id=mapping_id,
             old_value=old_value,
             new_value=new_value,
-            details={"curator": curator} if curator else None,
+            details=merged,
         )
     )
     await db.flush()
