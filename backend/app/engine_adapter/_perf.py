@@ -1,11 +1,11 @@
 """
-Performance patches for the upstream ``metaharmonizer`` engine.
+Performance + correctness patches for the upstream ``metaharmonizer`` engine.
 
 This module lives inside ``engine_adapter/`` — the ONLY place the project is
 allowed to import ``metaharmonizer`` (enforced by
-``scripts/check_engine_boundary.py``). It applies two safe, behaviour-preserving
-optimisations exactly once per process. Neither changes matching results; both
-are pure memoisation.
+``scripts/check_engine_boundary.py``). It applies, exactly once per process, two
+behaviour-preserving performance optimisations (pure memoisation) plus one
+correctness workaround for an upstream prod-mode bug (Patch 3).
 
 Why this is needed
 ------------------
@@ -252,10 +252,37 @@ def _patch_nci_client() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Patch 3: correctness — exact-match prod-mode bug
+# ---------------------------------------------------------------------------
+def patch_exact_matching() -> None:
+    """Work around an upstream prod-mode bug in ``OntoMapEngine``.
+
+    In ``run()`` an exact corpus-label hit is assigned
+    ``match1 = ground_truth_map[query]``, but ``ground_truth_map`` defaults to
+    ``{q: "Not Found"}`` when no ground truth is supplied — which is exactly our
+    production path. The result: every value that IS an exact ontology label
+    (e.g. ``hepatocellular carcinoma`` → ``NCIT:C3099``) is returned as
+    **"Not Found"** at score 1.0, and never even receives an id.
+
+    Disabling the exact fast-path routes those values through Stage-2 semantic
+    matching, which self-matches an exact label at ~1.0 with the correct term
+    and id (verified). Correct cases are unchanged; only the broken ones are
+    fixed. Cheap at our scale (hundreds of distinct values per study).
+    """
+    from metaharmonizer.engine.ontology_mapping_engine import OntoMapEngine
+
+    if getattr(OntoMapEngine, "_mh_exact_patched", False):
+        return
+    OntoMapEngine._exact_matching = lambda self: []  # force Stage-2 resolution
+    OntoMapEngine._mh_exact_patched = True  # type: ignore[attr-defined]
+
+
+
+# ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
 def install_patches() -> None:
-    """Idempotently install all engine performance patches."""
+    """Idempotently install all engine performance + correctness patches."""
     global _installed
     if _installed:
         return
@@ -264,5 +291,6 @@ def install_patches() -> None:
             return
         _patch_sentence_transformer()
         _patch_nci_client()
+        patch_exact_matching()
         _load_nci_cache()
         _installed = True

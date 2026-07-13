@@ -54,6 +54,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--source", default="ncit", help="Ontology source (default: ncit).")
     ap.add_argument("--limit", type=int, default=100, help="Max distinct queries to evaluate (0 = all).")
     ap.add_argument("--s2-method", default="sap-bert")
+    ap.add_argument("--raw", action="store_true",
+                    help="Skip the app's exact-match correctness patch (benchmark upstream as-is).")
     ap.add_argument("--out", type=Path, default=None, help="Optional per-row results CSV.")
     args = ap.parse_args(argv)
 
@@ -79,6 +81,13 @@ def main(argv: list[str] | None = None) -> int:
 
     # Engine is heavy to import (torch); do it lazily so --help stays instant.
     from metaharmonizer import OntoMapEngine  # noqa: E402  benchmark tool, boundary-exempt
+
+    # Apply the same exact-match correctness patch the app installs at startup,
+    # so the benchmark reflects real production behaviour (unless --raw).
+    if not args.raw:
+        from app.engine_adapter._perf import patch_exact_matching
+
+        patch_exact_matching()
 
     t0 = time.time()
     engine = OntoMapEngine(
