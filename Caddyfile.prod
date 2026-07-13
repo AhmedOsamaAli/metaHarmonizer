@@ -10,12 +10,16 @@
 {$DOMAIN} {
 	encode gzip
 
-	# HSTS + hardening headers (TLS is on, so HSTS is safe here).
+	# HSTS + hardening headers (TLS is on, so HSTS is safe here). CSP is validated
+	# against the actual Vite build (external module script; inline styles + Google
+	# Fonts allowed; data: favicon).
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
 		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), browsing-topics=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
 		-Server
 	}
 

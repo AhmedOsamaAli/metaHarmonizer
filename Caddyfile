@@ -21,9 +21,15 @@
 	}
 
 	header {
-		# Minimal hardening even in dev.
+		# Hardening for the served production build (the Vite dev server is separate).
+		# CSP is validated against the actual build: the entry is an external module
+		# script (script-src 'self'); styles need 'unsafe-inline' (React inline styles
+		# + Google Fonts); the favicon is a data: URI.
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), browsing-topics=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
 		-Server
 	}
 }

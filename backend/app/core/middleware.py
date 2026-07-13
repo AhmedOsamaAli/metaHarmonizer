@@ -40,6 +40,36 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         return response
 
 
+# Static hardening headers applied to *every* response (including errors). The
+# edge proxy sets its own, but the app must be safe behind any proxy (or none).
+# Content-Security-Policy for the SPA is set at the proxy; these protect the API
+# + docs surface. ``setdefault`` so a proxy/route override always wins.
+_SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), browsing-topics=()",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "X-XSS-Protection": "0",  # disable the legacy, buggy XSS auditor (modern best practice)
+}
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        for key, value in _SECURITY_HEADERS.items():
+            response.headers.setdefault(key, value)
+        # HSTS only when the request actually arrived over TLS (directly or via
+        # the proxy's X-Forwarded-Proto), so we never advertise it on plain-HTTP
+        # dev where a browser would pin an un-servable https upgrade.
+        proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+        if proto == "https":
+            response.headers.setdefault(
+                "Strict-Transport-Security", "max-age=63072000; includeSubDomains"
+            )
+        return response
+
+
 def _rid(request: Request) -> str:
     return getattr(request.state, "request_id", "") or request_id_ctx.get()
 

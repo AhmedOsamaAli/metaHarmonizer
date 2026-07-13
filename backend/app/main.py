@@ -12,7 +12,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.logging import configure_logging
-from app.core.middleware import install_observability
+from app.core.middleware import SecurityHeadersMiddleware, install_observability
 from app.core.limits import install_limits
 from app.core.metrics import MetricsMiddleware
 from app.core.sentry import init_sentry
@@ -63,6 +63,9 @@ app = FastAPI(
 
 # Request-id + unified error envelope (spec §6.1).
 install_observability(app)
+
+# Static security headers on every response (defense-in-depth behind any proxy).
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Prometheus golden-signal instrumentation (exposed at admin-scoped /metrics).
 app.add_middleware(MetricsMiddleware)
