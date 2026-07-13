@@ -24,6 +24,7 @@ import hashlib
 import json
 import logging
 import time
+import uuid
 
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
@@ -76,7 +77,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             r = get_redis()
             async with r.pipeline(transaction=True) as pipe:
                 pipe.zremrangebyscore(key, 0, now - window)
-                pipe.zadd(key, {f"{now}:{id(request)}": now})
+                # Member must be globally unique per request. Using id(request)
+                # is unsafe: CPython reuses the address of a freed Request across
+                # sequential calls and time.time() has coarse resolution on some
+                # platforms, so {now}:{id(request)} can collide and make zadd
+                # overwrite an existing member — under-counting the window and
+                # letting callers exceed the limit (fails open). A uuid4 token
+                # guarantees each request adds a distinct member.
+                pipe.zadd(key, {f"{now}:{uuid.uuid4().hex}": now})
                 pipe.zcard(key)
                 pipe.expire(key, window)
                 _, _, count, _ = await pipe.execute()
