@@ -12,6 +12,7 @@ import logging
 import math
 import os
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -56,29 +57,76 @@ def _to_score(value: Any) -> float:
     return max(0.0, min(1.0, f))
 
 
+def _data_dir() -> Path:
+    """Where the engine reads its corpora — mirrors ``_ensure_upstream_data_dir``
+    (``$METAHARMONIZER_DATA_DIR`` else the dashboard-owned ``backend/data``)."""
+    env = os.environ.get("METAHARMONIZER_DATA_DIR")
+    if env:
+        return Path(env)
+    return Path(__file__).resolve().parents[2] / "data"
+
+
+@lru_cache(maxsize=8)
+def _corpus_label_to_id(category: str, source: str) -> dict[str, str]:
+    """Load the ``label -> obo_id`` map for a corpus.
+
+    ``OntoMapEngine.run()`` returns only the matched *label* (``match1``), never
+    the ontology code — but every ``match1`` is a row from this corpus, so we can
+    recover the code by exact label. Returns ``{}`` (graceful degrade to a
+    code-less row) if the corpus can't be read.
+    """
+    path = _data_dir() / "corpus" / "retrieved_ontologies" / f"{source}_{category}_corpus.csv"
+    try:
+        df = pd.read_csv(path, usecols=["label", "obo_id"])
+    except Exception as exc:  # noqa: BLE001 — missing/renamed corpus -> no codes, not a crash
+        logger.warning("ontology code lookup unavailable (%s): %s", path, exc)
+        return {}
+    mapping: dict[str, str] = {}
+    for label, obo in zip(df["label"], df["obo_id"]):
+        if not isinstance(label, str):
+            continue
+        key = label.strip()
+        code = "" if obo is None else str(obo).strip()
+        if key and code and key not in mapping:  # first-wins for stable output
+            mapping[key] = code
+    return mapping
+
+
 def _normalize_engine_rows(
-    field_name: str, result: "pd.DataFrame"
+    field_name: str,
+    result: "pd.DataFrame",
+    category: str | None = None,
+    source: str | None = None,
 ) -> list[dict[str, Any]]:
     """Map an ``OntoMapEngine.run()`` frame to our ontology DTO rows.
 
     Defensive about column names so an upstream rename degrades to a
-    lower-confidence row rather than crashing.
+    lower-confidence row rather than crashing. When the engine supplies a label
+    but no code (its normal behaviour — the output frame has no id column) and
+    ``category``/``source`` are known, the code is recovered from the corpus.
     """
     rows: list[dict[str, Any]] = []
     records = result.to_dict(orient="records") if result is not None else []
+    label_to_id: dict[str, str] | None = None
     for raw in records:
         query = raw.get("query")
         if query is None:
             continue
         term = raw.get("match1")
+        term_missing = term is None or (isinstance(term, float) and math.isnan(term))
         ont_id = (
             raw.get("match1_id")
             or raw.get("match1_obo_id")
             or raw.get("obo_id")
             or None
         )
+        # Engine frames carry no code column; recover it from the corpus the
+        # match came from. Only load the map when a row actually needs it.
+        if ont_id is None and not term_missing and category and source:
+            if label_to_id is None:
+                label_to_id = _corpus_label_to_id(category, source)
+            ont_id = label_to_id.get(str(term).strip())
         score = _to_score(raw.get("match1_score"))
-        term_missing = term is None or (isinstance(term, float) and math.isnan(term))
         rows.append(
             {
                 "field_name": field_name,
@@ -140,6 +188,6 @@ def map_values_via_engine(
                 field_name, category, source, exc,
             )
             continue
-        rows.extend(_normalize_engine_rows(field_name, result))
+        rows.extend(_normalize_engine_rows(field_name, result, category, source))
         handled.add(field_name)
     return rows, handled

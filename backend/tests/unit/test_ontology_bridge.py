@@ -55,6 +55,46 @@ def test_normalize_engine_rows():
     assert rows[1]["ontology_term"] is None
 
 
+def test_normalize_engine_rows_enriches_code_from_corpus(monkeypatch):
+    # OntoMapEngine.run() emits only the matched *label*, no code column. When
+    # category/source are known the adapter recovers the code from the corpus
+    # (label -> obo_id) that the match came from.
+    monkeypatch.setattr(
+        _ontology, "_corpus_label_to_id",
+        lambda category, source: {"Glioblastoma": "NCIT:C3058"},
+    )
+    frame = pd.DataFrame([{"query": "GBM", "match1": "Glioblastoma", "match1_score": 1.0}])
+    rows = _ontology._normalize_engine_rows("disease", frame, "disease", "ncit")
+    assert rows[0]["ontology_term"] == "Glioblastoma"
+    assert rows[0]["ontology_id"] == "NCIT:C3058"
+
+
+def test_normalize_engine_rows_no_corpus_lookup_without_category(monkeypatch):
+    # Backward compat: with no category/source the corpus is never consulted and
+    # the frame's own id (here absent) is used as-is.
+    called = {"n": 0}
+
+    def _boom(category, source):
+        called["n"] += 1
+        return {"Glioblastoma": "NCIT:C3058"}
+
+    monkeypatch.setattr(_ontology, "_corpus_label_to_id", _boom)
+    frame = pd.DataFrame([{"query": "GBM", "match1": "Glioblastoma", "match1_score": 1.0}])
+    rows = _ontology._normalize_engine_rows("disease", frame)
+    assert rows[0]["ontology_id"] is None
+    assert called["n"] == 0
+
+
+def test_corpus_label_to_id_reads_real_corpus():
+    # Guards against corpus column drift (label/obo_id). Skips where the NCIt
+    # disease corpus isn't seeded (e.g. the light CI image).
+    _ontology._corpus_label_to_id.cache_clear()
+    mapping = _ontology._corpus_label_to_id("disease", "ncit")
+    if not mapping:
+        pytest.skip("disease corpus not present in this environment")
+    assert mapping.get("Glioblastoma") == "NCIT:C3058"
+
+
 class _FakeEngine:
     """Stand-in for OntoMapEngine.run() returning a deterministic frame.
 
