@@ -47,6 +47,8 @@ def _dev_admin() -> User:
         role="admin",
         is_active=True,
         email_verified=True,
+        approved=True,
+        admin_requested=False,
     )
 
 

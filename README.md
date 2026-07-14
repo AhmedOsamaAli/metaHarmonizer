@@ -42,6 +42,8 @@ Only `backend/app/engine_adapter/` may import the upstream `metaharmonizer` pack
 
 Requires Docker (or Postgres 16 + Redis 7 locally), Python 3.12+, Node 20+.
 
+> New here? **[SETUP.md](SETUP.md)** is a step-by-step cross-platform guide (Windows / macOS / Linux), including a **no-login, ML-free demo** (`ENGINE_IMPL=mock`, `AUTH_MODE=none`) that runs with one command.
+
 ```bash
 git clone https://github.com/AhmedOsamaAli/metaHarmonizer.git
 cd metaHarmonizer

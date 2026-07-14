@@ -107,7 +107,14 @@ export async function bootstrapSession(): Promise<User | null> {
             return res.user;
         } catch {
             setAccessToken(null);
-            return null;
+            // No session. If the API runs with auth disabled (AUTH_MODE=none — for
+            // local/dev use), /auth/me returns a synthetic admin, so the app can run
+            // without a login. In normal (jwt) mode this 401s and we fall to login.
+            try {
+                return await apiFetch<User>('/auth/me', { skipAuthRetry: true });
+            } catch {
+                return null;
+            }
         } finally {
             // Allow a later, deliberate re-bootstrap (e.g. after logout) to run.
             bootstrapInFlight = null;
