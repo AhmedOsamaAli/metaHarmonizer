@@ -11,7 +11,9 @@ import {
     login as apiLogin,
     logout as apiLogout,
     register as apiRegister,
+    requestAdminAccess as apiRequestAdmin,
 } from '../api/auth';
+import { setGuestMode } from '../api/http';
 import type { Role, User } from '../api/types';
 
 interface AuthContextValue {
@@ -19,6 +21,8 @@ interface AuthContextValue {
     /** True until the initial refresh-on-boot resolves. */
     initializing: boolean;
     isAuthenticated: boolean;
+    /** True when browsing the no-account preview (read-only, no real data). */
+    isGuest: boolean;
     login: (email: string, password: string) => Promise<User>;
     /**
      * Create an account. Does NOT sign in — non-bootstrap users must verify
@@ -32,17 +36,35 @@ interface AuthContextValue {
     ) => Promise<string>;
     logout: () => Promise<void>;
     setUser: (u: User | null) => void;
+    /** Enter the no-account guided preview (synthetic read-only curator). */
+    startGuestPreview: () => void;
+    /** Leave preview mode (e.g. to sign in / register). */
+    exitGuest: () => void;
+    /** Ask to be promoted from curator to admin (an admin approves). */
+    requestAdmin: () => Promise<void>;
     /** Role hierarchy check: curator < admin. */
     hasRole: (minimum: Role) => boolean;
 }
 
 const ROLE_RANK: Record<Role, number> = { curator: 1, admin: 2 };
 
+// Synthetic user for the no-account preview: a read-only curator with no token
+// (every write is blocked by the guest gate in api/http).
+const GUEST_USER: User = {
+    id: 0,
+    email: 'guest@preview.local',
+    name: 'Guest',
+    role: 'curator',
+    is_active: true,
+    email_verified: true,
+};
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [initializing, setInitializing] = useState(true);
+    const [isGuest, setIsGuest] = useState(false);
 
     // On boot, try to restore a session from the httpOnly refresh cookie.
     useEffect(() => {
@@ -64,7 +86,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             user,
             initializing,
             isAuthenticated: !!user,
+            isGuest,
             setUser,
+            startGuestPreview: () => {
+                setGuestMode(true);
+                setIsGuest(true);
+                setUser(GUEST_USER);
+            },
+            exitGuest: () => {
+                setGuestMode(false);
+                setIsGuest(false);
+                setUser(null);
+            },
             hasRole: (minimum) => !!user && ROLE_RANK[user.role] >= ROLE_RANK[minimum],
             login: async (email, password) => {
                 const res = await apiLogin({ email, password });
@@ -80,12 +113,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 });
                 return res.message;
             },
+            requestAdmin: async () => {
+                const updated = await apiRequestAdmin();
+                setUser(updated);
+            },
             logout: async () => {
+                if (isGuest) {
+                    setGuestMode(false);
+                    setIsGuest(false);
+                    setUser(null);
+                    return;
+                }
                 await apiLogout();
                 setUser(null);
             },
         }),
-        [user, initializing],
+        [user, initializing, isGuest],
     );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

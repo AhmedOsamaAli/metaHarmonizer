@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Shield, User as UserIcon, ChevronDown } from 'lucide-react';
+import { LogOut, Shield, ShieldCheck, User as UserIcon, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import type { Role } from '../api/types';
@@ -11,7 +11,7 @@ const ROLE_TONE: Record<Role, string> = {
 };
 
 export default function UserMenu() {
-  const { user, logout, hasRole } = useAuth();
+  const { user, logout, hasRole, requestAdmin } = useAuth();
   const navigate = useNavigate();
   if (!user) return null;
 
@@ -19,6 +19,15 @@ export default function UserMenu() {
     await logout();
     toast.success('Signed out');
     navigate('/login');
+  };
+
+  const handleRequestAdmin = async () => {
+    try {
+      await requestAdmin();
+      toast.success('Admin access requested — an admin will review it.');
+    } catch {
+      toast.error('Could not send the request. Please try again.');
+    }
   };
 
   return (
@@ -59,6 +68,15 @@ export default function UserMenu() {
           <Item icon={<UserIcon className="h-4 w-4" />} onSelect={() => navigate('/profile')}>
             Profile &amp; sessions
           </Item>
+          {user.role === 'curator' && (
+            <Item
+              icon={<ShieldCheck className="h-4 w-4" />}
+              onSelect={user.admin_requested ? () => {} : handleRequestAdmin}
+              className={user.admin_requested ? 'text-slate-400' : 'text-accent-700 focus:bg-accent-50'}
+            >
+              {user.admin_requested ? 'Admin access requested' : 'Request admin access'}
+            </Item>
+          )}
           {hasRole('admin') && (
             <Item icon={<Shield className="h-4 w-4" />} onSelect={() => navigate('/admin')}>
               Admin console

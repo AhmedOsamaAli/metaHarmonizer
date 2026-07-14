@@ -9,8 +9,9 @@ Token model
 
 Policy
   - Argon2id password hashing.
-  - Domain-restricted signup (ALLOWED_EMAIL_DOMAINS); empty -> invite-only.
-  - Bootstrap: the first account is ``admin``; everyone else is ``curator``.
+  - Open signup: the first account is ``admin`` (bootstrap); everyone else is a
+    ``curator``. Trusted-domain (ALLOWED_EMAIL_DOMAINS) accounts are approved
+    automatically; others need an admin to approve them before first sign-in.
   - Account lockout after LOGIN_MAX_FAILURES consecutive failed logins.
 """
 
@@ -61,8 +62,8 @@ router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
 # ── Errors ───────────────────────────────────────────────────────────────────
-class RegistrationClosedError(AppError):
-    code = "REGISTRATION_CLOSED"
+class AccountPendingError(AppError):
+    code = "ACCOUNT_PENDING"
     status_code = 403
 
 
@@ -176,10 +177,6 @@ async def register(
     body: RegisterRequest,
     db: AsyncSession = Depends(get_db),
 ) -> MessageResponse:
-    if not _domain_allowed(body.email):
-        raise RegistrationClosedError(
-            "Registration is restricted to approved email domains."
-        )
     if await users_repo.get_by_email(db, body.email):
         raise EmailTakenError("An account with this email already exists.")
 
@@ -189,11 +186,14 @@ async def register(
             "This password has appeared in a data breach. Please choose a different one."
         )
 
-    # Bootstrap: first user is admin, the rest are curators.
+    # Registration is open, and everyone is a curator. Trusted-domain accounts
+    # are approved automatically; anyone else (e.g. a personal Gmail) may still
+    # register but stays pending until an admin approves them. Admin access is
+    # always by request + admin approval, regardless of domain.
+    approved_domain = _domain_allowed(body.email)
     is_bootstrap = await users_repo.count_users(db) == 0
     role = "admin" if is_bootstrap else "curator"
-    # A non-bootstrap signup may request admin access; it stays a curator with a
-    # pending flag until an existing admin approves it.
+    approved = is_bootstrap or approved_domain
     admin_requested = body.request_admin and not is_bootstrap
 
     user = await users_repo.create_user(
@@ -202,6 +202,7 @@ async def register(
         password_hash=hash_password(body.password),
         name=body.name,
         role=role,
+        approved=approved,
         admin_requested=admin_requested,
     )
     # The bootstrap admin is auto-verified so the instance is never locked out
@@ -210,13 +211,19 @@ async def register(
         user.email_verified = True
     await db.commit()
 
-    if not is_bootstrap:
-        token = create_email_verify_token(user_id=user.id, email=user.email)
-        await send_verification_email(to=user.email, name=user.name, token=token)
-        return MessageResponse(
-            message="Account created. Check your email to verify your address before signing in.",
+    if is_bootstrap:
+        return MessageResponse(message="Admin account created. You can sign in now.")
+
+    token = create_email_verify_token(user_id=user.id, email=user.email)
+    await send_verification_email(to=user.email, name=user.name, token=token)
+    if approved:
+        message = "Account created. Check your email to verify your address before signing in."
+    else:
+        message = (
+            "Account created. Verify your email — then an administrator will approve "
+            "your account before you can sign in."
         )
-    return MessageResponse(message="Admin account created. You can sign in now.")
+    return MessageResponse(message=message)
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -244,6 +251,11 @@ async def login(
         # and let the client offer to resend the verification email.
         raise EmailNotVerifiedError(
             "Please verify your email address before signing in."
+        )
+    if not user.approved:
+        # Verified, but an untrusted-domain account an admin hasn't approved yet.
+        raise AccountPendingError(
+            "Your account is awaiting administrator approval."
         )
     await _clear_failures(body.email)
     tokens, _ = await _issue_tokens(db, response, request, user)
@@ -449,5 +461,21 @@ async def revoke_session(
 
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(current_user)) -> UserOut:
+    return UserOut.model_validate(user)
+
+
+@router.post("/request-admin", response_model=UserOut)
+async def request_admin(
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserOut:
+    """Let a signed-in curator request admin access for an admin to approve.
+
+    Idempotent — sets the pending flag; no-op for admins.
+    """
+    if user.role == "curator" and not user.admin_requested:
+        user.admin_requested = True
+        await db.commit()
+        await db.refresh(user)
     return UserOut.model_validate(user)
 

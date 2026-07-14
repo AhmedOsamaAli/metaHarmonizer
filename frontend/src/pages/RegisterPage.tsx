@@ -52,11 +52,9 @@ export default function RegisterPage() {
     } catch (err) {
       const msg =
         err instanceof ApiError
-          ? err.code === 'REGISTRATION_CLOSED'
-            ? 'Registration is restricted to approved email domains. Contact an administrator for access.'
-            : err.code === 'EMAIL_TAKEN'
-              ? 'An account with this email already exists. Try signing in instead.'
-              : err.message
+          ? err.code === 'EMAIL_TAKEN'
+            ? 'An account with this email already exists. Try signing in instead.'
+            : err.message
           : 'Could not create the account. Please try again.';
       setError(msg);
     } finally {
@@ -127,7 +125,7 @@ export default function RegisterPage() {
           leftIcon={<Mail className="h-4 w-4" />}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          hint="Must be an approved institutional domain."
+          hint="Any email works — trusted domains are approved instantly; others need an admin to approve the account before first sign-in."
         />
         <div>
           <Input
@@ -157,7 +155,7 @@ export default function RegisterPage() {
           )}
         </div>
 
-        {/* Admin access request — never grants admin directly. */}
+        {/* Admin access request — never grants it directly. */}
         <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-3">
           <input
             type="checkbox"
@@ -166,9 +164,9 @@ export default function RegisterPage() {
             className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
           />
           <span className="text-sm">
-            <span className="font-medium text-slate-800">Request administrator access</span>
+            <span className="font-medium text-slate-800">Request admin access</span>
             <span className="mt-0.5 block text-xs text-slate-500">
-              You’ll join as a curator. An existing administrator must approve admin access — it isn’t granted automatically.
+              You’ll join as a curator. Admin access is never granted automatically — an existing administrator must approve it. You can also request it later.
             </span>
           </span>
         </label>

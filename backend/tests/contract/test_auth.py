@@ -111,12 +111,20 @@ async def test_second_user_is_curator(client):
         assert bob.email_verified is False
 
 
-async def test_wrong_domain_rejected(client):
-    make_client, domain, _ = client
+async def test_untrusted_domain_registers_pending(client):
+    make_client, domain, SessionLocal = client
     async with await make_client() as c:
-        r = await c.post("/api/v1/auth/register", json={"email": "x@gmail.com", "password": "pw-123456"})
-    assert r.status_code == 403
-    assert r.json()["error"]["code"] == "REGISTRATION_CLOSED"
+        # A trusted-domain user bootstraps the admin so the next isn't bootstrap.
+        await _register(c, f"admin@{domain}")
+        # Registration is open: an untrusted domain still succeeds, but the
+        # account lands unapproved (an admin must approve before first sign-in).
+        r = await _register(c, "x@gmail.com")
+        assert r.status_code == 201, r.text
+    async with SessionLocal() as s:
+        u = await s.scalar(sa.select(User).where(User.email == "x@gmail.com"))
+        assert u is not None
+        assert u.role == "curator"
+        assert u.approved is False
 
 
 async def test_duplicate_email_conflict(client):

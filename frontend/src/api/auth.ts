@@ -40,6 +40,11 @@ export async function login(input: { email: string; password: string }): Promise
     return res;
 }
 
+/** Signed-in curator asks to be promoted to admin (an admin approves). */
+export async function requestAdminAccess(): Promise<User> {
+    return apiFetch<User>('/auth/request-admin', { method: 'POST' });
+}
+
 /* ---------- Email verification + password reset ---------- */
 
 export async function verifyEmail(token: string): Promise<MessageResponse> {
@@ -182,6 +187,14 @@ export async function adminApproveAdmin(userId: number): Promise<User> {
 
 export async function adminRejectAdmin(userId: number): Promise<User> {
     return apiFetch<User>(`/admin/users/${userId}/reject-admin`, { method: 'POST' });
+}
+
+export async function adminApproveAccount(userId: number): Promise<User> {
+    return apiFetch<User>(`/admin/users/${userId}/approve`, { method: 'POST' });
+}
+
+export async function adminRejectAccount(userId: number): Promise<User> {
+    return apiFetch<User>(`/admin/users/${userId}/reject`, { method: 'POST' });
 }
 
 export async function adminSetActive(userId: number, isActive: boolean): Promise<User> {

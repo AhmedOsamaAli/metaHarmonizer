@@ -46,6 +46,7 @@ async def seed(email: str, password: str, name: str | None, role: str | None) ->
             password_hash=hash_password(password),
             name=name or email.split("@")[0],
             role=final_role,
+            approved=True,
         )
         await users_repo.set_email_verified(db, user)
         await db.commit()

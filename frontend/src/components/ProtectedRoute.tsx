@@ -13,7 +13,7 @@ export default function ProtectedRoute({
   children: ReactNode;
   role?: Role;
 }) {
-  const { isAuthenticated, initializing, hasRole } = useAuth();
+  const { isAuthenticated, initializing, hasRole, isGuest } = useAuth();
   const location = useLocation();
 
   if (initializing) {
@@ -24,7 +24,9 @@ export default function ProtectedRoute({
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (role && !hasRole(role)) {
+  // Guests are previewing the whole journey (read-only), so they may view
+  // curator/admin pages; write actions are still disabled per-page + server-side.
+  if (role && !hasRole(role) && !isGuest) {
     return (
       <EmptyState
         icon={<ShieldAlert className="h-6 w-6 text-rose-500" />}

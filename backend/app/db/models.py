@@ -45,8 +45,14 @@ class User(Base, TimestampMixin):
     password_hash: Mapped[str | None] = mapped_column(String(255))
     is_active: Mapped[bool] = mapped_column(nullable=False, default=True, server_default="true")
     email_verified: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="false")
-    # Set when a curator asks to be promoted to admin at registration; an
-    # existing admin approves (role -> admin) or rejects (flag cleared).
+    # Whether the account may sign in and act. Trusted-domain signups (and the
+    # bootstrap admin) are approved automatically; anyone else stays pending
+    # until an admin approves them.
+    approved: Mapped[bool] = mapped_column(
+        nullable=False, default=False, server_default="false"
+    )
+    # Set when a curator asks to be promoted to admin (at registration or later);
+    # an existing admin approves (role -> admin) or rejects (flag cleared).
     admin_requested: Mapped[bool] = mapped_column(
         nullable=False, default=False, server_default="false"
     )

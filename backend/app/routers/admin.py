@@ -90,6 +90,7 @@ async def approve_admin_request(
     if not user:
         raise NotFoundError("User not found.")
     user.role = "admin"
+    user.approved = True
     user.admin_requested = False
     await audit_repo.add_audit_entry(
         db,
@@ -120,6 +121,57 @@ async def reject_admin_request(
         study_id=None,
         action="admin_reject_request",
         new_value=f"{actor_label(user)} request denied",
+        actor_id=admin.id,
+        curator=actor_label(admin),
+    )
+    await db.commit()
+    await db.refresh(user)
+    return UserOut.model_validate(user)
+
+
+@router.post("/users/{user_id}/approve", response_model=UserOut)
+async def approve_account(
+    user_id: int,
+    admin: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> UserOut:
+    """Approve a pending (untrusted-domain) account so it can sign in."""
+    user = await users_repo.get_by_id(db, user_id)
+    if not user:
+        raise NotFoundError("User not found.")
+    user.approved = True
+    await audit_repo.add_audit_entry(
+        db,
+        study_id=None,
+        action="admin_approve_account",
+        new_value=f"{actor_label(user)} approved",
+        actor_id=admin.id,
+        curator=actor_label(admin),
+    )
+    await db.commit()
+    await db.refresh(user)
+    return UserOut.model_validate(user)
+
+
+@router.post("/users/{user_id}/reject", response_model=UserOut)
+async def reject_account(
+    user_id: int,
+    admin: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> UserOut:
+    """Reject a pending account: deactivate it and end any sessions."""
+    user = await users_repo.get_by_id(db, user_id)
+    if not user:
+        raise NotFoundError("User not found.")
+    if user.id == admin.id:
+        raise ForbiddenError("You cannot reject your own account.")
+    user.is_active = False
+    await sessions_repo.revoke_all_for_user(db, user_id)
+    await audit_repo.add_audit_entry(
+        db,
+        study_id=None,
+        action="admin_reject_account",
+        new_value=f"{actor_label(user)} rejected",
         actor_id=admin.id,
         curator=actor_label(admin),
     )

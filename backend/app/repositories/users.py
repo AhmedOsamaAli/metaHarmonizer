@@ -33,6 +33,7 @@ async def create_user(
     password_hash: str | None,
     name: str | None,
     role: str,
+    approved: bool = False,
     admin_requested: bool = False,
 ) -> User:
     user = User(
@@ -40,6 +41,7 @@ async def create_user(
         password_hash=password_hash,
         name=name,
         role=role,
+        approved=approved,
         admin_requested=admin_requested,
     )
     db.add(user)

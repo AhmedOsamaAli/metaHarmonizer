@@ -155,6 +155,7 @@ export interface User {
     role: Role;
     is_active: boolean;
     email_verified: boolean;
+    approved?: boolean;
     admin_requested?: boolean;
 }
 

@@ -9,11 +9,13 @@ import Badge from '../components/ui/Badge';
 import { LoadingBlock, EmptyState } from '../components/ui/Feedback';
 import { useAuth } from '../context/AuthContext';
 import {
+  adminApproveAccount,
   adminApproveAdmin,
   adminForceLogout,
   adminListUsers,
   adminListSchemaVersions,
   adminPromoteSchemaVersion,
+  adminRejectAccount,
   adminRejectAdmin,
   adminSetActive,
   adminSetRole,
@@ -84,8 +86,27 @@ export default function AdminPage() {
     onError: (e: any) => toast.error(e?.message ?? 'Could not decline request'),
   });
 
+  const approveAccountM = useMutation({
+    mutationFn: adminApproveAccount,
+    onSuccess: (u) => {
+      invalidate();
+      toast.success(`${u.email} approved — they can now sign in`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Could not approve account'),
+  });
+
+  const rejectAccountM = useMutation({
+    mutationFn: adminRejectAccount,
+    onSuccess: (u) => {
+      invalidate();
+      toast(`${u.email} rejected`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Could not reject account'),
+  });
+
   const stats = computeStats(users.data ?? []);
   const pendingRequests = (users.data ?? []).filter((u) => u.admin_requested && u.role !== 'admin');
+  const pendingApprovals = (users.data ?? []).filter((u) => !u.approved && u.is_active);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -143,6 +164,56 @@ export default function AdminPage() {
                     onClick={() => rejectM.mutate(u.id)}
                   >
                     Decline
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {/* Pending account approvals (untrusted-domain signups) */}
+      {pendingApprovals.length > 0 && (
+        <Card className="overflow-hidden border-sky-200">
+          <div className="flex items-center gap-2 border-b border-sky-100 bg-sky-50/70 px-5 py-3">
+            <ShieldCheck className="h-4 w-4 text-sky-600" />
+            <h3 className="text-sm font-semibold text-sky-800">
+              Pending approvals
+              <span className="ml-1.5 font-normal text-sky-600">({pendingApprovals.length})</span>
+            </h3>
+          </div>
+          <ul className="divide-y divide-slate-100">
+            {pendingApprovals.map((u) => (
+              <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-slate-800">{u.name || u.email}</p>
+                  <p className="flex items-center gap-1.5 truncate text-xs text-slate-500">
+                    {u.email}
+                    {u.admin_requested && (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                        also requested admin
+                      </span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                    loading={approveAccountM.isPending && approveAccountM.variables === u.id}
+                    onClick={() => approveAccountM.mutate(u.id)}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-rose-600 hover:bg-rose-50"
+                    icon={<X className="h-3.5 w-3.5" />}
+                    loading={rejectAccountM.isPending && rejectAccountM.variables === u.id}
+                    onClick={() => rejectAccountM.mutate(u.id)}
+                  >
+                    Reject
                   </Button>
                 </div>
               </li>
