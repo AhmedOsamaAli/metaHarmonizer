@@ -103,3 +103,14 @@ backend/kb_build_*.log
 # E2E smoke-test artifacts
 backend/e2e_server.log
 backend/scripts/e2e_export_*.csv
+
+# Local-only working folders (kept out of git by request)
+presentation/
+sehyun-input/
+
+# Local emulator / scratch artifacts
+__azurite_db_*.json
+MetaHarmonizerSchemaRegistry-main*/
+
+# Loose schema-eval outputs at the backend root (regenerable)
+backend/schema_*.csv
