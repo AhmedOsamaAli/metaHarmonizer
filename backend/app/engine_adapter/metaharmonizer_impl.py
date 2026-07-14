@@ -133,15 +133,31 @@ class MetaHarmonizerAdapter:
         out.to_csv(merged_path, index=False)
 
     @lru_cache(maxsize=8)
-    def _engine_for(self, csv_path: str):
+    def _engine_for(self, csv_path: str, schema_key: str):
         pkg = _require_pkg()
-        from . import _perf
+        from . import _perf, _schema_registry
 
         _perf.install_patches()
         SchemaMapEngine = pkg.SchemaMapEngine  # type: ignore[attr-defined]
+        sch = _schema_registry.resolve(schema_key)
+        if sch and sch.get("target_schema_path"):
+            # A SchemaRegistry-installed target schema (GDC / cBioPortal / cMD /
+            # …): pass explicit paths so the engine maps into it, along with its
+            # matched alias / allowed-values dicts when present.
+            kwargs: dict[str, Any] = {
+                "target_schema_path": sch["target_schema_path"],
+                "mode": self._mode,
+                "top_k": self._top_k,
+            }
+            if sch.get("alias_dict_path"):
+                kwargs["alias_dict_path"] = sch["alias_dict_path"]
+            if sch.get("value_dict_path"):
+                kwargs["value_dict_path"] = sch["value_dict_path"]
+            return SchemaMapEngine(csv_path, **kwargs)
+        # Fallback: treat the key as a bundled preset name (cbio / gdc).
         return SchemaMapEngine(
             csv_path,
-            self._schema,
+            schema_key,
             mode=self._mode,
             top_k=self._top_k,
             alias_dict_path=self._alias_dict_path(),
@@ -156,10 +172,21 @@ class MetaHarmonizerAdapter:
         curated_df: pd.DataFrame,
         *,
         csv_path: str | None = None,
+        target_schema: str | None = None,
     ) -> list[dict[str, Any]]:
         if not csv_path:
             raise ValueError("metaharmonizer adapter requires csv_path")
-        engine = self._engine_for(csv_path)
+        from . import _schema_registry
+
+        # Resolve the curator's chosen target schema: an installed SchemaRegistry
+        # schema if valid, else the installed default, else the bundled preset.
+        if _schema_registry.is_valid(target_schema):
+            schema_key = target_schema
+        elif _schema_registry.available_schemas():
+            schema_key = _schema_registry.default_key()
+        else:
+            schema_key = self._schema
+        engine = self._engine_for(csv_path, schema_key)
         raw = engine.run_schema_mapping()
         # Persist new NCI EVS lookups so later studies reuse them.
         from . import _perf
@@ -209,6 +236,8 @@ class MetaHarmonizerAdapter:
                 "on-demand LLM matching."
             )
         pkg = _require_pkg()
+        from . import _schema_registry
+
         # engine >=0.4.0: LLMMatcher moved to the stage-4 matchers module.
         try:
             LLMMatcher = pkg.LLMMatcher  # type: ignore[attr-defined]
@@ -216,7 +245,8 @@ class MetaHarmonizerAdapter:
             from metaharmonizer.models.schema_mapper.matchers.stage4_matchers import (
                 LLMMatcher,
             )
-        engine = self._engine_for(csv_path)
+        schema_key = getattr(self, "_schema", None) or _schema_registry.default_key()
+        engine = self._engine_for(csv_path, schema_key)
         matcher = LLMMatcher(engine)
         return [
             {"field": f, "confidence": round(float(s), 4), "reasoning": src}

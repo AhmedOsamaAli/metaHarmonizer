@@ -131,8 +131,10 @@ def test_engine_schema_output_has_contract_columns(tmp_path):
         ).to_csv(csv_path, index=False)
         csv = str(csv_path)
 
+    from app.engine_adapter import _schema_registry
+
     adapter = MetaHarmonizerAdapter(mode="manual")
-    engine = adapter._engine_for(csv)
+    engine = adapter._engine_for(csv, _schema_registry.default_key())
     frame = engine.run_schema_mapping()
     cols = set(frame.columns)
 

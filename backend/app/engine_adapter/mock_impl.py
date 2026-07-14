@@ -26,6 +26,7 @@ class MockEngineAdapter:
         curated_df: pd.DataFrame,
         *,
         csv_path: str | None = None,
+        target_schema: str | None = None,
     ) -> list[dict[str, Any]]:
         curated_cols = list(curated_df.columns) if curated_df is not None else []
         rows: list[dict[str, Any]] = []

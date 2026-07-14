@@ -109,6 +109,7 @@ async def harmonize_study(
     mode: str = Form("both"),
     schema_version_id: int | None = Form(None),
     ontology_columns: str | None = Form(None),
+    target_schema: str | None = Form(None),
     user: User = Depends(require_role("curator")),
     db_session: AsyncSession = Depends(get_db),
 ):
@@ -125,6 +126,12 @@ async def harmonize_study(
     mode = _validate_mode(mode)
     suffix = _validate_suffix(file.filename)
     onto_cols = [c.strip() for c in (ontology_columns or "").split(",") if c.strip()]
+
+    # Validate the curator's chosen target schema (GDC / cBioPortal / cMD / …).
+    from app.engine_adapter import _schema_registry
+
+    if target_schema and not _schema_registry.is_valid(target_schema):
+        raise HTTPException(400, f"Unknown target schema '{target_schema}'.")
 
     # Backpressure: refuse before doing any work (upload/parse) when the queue is full.
     if not await has_capacity():
@@ -180,6 +187,7 @@ async def harmonize_study(
         owner_id=getattr(user, "id", None),
         mode=mode,
         ontology_columns=onto_cols or None,
+        target_schema=target_schema,
     )
 
     return HarmonizeAccepted(
@@ -202,6 +210,18 @@ async def list_target_schemas(
     from app.repositories import schema_versions as schema_repo
 
     return await schema_repo.list_versions(db)
+
+
+@router.get("/target-schemas")
+async def list_engine_target_schemas(
+    user: User = Depends(require_role("curator")),
+) -> list[dict]:
+    """Target schemas the engine can map into (GDC / cBioPortal / cMD / …), for
+    the upload picker. Reads the installed SchemaRegistry artifacts — no engine
+    import, so it's cheap even on a cold server."""
+    from app.engine_adapter import _schema_registry
+
+    return _schema_registry.available_schemas()
 
 
 @router.get("/harmonize/{job_id}")

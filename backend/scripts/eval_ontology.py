@@ -47,6 +47,38 @@ def _first(raw: dict, *keys: str):
     return None
 
 
+def _load_corpus_codes(category: str, source: str) -> dict[str, str]:
+    """Build a normalized ``label -> code`` map for a corpus.
+
+    ``OntoMapEngine.run()`` returns only the matched *label*, never the code, so
+    the id metric needs the code recovered from the corpus the engine searched
+    (exactly what the production adapter does). Handles both corpus column
+    conventions: ``label``/``obo_id`` (NCIt/UBERON) and
+    ``official_label``/``clean_code`` (EFO). Returns ``{}`` if unreadable.
+    """
+    import os
+
+    env = os.environ.get("METAHARMONIZER_DATA_DIR")
+    base = Path(env) if env else Path(__file__).resolve().parents[1] / "data"
+    path = base / "corpus" / "retrieved_ontologies" / f"{source}_{category}_corpus.csv"
+    if not path.exists():
+        return {}
+    df = pd.read_csv(path)
+    label_col = next((c for c in ("label", "official_label") if c in df.columns), None)
+    code_col = next((c for c in ("obo_id", "clean_code") if c in df.columns), None)
+    if not label_col or not code_col:
+        return {}
+    out: dict[str, str] = {}
+    for lab, code in zip(df[label_col], df[code_col]):
+        if not isinstance(lab, str):
+            continue
+        key = _norm(lab)
+        val = "" if code is None else str(code).strip()
+        if key and val and key not in out:  # first-wins for stability
+            out[key] = val
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Evaluate ontology mapping against a benchmark CSV.")
     ap.add_argument("--benchmark", required=True, type=Path, help="CSV with query,ref_match,ref_match_id.")
@@ -56,6 +88,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--s2-method", default="sap-bert")
     ap.add_argument("--raw", action="store_true",
                     help="Skip the app's exact-match correctness patch (benchmark upstream as-is).")
+    ap.add_argument("--no-concept-tables", action="store_true",
+                    help="Skip the OLS-dependent concept-table build and synonym stage 2.5 "
+                         "(measure stage-1+2 only). Use when the concept table isn't available "
+                         "offline, e.g. the EFO merged corpus whose codes aren't OLS-fetchable.")
     ap.add_argument("--out", type=Path, default=None, help="Optional per-row results CSV.")
     args = ap.parse_args(argv)
 
@@ -89,6 +125,17 @@ def main(argv: list[str] | None = None) -> int:
 
         patch_exact_matching()
 
+    engine_kwargs: dict = {}
+    if args.no_concept_tables:
+        # Benchmark tool (boundary-exempt): the EFO merged corpus ships no concept
+        # table (efo_phenotype.json) and its codes aren't OLS-fetchable, so the
+        # setup-time build fails offline. Neutralize it and the synonym stage so
+        # stage-1+2 (exact + SapBERT semantic) run standalone. This is a fair
+        # lower bound on quality (no synonym boost).
+        OntoMapEngine._ensure_concept_tables = lambda self, corpus_df: None
+        engine_kwargs["skip_stage25"] = True
+        print("[eval] concept tables + synonym stage 2.5 DISABLED (stage-1+2 only)")
+
     t0 = time.time()
     engine = OntoMapEngine(
         corpus_category=args.category,
@@ -96,10 +143,17 @@ def main(argv: list[str] | None = None) -> int:
         ontology_source=args.source,
         s2_method=args.s2_method,
         s2_strategy="st",
+        **engine_kwargs,
     )
     result = engine.run()
     elapsed = time.time() - t0
     print(f"[eval] engine.run() over {len(queries)} queries in {elapsed:.1f}s")
+
+    # The engine emits labels but no code; recover the code from the corpus by
+    # label so the id metric is real (mirrors the production adapter).
+    code_map = _load_corpus_codes(args.category, args.source)
+    if code_map:
+        print(f"[eval] corpus code map: {len(code_map)} labels for id recovery")
 
     records = result.to_dict(orient="records") if result is not None else []
     rows: list[dict] = []
@@ -108,6 +162,8 @@ def main(argv: list[str] | None = None) -> int:
         q = str(raw.get("query"))
         pred_term = _first(raw, "match1")
         pred_id = _first(raw, "match1_id", "match1_obo_id", "obo_id")
+        if not pred_id and pred_term and code_map:
+            pred_id = code_map.get(_norm(pred_term))
         score = _first(raw, "match1_score") or 0.0
         gl, gi = gold_label.get(q), gold_id.get(q)
         label_hit = bool(pred_term) and _norm(pred_term) == _norm(gl)

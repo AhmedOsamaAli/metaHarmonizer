@@ -43,6 +43,7 @@ class EngineProtocol(Protocol):
         curated_df: pd.DataFrame,
         *,
         csv_path: str | None = None,
+        target_schema: str | None = None,
     ) -> list[dict[str, Any]]:
         """
         Map every column in ``raw_df`` to a curated schema field.

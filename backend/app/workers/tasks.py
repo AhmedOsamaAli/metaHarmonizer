@@ -75,6 +75,7 @@ def _run_pipeline(
     *,
     mode: str = "both",
     ontology_columns: list[str] | None = None,
+    target_schema: str | None = None,
 ) -> dict:
     """Synchronous, CPU-heavy engine work — executed in a worker thread.
 
@@ -114,7 +115,9 @@ def _run_pipeline(
         schema_all: list[dict] = []
         if mode in ("both", "schema", "ontology"):
             curated_df = pd.read_csv(curated_path, low_memory=False)
-            schema_all = engine.harmonize_schema(raw_df, curated_df, csv_path=str(local_csv))
+            schema_all = engine.harmonize_schema(
+                raw_df, curated_df, csv_path=str(local_csv), target_schema=target_schema
+            )
 
         # Only "both" and "schema" expose the schema mappings to the curator.
         if mode in ("both", "schema"):
@@ -148,6 +151,7 @@ async def run_harmonize(
     owner_id: int | None = None,
     mode: str = "both",
     ontology_columns: list[str] | None = None,
+    target_schema: str | None = None,
 ) -> None:
     """Execute one harmonize job end-to-end. Never raises — terminal state is
     recorded in job_runs and broadcast on the bus."""
@@ -182,6 +186,7 @@ async def run_harmonize(
                 curated_path,
                 mode=mode,
                 ontology_columns=ontology_columns,
+                target_schema=target_schema,
             )
         )
         await _checkpoint(study_id)

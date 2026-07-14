@@ -61,6 +61,7 @@ async def enqueue_harmonize(
     owner_id: int | None,
     mode: str = "both",
     ontology_columns: list[str] | None = None,
+    target_schema: str | None = None,
 ) -> None:
     kwargs = dict(
         job_id=job_id,
@@ -71,6 +72,7 @@ async def enqueue_harmonize(
         owner_id=owner_id,
         mode=mode,
         ontology_columns=ontology_columns,
+        target_schema=target_schema,
     )
 
     if settings.job_mode == "queue":
