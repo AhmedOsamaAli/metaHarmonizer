@@ -48,6 +48,9 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
+      # Real ontology mapping (NCIt/UBERON via the engine KB). Falls back to the
+      # curated dictionary if the KB isn't seeded, so it's safe on by default.
+      ONTOLOGY_ENGINE: "${ONTOLOGY_ENGINE:-1}"
       # Load embedding models from the seeded caches only — never the network.
       HF_HUB_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"
@@ -81,6 +84,9 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
+      # Real ontology mapping (NCIt/UBERON via the engine KB). Falls back to the
+      # curated dictionary if the KB isn't seeded, so it's safe on by default.
+      ONTOLOGY_ENGINE: "${ONTOLOGY_ENGINE:-1}"
       # Load embedding models from the seeded caches only — never the network.
       HF_HUB_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"

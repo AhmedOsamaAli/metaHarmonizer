@@ -21,15 +21,15 @@ cp .env.example .env
 
 Edit `.env` — at minimum set these for production:
 
-| Variable | Set to |
-| --- | --- |
-| `JWT_SECRET` | a real 32+ byte secret: `python -c "import secrets;print(secrets.token_urlsafe(48))"` |
-| `POSTGRES_PASSWORD` | a strong password |
-| `JOB_MODE` | `queue` (so the worker runs harmonizations) |
-| `ALLOWED_EMAIL_DOMAINS` | your org's email domain(s), comma-separated |
-| `CORS_ORIGINS` / `APP_BASE_URL` | your public URL (e.g. `https://harmonize.example.org`) |
-| `HF_HUB_OFFLINE` / `TRANSFORMERS_OFFLINE` | `1` (load models from the seeded cache) |
-| `RESEND_API_KEY` | (optional) for verification / reset emails; without it, links are logged |
+| Variable                                  | Set to                                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------------------------- |
+| `JWT_SECRET`                              | a real 32+ byte secret: `python -c "import secrets;print(secrets.token_urlsafe(48))"` |
+| `POSTGRES_PASSWORD`                       | a strong password                                                                     |
+| `JOB_MODE`                                | `queue` (so the worker runs harmonizations)                                           |
+| `ALLOWED_EMAIL_DOMAINS`                   | your org's email domain(s), comma-separated                                           |
+| `CORS_ORIGINS` / `APP_BASE_URL`           | your public URL (e.g. `https://harmonize.example.org`)                                |
+| `HF_HUB_OFFLINE` / `TRANSFORMERS_OFFLINE` | `1` (load models from the seeded cache)                                               |
+| `RESEND_API_KEY`                          | (optional) for verification / reset emails; without it, links are logged              |
 
 The container DSNs for Postgres/Redis are set by compose — you do **not** edit
 `DATABASE_URL`/`REDIS_URL` for the Docker path.

@@ -78,14 +78,14 @@ Interactive API reference (OpenAPI/Swagger): `http://localhost:8000/docs`.
 
 `.env.example` is the annotated catalogue. Key variables:
 
-| Variable | Required | Description |
-| --- | :---: | --- |
-| `JWT_SECRET` | yes | Signs tokens (boot fails if < 32 bytes). |
-| `DATABASE_URL` | yes | `postgresql+asyncpg://…` DSN. |
-| `REDIS_URL` | yes | Jobs, rate limits, WS tickets. |
-| `ALLOWED_EMAIL_DOMAINS` | yes | Signup allow-list; empty = registration closed. |
-| `ENGINE_IMPL` | | `metaharmonizer` (default) or `mock`. |
-| `GEMINI_API_KEY` | | Enables the optional Stage-4 LLM rematch. |
+| Variable                | Required | Description                                     |
+| ----------------------- | :------: | ----------------------------------------------- |
+| `JWT_SECRET`            |   yes    | Signs tokens (boot fails if < 32 bytes).        |
+| `DATABASE_URL`          |   yes    | `postgresql+asyncpg://…` DSN.                   |
+| `REDIS_URL`             |   yes    | Jobs, rate limits, WS tickets.                  |
+| `ALLOWED_EMAIL_DOMAINS` |   yes    | Signup allow-list; empty = registration closed. |
+| `ENGINE_IMPL`           |          | `metaharmonizer` (default) or `mock`.           |
+| `GEMINI_API_KEY`        |          | Enables the optional Stage-4 LLM rematch.       |
 
 Migrations are managed by Alembic and are not auto-applied — run `alembic upgrade head` after schema changes.
 
