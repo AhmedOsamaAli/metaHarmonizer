@@ -1,6 +1,7 @@
 // Core HTTP layer — auth header injection + transparent 401 refresh.
 
 import type { ApiErrorBody } from './types';
+import { guestFixture } from './guestFixtures';
 
 export const BASE = '/api/v1';
 
@@ -33,6 +34,17 @@ export function getAccessToken() {
 export function onTokenChange(fn: (token: string | null) => void) {
     listeners.add(fn);
     return () => listeners.delete(fn);
+}
+
+/* ---------- Guest preview (no account) ---------- */
+let guestMode = false;
+/** Toggle guest preview. While on, non-auth API calls are blocked so no real
+ *  data is fetched and no 401 refresh can bounce the visitor to /login. */
+export function setGuestMode(v: boolean) {
+    guestMode = v;
+}
+export function isGuestMode() {
+    return guestMode;
 }
 
 /* ---------- Refresh coordination (single-flight) ---------- */
@@ -93,6 +105,16 @@ interface Options extends RequestInit {
 /** Central fetch wrapper: injects bearer token, sends cookies, retries once on 401. */
 export async function apiFetch<T = unknown>(path: string, opts: Options = {}): Promise<T> {
     const { skipAuthRetry, json = true, headers, ...init } = opts;
+
+    // Guest preview has no account. Serve sample fixtures for GETs so the
+    // walkthrough shows a realistic curated study, and block everything else
+    // (writes, unknown reads) so nothing real is exposed and no 401 -> refresh
+    // loop can bounce the visitor to /login. Auth endpoints stay reachable.
+    if (guestMode && !path.startsWith('/auth/')) {
+        const fx = guestFixture(path, (init.method as string) ?? 'GET');
+        if (fx) return fx.data as T;
+        throw new ApiError(0, 'GUEST_PREVIEW', 'Sign in to do that.');
+    }
 
     const buildHeaders = (): HeadersInit => {
         const h = new Headers(headers);

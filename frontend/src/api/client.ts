@@ -52,6 +52,8 @@ export interface HarmonizeOptions {
     mode?: HarmonizeMode;
     /** Registered target-schema version to map against. Omit for current. */
     schemaVersionId?: number;
+    /** Engine target schema to map into (GDC / cBioPortal / cMD / …). */
+    targetSchema?: string;
     /** Column allow-list that scopes the ontology pass (required for 'ontology'). */
     ontologyColumns?: string[];
 }
@@ -69,6 +71,17 @@ export async function listTargetSchemas(): Promise<TargetSchema[]> {
     return request<TargetSchema[]>(`${BASE}/schema-versions`);
 }
 
+export interface EngineTargetSchema {
+    key: string;
+    label: string;
+    fields: number;
+}
+
+/** Target schemas the engine can map into (GDC / cBioPortal / cMD / …). */
+export async function listEngineTargetSchemas(): Promise<EngineTargetSchema[]> {
+    return request<EngineTargetSchema[]>(`${BASE}/target-schemas`);
+}
+
 export async function uploadAndHarmonize(
     file: File,
     opts: HarmonizeOptions = {},
@@ -78,6 +91,7 @@ export async function uploadAndHarmonize(
     if (opts.mode) form.append('mode', opts.mode);
     if (opts.schemaVersionId != null)
         form.append('schema_version_id', String(opts.schemaVersionId));
+    if (opts.targetSchema) form.append('target_schema', opts.targetSchema);
     if (opts.ontologyColumns?.length)
         form.append('ontology_columns', opts.ontologyColumns.join(','));
     return request<HarmonizeAccepted>(`${BASE}/harmonize`, {

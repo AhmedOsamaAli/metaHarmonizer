@@ -8,9 +8,10 @@ import ColumnTokenInput from '../components/ColumnTokenInput';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { uploadAndHarmonize, listTargetSchemas, type HarmonizeMode } from '../api/client';
+import { uploadAndHarmonize, listTargetSchemas, listEngineTargetSchemas, type HarmonizeMode } from '../api/client';
 import { parseDelimitedPreview, type ParsedPreview } from '../lib/parseDelimited';
 import { useJobs } from '../context/JobsContext';
+import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/http';
 
 type UploadState = 'idle' | 'uploading' | 'error';
@@ -32,6 +33,7 @@ export default function UploadPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { track, cancel, jobs } = useJobs();
+  const { isGuest } = useAuth();
   const [state, setState] = useState<UploadState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -39,6 +41,7 @@ export default function UploadPage() {
   // an optional column allow-list that scopes the ontology pass.
   const [mode, setMode] = useState<HarmonizeMode>('both');
   const [schemaVersionId, setSchemaVersionId] = useState<number | undefined>(undefined);
+  const [targetSchema, setTargetSchema] = useState<string | undefined>(undefined);
   const [ontologyColumns, setOntologyColumns] = useState<string[]>([]);
   // Client-side preview of the selected file (header + first rows) so the
   // curator can sanity-check the upload and so column names can power the
@@ -46,6 +49,7 @@ export default function UploadPage() {
   const [preview, setPreview] = useState<ParsedPreview | null>(null);
   const [showAllRows, setShowAllRows] = useState(false);
   const { data: schemas } = useQuery({ queryKey: ['target-schemas'], queryFn: listTargetSchemas });
+  const { data: engineSchemas } = useQuery({ queryKey: ['engine-target-schemas'], queryFn: listEngineTargetSchemas });
   // The study this upload session is following. Falls back (after a reload) to
   // the most recently-started job so the in-page view is restored too.
   const [currentStudyId, setCurrentStudyId] = useState<string | null>(null);
@@ -81,6 +85,7 @@ export default function UploadPage() {
       const res = await uploadAndHarmonize(file, {
         mode,
         schemaVersionId,
+        targetSchema,
         ontologyColumns: cols,
       });
       setCurrentStudyId(res.study_id);
@@ -114,7 +119,17 @@ export default function UploadPage() {
         description="Upload a CSV/TSV file with clinical metadata. The pipeline maps columns to the curated reference schema automatically."
       />
 
-      <FileUploader onFileSelected={handleFileSelected} disabled={state === 'uploading' || !!processing} />
+      <div>
+        <FileUploader
+          onFileSelected={handleFileSelected}
+          disabled={isGuest || state === 'uploading' || !!processing}
+        />
+        {isGuest && (
+          <p className="mt-2 text-center text-xs text-slate-400">
+            Preview only — sign in as a curator to upload and harmonize your own study.
+          </p>
+        )}
+      </div>
 
       {/* File preview — header + first rows, parsed client-side before upload */}
       {file && preview && !processing && !done && (
@@ -206,8 +221,30 @@ export default function UploadPage() {
 
               {mode !== 'ontology' && (
                 <div>
+                  <label htmlFor="target-standard" className="text-sm font-semibold text-slate-900">
+                    Target standard
+                  </label>
+                  <p className="text-xs text-slate-500">Which standard schema to map the columns into.</p>
+                  <select
+                    id="target-standard"
+                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                    value={targetSchema ?? ''}
+                    onChange={(e) => setTargetSchema(e.target.value || undefined)}
+                  >
+                    <option value="">Default{engineSchemas?.length ? ` (${engineSchemas[0].label})` : ''}</option>
+                    {engineSchemas?.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.label} — {s.fields} fields
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {mode !== 'ontology' && (
+                <div>
                   <label htmlFor="schema-version" className="text-sm font-semibold text-slate-900">
-                    Target schema
+                    Schema version
                   </label>
                   <select
                     id="schema-version"

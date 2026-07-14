@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Mail, Lock, LogIn } from 'lucide-react';
+import { Mail, Lock, LogIn, Compass } from 'lucide-react';
 import { toast } from 'sonner';
 import AuthLayout from '../components/AuthLayout';
 import Button from '../components/ui/Button';
@@ -10,7 +10,7 @@ import { ApiError } from '../api/http';
 import { resendVerification } from '../api/auth';
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, startGuestPreview } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? '/';
@@ -133,6 +133,28 @@ export default function LoginPage() {
           Sign in
         </Button>
       </form>
+
+      <div className="mt-5">
+        <div className="relative flex items-center">
+          <span className="h-px flex-1 bg-slate-200" />
+          <span className="px-3 text-xs font-medium text-slate-400">or</span>
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            startGuestPreview();
+            navigate('/', { replace: true });
+          }}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        >
+          <Compass className="h-4 w-4" />
+          Explore the dashboard — no account needed
+        </button>
+        <p className="mt-2 text-center text-xs text-slate-400">
+          A guided, read-only walkthrough of what curators and admins do.
+        </p>
+      </div>
     </AuthLayout>
   );
 }

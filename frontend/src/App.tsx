@@ -1,4 +1,4 @@
-import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Upload, Table2, BarChart3, Download, Microscope, Shield, Activity } from 'lucide-react';
 import { lazy, Suspense, type ReactNode } from 'react';
 import Brand from './components/Brand';
@@ -8,6 +8,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ProcessingTray from './components/ProcessingTray';
 import { LoadingBlock } from './components/ui/Feedback';
 import { useAuth } from './context/AuthContext';
+import type { Role } from './api/types';
 
 // Eager: tiny entry pages. Lazy: heavier feature pages (code-split per route).
 import LoginPage from './pages/LoginPage';
@@ -25,9 +26,15 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const ActivityPage = lazy(() => import('./pages/ActivityPage'));
 
-const NAV_ITEMS = [
+const NAV_ITEMS: {
+  to: string;
+  icon: typeof LayoutDashboard;
+  label: string;
+  end: boolean;
+  minRole?: Role;
+}[] = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
-  { to: '/upload', icon: Upload, label: 'Upload', end: false },
+  { to: '/upload', icon: Upload, label: 'Upload', end: false, minRole: 'curator' },
   { to: '/review', icon: Table2, label: 'Mappings', end: false },
   { to: '/ontology', icon: Microscope, label: 'Ontology', end: false },
   { to: '/quality', icon: BarChart3, label: 'Quality', end: false },
@@ -35,14 +42,15 @@ const NAV_ITEMS = [
 ];
 
 function TopNav() {
-  const { hasRole } = useAuth();
+  const { hasRole, isGuest, exitGuest } = useAuth();
+  const navigate = useNavigate();
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Brand />
 
         <nav className="hidden items-center gap-1 md:flex">
-          {NAV_ITEMS.map(({ to, icon: Icon, label, end }) => (
+          {NAV_ITEMS.filter((i) => hasRole(i.minRole ?? 'curator')).map(({ to, icon: Icon, label, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -92,14 +100,41 @@ function TopNav() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <NotificationBell />
-          <UserMenu />
+          {isGuest ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  exitGuest();
+                  navigate('/login');
+                }}
+                className="rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  exitGuest();
+                  navigate('/register');
+                }}
+                className="rounded-xl bg-primary-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-primary-700"
+              >
+                Create account
+              </button>
+            </>
+          ) : (
+            <>
+              <NotificationBell />
+              <UserMenu />
+            </>
+          )}
         </div>
       </div>
 
       {/* Mobile nav */}
       <nav className="flex items-center gap-1 overflow-x-auto border-t border-slate-100 px-3 py-2 md:hidden">
-        {NAV_ITEMS.map(({ to, icon: Icon, label, end }) => (
+        {NAV_ITEMS.filter((i) => hasRole(i.minRole ?? 'curator')).map(({ to, icon: Icon, label, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -120,6 +155,8 @@ function TopNav() {
 }
 
 function AppLayout({ children }: { children: ReactNode }) {
+  const { isGuest, exitGuest } = useAuth();
+  const navigate = useNavigate();
   return (
     <div className="relative flex min-h-screen flex-col">
       {/* Layered ambient background */}
@@ -128,6 +165,33 @@ function AppLayout({ children }: { children: ReactNode }) {
       <div className="pointer-events-none fixed inset-0 -z-10 bg-grid-slate bg-grid [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" />
 
       <TopNav />
+      {isGuest && (
+        <div className="sticky top-16 z-30 flex flex-wrap items-center justify-center gap-x-1.5 border-b border-amber-200 bg-amber-50/95 px-4 py-2 text-center text-xs font-medium text-amber-900 backdrop-blur">
+          <span>Preview mode — no account, read-only.</span>
+          <button
+            type="button"
+            onClick={() => {
+              exitGuest();
+              navigate('/register');
+            }}
+            className="font-semibold underline underline-offset-2 hover:text-amber-950"
+          >
+            Create an account
+          </button>
+          <span>or</span>
+          <button
+            type="button"
+            onClick={() => {
+              exitGuest();
+              navigate('/login');
+            }}
+            className="font-semibold underline underline-offset-2 hover:text-amber-950"
+          >
+            sign in
+          </button>
+          <span>to harmonize studies.</span>
+        </div>
+      )}
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <Suspense fallback={<LoadingBlock />}>
           <div className="animate-fade-in">{children}</div>
@@ -172,7 +236,7 @@ export default function App() {
       <Route path="/reset" element={<ResetPasswordPage />} />
 
       <Route path="/" element={<Shell><DashboardPage /></Shell>} />
-      <Route path="/upload" element={<Shell><UploadPage /></Shell>} />
+      <Route path="/upload" element={<Shell role="curator"><UploadPage /></Shell>} />
       <Route path="/review" element={<Shell><MappingReview /></Shell>} />
       <Route path="/review/:studyId" element={<Shell><MappingReview /></Shell>} />
       <Route path="/ontology" element={<Shell><OntologyReview /></Shell>} />

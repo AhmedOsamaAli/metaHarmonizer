@@ -7,6 +7,7 @@ import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { JobsProvider } from './context/JobsContext';
 import { NotificationsProvider } from './context/NotificationsContext';
+import { TourProvider } from './components/Walkthrough';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -27,7 +28,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <NotificationsProvider>
             <JobsProvider>
-              <App />
+              <TourProvider>
+                <App />
+              </TourProvider>
             </JobsProvider>
           </NotificationsProvider>
           <Toaster
