@@ -142,12 +142,18 @@ services:
       # Match the api/worker data root so seed_kb installs the corpus where they
       # read it (/app/data/corpus), not the engine's default (~/.metaharmonizer).
       METAHARMONIZER_DATA_DIR: /app/data
+      # Auto-download the bundle when it isn't provided locally at ./kb. Publish
+      # it once (python -m scripts.package_kb) and set KB_BUNDLE_URL in .env; the
+      # command below fetches it to a writable path, then seeds the volumes.
+      KB_BUNDLE_URL: "${KB_BUNDLE_URL:-}"
+      KB_BUNDLE_SHA256: "${KB_BUNDLE_SHA256:-}"
     volumes:
       - engine_cache:/root/.metaharmonizer
       - hf_cache:/root/.cache/huggingface   # seed the schema model into the shared HF cache
       - corpus_data:/app/data/corpus       # seed the corpus into the shared volume api/worker read
       - ./kb:/kb:ro
-    command: ["sh", "-c", "python -m scripts.seed_kb /kb/${KB_ARCHIVE:-kb_offline_bundle.tar.gz} --force"]
+    # Use ./kb/<archive> if it's mounted there, otherwise download from KB_BUNDLE_URL.
+    command: ["sh", "-c", "F=/kb/${KB_ARCHIVE:-kb_offline_bundle.tar.gz}; if [ -f \"$$F\" ]; then python -m scripts.seed_kb \"$$F\" --force; else python -m scripts.seed_kb /tmp/kb_offline_bundle.tar.gz --force; fi"]
     restart: "no"
 
   # One-shot: create the bootstrap admin account. Opt-in via the `seed` profile:

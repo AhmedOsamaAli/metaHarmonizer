@@ -95,6 +95,49 @@ def _install_tree(src_root: Path, dst_root: Path, force: bool, *, label: str) ->
         print(f"[seed] {label}: already present at {dst_root} (use --force to overwrite)")
 
 
+def _download(url: str, dest: Path, *, sha256: str | None = None) -> None:
+    """Stream the bundle from ``url`` to ``dest`` (atomic, optional sha256 check).
+
+    Standard-library only, so it works in a bare container with no extra deps.
+    Writes to a ``.part`` file and renames on success, so an interrupted run
+    never leaves a half-written bundle that looks complete.
+    """
+    import hashlib
+    import urllib.request
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dest.with_name(dest.name + ".part")
+    print(f"[seed] downloading bundle from {url}")
+    digest = hashlib.sha256()
+    done = 0
+    req = urllib.request.Request(url, headers={"User-Agent": "metaharmonizer-seed-kb"})
+    with urllib.request.urlopen(req) as resp, open(tmp, "wb") as fh:  # noqa: S310
+        total = int(resp.headers.get("Content-Length") or 0)
+        while True:
+            chunk = resp.read(1 << 20)  # 1 MiB
+            if not chunk:
+                break
+            fh.write(chunk)
+            digest.update(chunk)
+            done += len(chunk)
+            if total:
+                print(
+                    f"\r[seed]   {done // (1 << 20)}/{total // (1 << 20)} MiB "
+                    f"({done * 100 // total}%)",
+                    end="",
+                    flush=True,
+                )
+    if total:
+        print()
+    if sha256 and digest.hexdigest().lower() != sha256.strip().lower():
+        tmp.unlink(missing_ok=True)
+        raise RuntimeError(
+            f"bundle sha256 mismatch: expected {sha256}, got {digest.hexdigest()}"
+        )
+    tmp.replace(dest)
+    print(f"[seed] downloaded {done // (1 << 20)} MiB -> {dest}")
+
+
 def seed(bundle: Path, *, force: bool) -> int:
     if not bundle.exists():
         print(f"[seed] bundle not found: {bundle}", file=sys.stderr)
@@ -151,12 +194,48 @@ def seed(bundle: Path, *, force: bool) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Install an offline KB bundle.")
-    parser.add_argument("bundle", type=Path, help="Path to kb_offline_bundle.tar.gz.")
+    parser = argparse.ArgumentParser(
+        description="Install an offline KB bundle, downloading it first when missing."
+    )
+    parser.add_argument(
+        "bundle",
+        nargs="?",
+        default=os.getenv("KB_BUNDLE_PATH", "kb_offline_bundle.tar.gz"),
+        help="Local path to the bundle (downloaded here when missing). May also be an http(s) URL.",
+    )
+    parser.add_argument(
+        "--url",
+        default=os.getenv("KB_BUNDLE_URL"),
+        help="Download the bundle from this URL when the local file is missing (default: $KB_BUNDLE_URL).",
+    )
+    parser.add_argument(
+        "--sha256",
+        default=os.getenv("KB_BUNDLE_SHA256"),
+        help="Expected sha256 for an integrity check (default: $KB_BUNDLE_SHA256).",
+    )
     parser.add_argument("--force", action="store_true",
-                        help="Overwrite existing KB / corpus / cache.")
+                        help="Overwrite existing KB / corpus / cache / models.")
     args = parser.parse_args(argv)
-    return seed(args.bundle, force=args.force)
+
+    # The positional may be a URL directly (convenience).
+    url = args.url
+    bundle_arg = str(args.bundle)
+    if bundle_arg.startswith(("http://", "https://")):
+        url = bundle_arg
+        bundle = Path(os.getenv("KB_BUNDLE_PATH", "kb_offline_bundle.tar.gz"))
+    else:
+        bundle = Path(bundle_arg)
+
+    if not bundle.exists():
+        if url:
+            _download(url, bundle, sha256=args.sha256)
+        else:
+            print(
+                f"[seed] bundle not found and no --url / $KB_BUNDLE_URL to download it: {bundle}",
+                file=sys.stderr,
+            )
+            return 1
+    return seed(bundle, force=args.force)
 
 
 if __name__ == "__main__":
