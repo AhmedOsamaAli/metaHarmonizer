@@ -236,47 +236,68 @@ async def force_logout(
 # ---------------------------------------------------------------------------
 @router.get("/schema-versions")
 async def list_schema_versions(
+    target_schema: str | None = None,
     _admin: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    return await schema_repo.list_versions(db)
+    return await schema_repo.list_versions(db, target_schema)
 
 
 @router.post("/schema-versions", status_code=201)
 async def upload_schema_version(
     label: str,
+    target_schema: str,
     file: UploadFile = File(...),
     promote: bool = False,
     admin: User = Depends(require_role("admin")),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Upload a new curated-fields CSV as a new schema version (never an
-    overwrite). Optionally promote it to current in the same call."""
+    """Upload a new curated-fields CSV as a new version of a target schema
+    (never an overwrite). Optionally promote it to that target's current in the
+    same call."""
+    from app.engine_adapter import _schema_registry
+
     if not file.filename or not file.filename.lower().endswith(".csv"):
         raise HTTPException(status_code=400, detail="A .csv file is required.")
-    if await schema_repo.get_by_label(db, label):
-        raise HTTPException(status_code=409, detail=f"Version '{label}' already exists.")
+    if not _schema_registry.is_valid(target_schema):
+        raise HTTPException(
+            status_code=400, detail=f"Unknown target schema '{target_schema}'."
+        )
+    if await schema_repo.get_by_label(db, target_schema, label):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Version '{label}' already exists for '{target_schema}'.",
+        )
 
     SCHEMA_STORE.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
-    save_path = SCHEMA_STORE / f"curated_{label}_{stamp}.csv"
+    save_path = SCHEMA_STORE / f"curated_{target_schema}_{label}_{stamp}.csv"
     with open(save_path, "wb") as f:
         while chunk := await file.read(1024 * 1024):
             f.write(chunk)
 
     version = await schema_repo.create_version(
-        db, label=label, source_path=str(save_path), make_current=promote
+        db,
+        label=label,
+        source_path=str(save_path),
+        target_schema=target_schema,
+        make_current=promote,
     )
     await audit_repo.add_audit_entry(
         db,
         study_id=None,
         action="schema_version_upload",
-        new_value=f"{label}{' (promoted)' if promote else ''}",
+        new_value=f"{target_schema}/{label}{' (promoted)' if promote else ''}",
         actor_id=admin.id,
         curator=actor_label(admin),
     )
     await db.commit()
-    return {"id": version.id, "label": version.label, "is_current": version.is_current}
+    return {
+        "id": version.id,
+        "target_schema": version.target_schema,
+        "label": version.label,
+        "is_current": version.is_current,
+    }
 
 
 @router.get("/schema-aliases")

@@ -65,9 +65,25 @@ class User(Base, TimestampMixin):
 # Schema / ontology versioning (reproducibility pins)
 class SchemaVersion(Base, TimestampMixin):
     __tablename__ = "schema_versions"
+    __table_args__ = (
+        # A version label is unique within its target schema — each target
+        # (gdc / cbioportal / cmd / …) has its own v1, v2, … lineage.
+        UniqueConstraint("target_schema", "label", name="uq_schema_versions_target_label"),
+        # At most one current version per target schema (partial unique index).
+        Index(
+            "uq_schema_versions_current_per_target",
+            "target_schema",
+            unique=True,
+            postgresql_where=text("is_current"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    label: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    # The engine target schema this version belongs to (gdc / cbioportal / cmd / …).
+    target_schema: Mapped[str] = mapped_column(
+        String(100), nullable=False, server_default="cbioportal"
+    )
+    label: Mapped[str] = mapped_column(String(100), nullable=False)
     is_current: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="false")
     source_path: Mapped[str | None] = mapped_column(Text)
 

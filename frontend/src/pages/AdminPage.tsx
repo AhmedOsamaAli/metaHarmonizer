@@ -31,6 +31,7 @@ import {
   adminDeleteAlias,
   adminExportAliases,
 } from '../api/auth';
+import { listEngineTargetSchemas } from '../api/client';
 import type { SchemaDiff, LearnedCandidate, AliasEntry } from '../api/auth';
 import type { Role, User } from '../api/types';
 
@@ -349,7 +350,14 @@ function computeStats(users: User[]) {
 
 function SchemaVersionsCard() {
   const qc = useQueryClient();
-  const versions = useQuery({ queryKey: ['admin', 'schema-versions'], queryFn: adminListSchemaVersions });
+  const engineSchemas = useQuery({ queryKey: ['engine-target-schemas'], queryFn: listEngineTargetSchemas });
+  const [target, setTarget] = useState('');
+  const activeTarget = target || engineSchemas.data?.[0]?.key || '';
+  const versions = useQuery({
+    queryKey: ['admin', 'schema-versions', activeTarget],
+    queryFn: () => adminListSchemaVersions(activeTarget || undefined),
+    enabled: !!activeTarget,
+  });
   const fileRef = useRef<HTMLInputElement>(null);
   const [label, setLabel] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -367,7 +375,7 @@ function SchemaVersionsCard() {
   const invalidate = () => qc.invalidateQueries({ queryKey: ['admin', 'schema-versions'] });
 
   const uploadM = useMutation({
-    mutationFn: () => adminUploadSchemaVersion(label.trim(), file!, true),
+    mutationFn: () => adminUploadSchemaVersion(activeTarget, label.trim(), file!, true),
     onSuccess: (v) => {
       invalidate();
       toast.success(`Schema ${v.label} uploaded and promoted`);
@@ -392,15 +400,37 @@ function SchemaVersionsCard() {
       <CardHeader
         icon={<Layers className="h-4 w-4" />}
         title="Schema versions"
-        description="The curated-fields schema new studies map against. New uploads are new versions — existing studies stay pinned."
+        description="Each target schema keeps its own version lineage. New uploads are new versions of the selected target — existing studies stay pinned."
       />
       <CardBody className="space-y-4">
+        {/* Target schema — each target has its own version lineage */}
+        <div>
+          <label htmlFor="schema-target" className="block text-xs font-medium text-slate-500">
+            Target schema
+          </label>
+          <select
+            id="schema-target"
+            value={activeTarget}
+            onChange={(e) => {
+              setTarget(e.target.value);
+              setFromId(null);
+              setToId(null);
+              setDiff(null);
+            }}
+            className="mt-1 rounded border border-slate-200 px-2 py-1.5 text-sm"
+          >
+            {engineSchemas.data?.map((s) => (
+              <option key={s.key} value={s.key}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Upload form */}
         <form
           className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3"
           onSubmit={(e) => {
             e.preventDefault();
-            if (label.trim() && file) uploadM.mutate();
+            if (label.trim() && file && activeTarget) uploadM.mutate();
           }}
         >
           <div>
@@ -431,7 +461,7 @@ function SchemaVersionsCard() {
           <Button
             type="submit"
             loading={uploadM.isPending}
-            disabled={!label.trim() || !file}
+            disabled={!label.trim() || !file || !activeTarget}
             icon={<Upload className="h-4 w-4" />}
           >
             Upload &amp; promote

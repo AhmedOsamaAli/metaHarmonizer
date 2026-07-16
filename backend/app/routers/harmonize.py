@@ -67,8 +67,12 @@ async def _stream_upload(file: UploadFile, save_path: Path, max_bytes: int) -> N
             f.write(chunk)
 
 
-async def _resolve_schema(db: AsyncSession, schema_version_id: int | None):
-    """Resolve the target schema: explicit version, else current, else bundled."""
+async def _resolve_schema(
+    db: AsyncSession, schema_version_id: int | None, target_schema: str | None = None
+):
+    """Resolve the schema version: explicit id, else the chosen target's current,
+    else the bundled curated reference."""
+    from app.engine_adapter import _schema_registry
     from app.repositories import schema_versions as schema_repo
 
     if schema_version_id is not None:
@@ -76,8 +80,9 @@ async def _resolve_schema(db: AsyncSession, schema_version_id: int | None):
         if chosen is None:
             raise HTTPException(404, f"Schema version {schema_version_id} not found.")
     else:
-        chosen = await schema_repo.get_current(db)
-    curated_path = Path(chosen.source_path) if chosen else CURATED_PATH
+        key = target_schema or _schema_registry.default_key()
+        chosen = await schema_repo.get_current(db, key)
+    curated_path = Path(chosen.source_path) if chosen and chosen.source_path else CURATED_PATH
     if not curated_path.exists():
         raise HTTPException(
             500, "Curated reference file not found. Place curated_meta.csv in metadata_samples/."
@@ -145,7 +150,9 @@ async def harmonize_study(
 
     await _stream_upload(file, save_path, settings.max_upload_mb * 1024 * 1024)
     try:
-        chosen_schema, curated_path = await _resolve_schema(db_session, schema_version_id)
+        chosen_schema, curated_path = await _resolve_schema(
+            db_session, schema_version_id, target_schema
+        )
         shape_df = _read_shape(save_path, suffix)
         _enforce_row_cap(shape_df)
     except Exception:

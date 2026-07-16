@@ -41,11 +41,18 @@ async def lifespan(app: FastAPI):
     # a reproducibility pin. Idempotent: no-op once a current version exists.
     try:
         from app.db.session import SessionLocal
+        from app.engine_adapter import _schema_registry
         from app.repositories import schema_versions as schema_repo
         from app.routers.harmonize import CURATED_PATH
 
+        # One v1 lineage per installed target schema (gdc / cbioportal / cmd / …),
+        # falling back to the default key when no registry is installed.
+        keys = [s["key"] for s in _schema_registry.available_schemas()] or [
+            _schema_registry.default_key()
+        ]
+        targets = {k: str(CURATED_PATH) for k in keys}
         async with SessionLocal() as db:
-            await schema_repo.ensure_seed_version(db, source_path=str(CURATED_PATH))
+            await schema_repo.ensure_seed_versions(db, targets)
     except Exception:  # noqa: BLE001 — seeding must never block startup
         import logging
 

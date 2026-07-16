@@ -220,24 +220,27 @@ export async function adminForceLogout(userId: number): Promise<void> {
 
 export interface SchemaVersion {
     id: number;
+    target_schema: string;
     label: string;
     is_current: boolean;
     source_path: string | null;
     created_at: string;
 }
 
-export async function adminListSchemaVersions(): Promise<SchemaVersion[]> {
-    return apiFetch<SchemaVersion[]>('/admin/schema-versions');
+export async function adminListSchemaVersions(targetSchema?: string): Promise<SchemaVersion[]> {
+    const q = targetSchema ? `?target_schema=${encodeURIComponent(targetSchema)}` : '';
+    return apiFetch<SchemaVersion[]>(`/admin/schema-versions${q}`);
 }
 
 export async function adminUploadSchemaVersion(
+    targetSchema: string,
     label: string,
     file: File,
     promote = false,
-): Promise<{ id: number; label: string; is_current: boolean }> {
+): Promise<{ id: number; target_schema: string; label: string; is_current: boolean }> {
     const form = new FormData();
     form.append('file', file);
-    const params = new URLSearchParams({ label, promote: String(promote) });
+    const params = new URLSearchParams({ label, target_schema: targetSchema, promote: String(promote) });
     return apiFetch(`/admin/schema-versions?${params}`, { method: 'POST', body: form });
 }
 
