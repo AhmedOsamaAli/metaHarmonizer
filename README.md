@@ -47,7 +47,9 @@ Requires Docker (or Postgres 16 + Redis 7 locally), Python 3.12+, Node 20+.
 ```bash
 git clone https://github.com/AhmedOsamaAli/metaHarmonizer.git
 cd metaHarmonizer
-cp .env.example .env        # set ALLOWED_EMAIL_DOMAINS and JWT_SECRET
+cp .env.example .env        # local Docker boots as-is (a dev JWT secret is auto-set)
+# For native runs or production, set a strong secret in .env:
+#   JWT_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(48))")
 ```
 
 **Full stack (Docker):**

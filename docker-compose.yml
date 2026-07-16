@@ -59,6 +59,8 @@ services:
       - hf_cache:/root/.cache/huggingface   # schema model (all-MiniLM-L6-v2), seeded offline
       - corpus_data:/app/data/corpus       # seeded ontology corpus (kb-import writes, api/worker read)
       - uploads:/app/data/uploads          # shared with the worker so queue mode can read uploads
+      - schema_versions:/app/data/schema/versions  # admin-uploaded schema versions (shared + persistent)
+      - schema_aliases:/app/data/schema/aliases    # admin-uploaded alias dictionary (shared + persistent)
     # Run migrations on startup, then serve (idempotent). Postgres is healthy
     # via depends_on, so a compose-based run needs no separate migrate step.
     command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
@@ -95,6 +97,8 @@ services:
       - hf_cache:/root/.cache/huggingface   # schema model, same cache as the API
       - corpus_data:/app/data/corpus       # same corpus volume as the API
       - uploads:/app/data/uploads          # same volume as the API — reads the uploaded file
+      - schema_versions:/app/data/schema/versions  # same schema-version store as the API
+      - schema_aliases:/app/data/schema/aliases    # same alias store as the API
     # arq worker (Sprint 4). Set JOB_MODE=queue so the API enqueues here.
     # Scale concurrency with `docker compose up --scale worker=N`.
     command: ["arq", "app.workers.arq_worker.WorkerSettings"]
@@ -181,3 +185,5 @@ volumes:
   hf_cache:
   web_dist:
   uploads:
+  schema_versions:
+  schema_aliases:

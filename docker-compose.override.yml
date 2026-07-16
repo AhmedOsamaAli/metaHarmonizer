@@ -18,6 +18,12 @@ services:
       - "6379:6379"
 
   api:
+    # Dev-only JWT secret so `cp .env.example .env && docker compose up` boots
+    # without a manual step. Overrides the .env placeholder (which the app
+    # rejects). Production uses docker-compose.prod.yml (which skips this file)
+    # and must supply a real JWT_SECRET.
+    environment:
+      JWT_SECRET: dev-secret-key-at-least-32-bytes-long-please
     ports:
       - "8000:8000"
     volumes:
@@ -26,6 +32,8 @@ services:
     command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
 
   worker:
+    environment:
+      JWT_SECRET: dev-secret-key-at-least-32-bytes-long-please
     volumes:
       - ./backend:/app
       - engine_cache:/root/.metaharmonizer
