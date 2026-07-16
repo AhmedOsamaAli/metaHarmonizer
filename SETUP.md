@@ -43,17 +43,25 @@ cp .env.example .env          # Windows PowerShell: copy .env.example .env
 ## 2. Get the engine KB + models (one-time)
 
 The real engine needs a **knowledge base** (FAISS + SQLite indexes over NCIt/UBERON/…)
-and **embedding models** (MiniLM for schema, SapBERT for ontology). These are large and
-built **out-of-band**, not shipped in the repo. Build the offline bundle **once** on a
-machine with internet (needs a free `UMLS_API_KEY` the first time):
+and **embedding models** (MiniLM for schema, SapBERT for ontology). These are large
+(~1.4 GB) and shipped **out-of-band**, not in the repo. Pick one:
+
+**A — Use a prebuilt bundle (recommended for a fresh run).** Get
+`kb_offline_bundle.tar.gz` from the maintainer or a published GitHub Release, then either:
+- drop it at `./kb/kb_offline_bundle.tar.gz`, **or**
+- set `KB_BUNDLE_URL` (+ `KB_BUNDLE_SHA256`) in `.env` so `kb-import` downloads it.
+
+**B — Build it yourself (maintainers).** On a machine with internet + a free
+`UMLS_API_KEY` the first time:
 
 ```bash
 cd backend
-python -m scripts.package_kb -o ../kb/kb_offline_bundle.tar.gz   # ~0.7 GB models + KB
+python -m scripts.package_kb -o ../kb/kb_offline_bundle.tar.gz   # ~1.4 GB models + KB
 ```
 
-The full recipe (and how to pin/upgrade it) is in **[DEPLOY.md](DEPLOY.md)**. Keep the
-bundle at `./kb/kb_offline_bundle.tar.gz`.
+The full recipe (and how to pin/upgrade it) is in **[DEPLOY.md](DEPLOY.md)**. Either way,
+the seed step (below) installs it into the stack; new machines with no bundle **and** no
+`KB_BUNDLE_URL` will fail the seed with a clear "bundle not found" message.
 
 ---
 
