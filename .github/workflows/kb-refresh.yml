@@ -1,0 +1,100 @@
+name: Refresh KB bundle
+
+# Rebuilds the offline KB + embedding-model bundle from the *current* source
+# ontologies and republishes it as the `kb-latest` release asset. The engine KB
+# is a point-in-time snapshot; run this occasionally to pick up newer
+# NCIt / UBERON / GO / CL terms.
+#
+# Base corpora fetch key-free (NCIt via EVSREST, UBERON via OLS4). Set the
+# optional `UMLS_API_KEY` repo secret to add synonym enrichment.
+#
+# Republishing changes the bundle's sha256, so the job opens a PR bumping
+# KB_BUNDLE_SHA256 in .env.example — merge it to keep integrity checks valid.
+#
+# First time: run it manually (Actions -> Refresh KB bundle -> Run workflow) and
+# confirm it succeeds before relying on the schedule.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    # 03:00 UTC on the 1st of Jan / Apr / Jul / Oct (quarterly).
+    - cron: "0 3 1 */3 *"
+
+permissions:
+  contents: write        # upload the release asset + push the sha-bump branch
+  pull-requests: write   # open the sha-bump PR
+
+concurrency:
+  group: kb-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      # Build into the repo checkout so package_kb finds the KB + corpus.
+      KNOWLEDGE_DB_DIR: ${{ github.workspace }}/backend/kb_build
+      METAHARMONIZER_DATA_DIR: ${{ github.workspace }}/backend/data
+      # Optional: only adds synonym enrichment; the base build works without it.
+      UMLS_API_KEY: ${{ secrets.UMLS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend + vendored engine wheel
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build the KB (fetch ontologies + build FAISS indexes)
+        working-directory: backend
+        # NOTE: HF_HUB_OFFLINE is intentionally unset here so the embedding
+        # models download during the build; the bundle then ships them for
+        # offline runtime use.
+        run: python -m scripts.build_kb
+
+      - name: Package the offline bundle
+        working-directory: backend
+        run: python -m scripts.package_kb -o ../kb/kb_offline_bundle.tar.gz
+
+      - name: Compute sha256
+        id: sha
+        run: |
+          SHA=$(sha256sum kb/kb_offline_bundle.tar.gz | awk '{print $1}')
+          SIZE=$(stat -c%s kb/kb_offline_bundle.tar.gz)
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          {
+            echo "### KB bundle"
+            echo "- size: ${SIZE} bytes"
+            echo "- sha256: \`${SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Republish to the kb-latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload kb-latest kb/kb_offline_bundle.tar.gz --clobber
+
+      - name: Open a PR bumping KB_BUNDLE_SHA256
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          SHA="${{ steps.sha.outputs.sha256 }}"
+          sed -i -E "s|^KB_BUNDLE_SHA256=.*|KB_BUNDLE_SHA256=${SHA}  # integrity check of the current bundle|" .env.example
+          if git diff --quiet -- .env.example; then
+            echo "sha256 unchanged — no PR needed"; exit 0
+          fi
+          BR="kb-refresh/sha-${SHA:0:12}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BR"
+          git add .env.example
+          git commit -m "chore(kb): bump KB_BUNDLE_SHA256 after KB refresh"
+          git push -u origin "$BR"
+          gh pr create --base main --head "$BR" \
+            --title "Refresh KB bundle (bump sha256)" \
+            --body "Automated KB rebuild republished to \`kb-latest\`. New sha256: \`${SHA}\`. Merge to keep the download integrity check in sync."
