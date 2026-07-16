@@ -61,6 +61,7 @@ services:
       - uploads:/app/data/uploads          # shared with the worker so queue mode can read uploads
       - schema_versions:/app/data/schema/versions  # admin-uploaded schema versions (shared + persistent)
       - schema_aliases:/app/data/schema/aliases    # admin-uploaded alias dictionary (shared + persistent)
+      - ./metadata_samples:/metadata_samples:ro    # curated_meta.csv reference (CURATED_PATH); lives at repo root, outside the backend build context
     # Run migrations on startup, then serve (idempotent). Postgres is healthy
     # via depends_on, so a compose-based run needs no separate migrate step.
     command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
@@ -99,6 +100,7 @@ services:
       - uploads:/app/data/uploads          # same volume as the API — reads the uploaded file
       - schema_versions:/app/data/schema/versions  # same schema-version store as the API
       - schema_aliases:/app/data/schema/aliases    # same alias store as the API
+      - ./metadata_samples:/metadata_samples:ro    # curated_meta.csv reference (CURATED_PATH); same as the API
     # arq worker (Sprint 4). Set JOB_MODE=queue so the API enqueues here.
     # Scale concurrency with `docker compose up --scale worker=N`.
     command: ["arq", "app.workers.arq_worker.WorkerSettings"]
