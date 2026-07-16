@@ -8,7 +8,7 @@ import ColumnTokenInput from '../components/ColumnTokenInput';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { uploadAndHarmonize, listTargetSchemas, listEngineTargetSchemas, type HarmonizeMode } from '../api/client';
+import { uploadAndHarmonize, listEngineTargetSchemas, type HarmonizeMode } from '../api/client';
 import { parseDelimitedPreview, type ParsedPreview } from '../lib/parseDelimited';
 import { useJobs } from '../context/JobsContext';
 import { useAuth } from '../context/AuthContext';
@@ -40,7 +40,6 @@ export default function UploadPage() {
   // Harmonization options (Sehyun follow-ups): mapper mode, target schema, and
   // an optional column allow-list that scopes the ontology pass.
   const [mode, setMode] = useState<HarmonizeMode>('both');
-  const [schemaVersionId, setSchemaVersionId] = useState<number | undefined>(undefined);
   const [targetSchema, setTargetSchema] = useState<string | undefined>(undefined);
   const [ontologyColumns, setOntologyColumns] = useState<string[]>([]);
   // Client-side preview of the selected file (header + first rows) so the
@@ -48,7 +47,6 @@ export default function UploadPage() {
   // ontology-column autocomplete.
   const [preview, setPreview] = useState<ParsedPreview | null>(null);
   const [showAllRows, setShowAllRows] = useState(false);
-  const { data: schemas } = useQuery({ queryKey: ['target-schemas'], queryFn: listTargetSchemas });
   const { data: engineSchemas } = useQuery({ queryKey: ['engine-target-schemas'], queryFn: listEngineTargetSchemas });
   // The study this upload session is following. Falls back (after a reload) to
   // the most recently-started job so the in-page view is restored too.
@@ -84,7 +82,6 @@ export default function UploadPage() {
     try {
       const res = await uploadAndHarmonize(file, {
         mode,
-        schemaVersionId,
         targetSchema,
         ontologyColumns: cols,
       });
@@ -235,29 +232,6 @@ export default function UploadPage() {
                     {engineSchemas?.map((s) => (
                       <option key={s.key} value={s.key}>
                         {s.label} — {s.fields} fields
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {mode !== 'ontology' && (
-                <div>
-                  <label htmlFor="schema-version" className="text-sm font-semibold text-slate-900">
-                    Schema version
-                  </label>
-                  <select
-                    id="schema-version"
-                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-                    value={schemaVersionId ?? ''}
-                    onChange={(e) =>
-                      setSchemaVersionId(e.target.value ? Number(e.target.value) : undefined)
-                    }
-                  >
-                    <option value="">Current{schemas?.find((s) => s.is_current) ? ` (${schemas.find((s) => s.is_current)!.label})` : ''}</option>
-                    {schemas?.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}{s.is_current ? ' — current' : ''}
                       </option>
                     ))}
                   </select>
