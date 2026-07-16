@@ -68,6 +68,30 @@ def _strip_smart_quotes(text: str) -> str:
     """Replace curly quotes with straight ones (checklist: no smart quotes)."""
     return text.translate(_SMART_QUOTES)
 
+
+# Cell values beginning with these can be executed as a formula by Excel /
+# Google Sheets / LibreOffice when a CSV is opened — the classic "CSV injection".
+_CSV_FORMULA_TRIGGERS = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _guard_formula_injection(value: Any) -> Any:
+    """Neutralize spreadsheet formula-injection in a cell value.
+
+    Prefixes a single quote to any string whose first character a spreadsheet
+    could treat as a formula, so it renders as literal text. Plain numbers
+    (e.g. ``-5``, ``+3.1``) are left untouched, and non-strings pass through.
+    """
+    if not isinstance(value, str) or not value:
+        return value
+    if value[0] not in _CSV_FORMULA_TRIGGERS:
+        return value
+    try:
+        float(value)  # keep legitimate numbers like "-5" / "+3.1" intact
+        return value
+    except ValueError:
+        return "'" + value
+
+
 # Patient-level clinical attributes (cBioPortal convention). When a study is
 # exported as a folder, these go to data_clinical_patient.txt and everything
 # else (that isn't an ID) goes to data_clinical_sample.txt. Survival columns
@@ -206,6 +230,12 @@ async def export_harmonized_csv(
             out_df[col] = out_df[col].map(
                 lambda v, _m=lookup: _m.get(str(v), v) if pd.notna(v) else v
             )
+
+    # Neutralize spreadsheet formula-injection in this human-facing CSV. (The
+    # cBioPortal TSVs are machine-read by the importer, so they are not escaped.)
+    for col in out_df.columns:
+        if out_df[col].dtype == object:
+            out_df[col] = out_df[col].map(_guard_formula_injection)
 
     return out_df.to_csv(index=False)
 

@@ -34,6 +34,22 @@ def test_cbioportal_export_blanks_missing_values():
     assert exporter._sanitize_id("MG100208") == "MG100208"
 
 
+def test_guard_formula_injection_escapes_formulas_not_numbers():
+    from app.services import exporter
+
+    # Formula triggers get a leading apostrophe so a spreadsheet renders them
+    # as literal text (CSV-injection defense on the human-facing CSV export).
+    assert exporter._guard_formula_injection("=SUM(A1:A9)") == "'=SUM(A1:A9)"
+    assert exporter._guard_formula_injection("@foo") == "'@foo"
+    assert exporter._guard_formula_injection("+cmd|'/c calc'!A1") == "'+cmd|'/c calc'!A1"
+    assert exporter._guard_formula_injection("-2+3+cmd") == "'-2+3+cmd"
+    # Plain numbers and ordinary text are left untouched.
+    assert exporter._guard_formula_injection("-5") == "-5"
+    assert exporter._guard_formula_injection("+3.1") == "+3.1"
+    assert exporter._guard_formula_injection("healthy") == "healthy"
+    assert exporter._guard_formula_injection("") == ""
+
+
 def test_value_rewrite_map_applies_accepted_terms():
     """U5: a column's accepted raw_value -> term mapping rewrites cells; others pass through."""
     lookup = {"adult": "Adult", "stool": "feces"}
