@@ -31,8 +31,26 @@ docker compose up --build
 # 5 — Open the app  →  http://localhost:8080
 ```
 
-On first open, **register an account — the first one becomes the admin.**
-Later accounts are curators.
+On first open, **register an account — the *first* account on an empty database becomes
+the admin** (auto-verified, ready to sign in immediately). Later accounts are curators
+who must confirm their email — and because a local install sends no email, **only that
+first account can sign in** unless you configure a mail provider.
+
+**Just trying it out? Skip login entirely** — set `AUTH_MODE=none` in `.env` before step 4
+(see Optional below). You're dropped straight into the dashboard as an admin — no
+registration, email, or approval — and it works even if the database already has
+accounts. This is the smoothest path for evaluation.
+
+**Prefer a ready-made login** (e.g. to hand to a teammate)? Instead of registering,
+seed one — run from the project root (the folder with `docker-compose.yml`):
+
+```bash
+docker compose --profile seed run --rm seed
+```
+
+Creates `admin@example.com` / `ChangeMe!2026` (admin, verified). Override with
+`SEED_EMAIL` / `SEED_PASSWORD`. It's idempotent — an existing account is left unchanged
+(it won't reset the password), so run it on a fresh database or use a new email.
 
 To stop: `docker compose down` (add `-v` to also wipe the database and caches).
 
@@ -50,14 +68,24 @@ accept or correct the mappings.
 
 ## Optional (one line each in `.env`, before step 4)
 
-- **Skip login** — set `AUTH_MODE=none` to be dropped straight into the dashboard
-  as a local admin, with no registration or email. **Local use only** — never
-  deploy with it.
+- **Skip login (recommended for evaluation)** — set `AUTH_MODE=none` to be dropped
+  straight into the dashboard as a local admin, with no registration, email, or approval.
+  Set it before step 4 and it just works; change it later and re-run
+  `docker compose up -d --force-recreate api` for it to take effect. **Local use only** —
+  never deploy with it.
 - **Best ontology matches (Stage-4 LLM)** — set `GEMINI_API_KEY=your-key` to enable
   the LLM fallback for the hardest columns. Without it, the earlier stages still run.
 
 ## Troubleshooting
 
+- **Registered an account but can't sign in** — only the *first* account on an empty
+  database is auto-verified. Later self-registrations must confirm their email, which a
+  local install can't send, so sign-in is blocked ("verify your email" / "awaiting
+  approval"). Easiest fix: set `AUTH_MODE=none` (skip login), then
+  `docker compose up -d --force-recreate api`. Or reset with `docker compose down -v` and
+  register once, or seed an account.
+- **Credentials from someone else don't work** — accounts live in the database and don't
+  transfer between machines/installs; each install needs its own first account (or seed).
 - **Ontology mapping returns no NCIt / UBERON codes** — the KB step didn't complete.
   Re-run `docker compose --profile kb run --rm kb-import` and confirm it prints a
   `downloaded … MiB` line.
