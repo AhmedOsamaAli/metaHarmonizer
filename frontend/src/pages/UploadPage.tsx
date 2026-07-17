@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, AlertCircle, FileSpreadsheet, ArrowRight, Sparkles, Loader2, X, Table2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, FileSpreadsheet, ArrowRight, Sparkles, Table2 } from 'lucide-react';
 import { toast } from 'sonner';
 import FileUploader from '../components/FileUploader';
 import ColumnTokenInput from '../components/ColumnTokenInput';
@@ -32,7 +32,7 @@ const STAGES = [
 export default function UploadPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { track, cancel, jobs } = useJobs();
+  const { track, jobs } = useJobs();
   const { isGuest } = useAuth();
   const [state, setState] = useState<UploadState>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -50,15 +50,17 @@ export default function UploadPage() {
   const { data: engineSchemas } = useQuery({ queryKey: ['engine-target-schemas'], queryFn: listEngineTargetSchemas });
   // The study this upload session is following. Falls back (after a reload) to
   // the most recently-started job so the in-page view is restored too.
+  // The run whose "complete → review" card we surface inline once it finishes.
+  // Harmonization is never required to stay in view: every run continues in the
+  // docked tray (bottom-right), so the upload form below is never blocked while
+  // a run is processing (or being cancelled). We only keep a handle to the
+  // most-recently-started run so its success card can appear here.
   const [currentStudyId, setCurrentStudyId] = useState<string | null>(null);
 
-  const followed = useMemo(() => {
-    if (currentStudyId) return jobs.find((j) => j.studyId === currentStudyId) ?? null;
-    // After a refresh we lose currentStudyId; show the newest active job so the
-    // upload page reflects in-flight work (the tray shows the rest).
-    const active = jobs.filter((j) => j.phase === 'queued' || j.phase === 'processing');
-    return active.length ? active[0] : null;
-  }, [currentStudyId, jobs]);
+  const followed = useMemo(
+    () => (currentStudyId ? jobs.find((j) => j.studyId === currentStudyId) ?? null : null),
+    [currentStudyId, jobs],
+  );
 
   const handleFileSelected = (f: File) => {
     setFile(f);
@@ -98,6 +100,9 @@ export default function UploadPage() {
         rowCount: res.row_count,
         columnCount: res.column_count,
       });
+      // The run continues in the background (docked tray, bottom-right); the
+      // form is immediately free for the next upload.
+      toast.success(`Harmonizing ${res.study_name} — progress shows in the jobs tray.`);
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Upload failed';
       setError(msg);
@@ -106,7 +111,6 @@ export default function UploadPage() {
     }
   };
 
-  const processing = followed && (followed.phase === 'queued' || followed.phase === 'processing');
   const done = followed && followed.phase === 'done';
 
   return (
@@ -119,7 +123,7 @@ export default function UploadPage() {
       <div>
         <FileUploader
           onFileSelected={handleFileSelected}
-          disabled={isGuest || state === 'uploading' || !!processing}
+          disabled={isGuest || state === 'uploading'}
         />
         {isGuest && (
           <p className="mt-2 text-center text-xs text-slate-400">
@@ -129,7 +133,7 @@ export default function UploadPage() {
       </div>
 
       {/* File preview — header + first rows, parsed client-side before upload */}
-      {file && preview && !processing && !done && (
+      {file && preview && (
         <Card>
           <CardBody className="space-y-3">
             <div className="flex items-center justify-between gap-3">
@@ -190,7 +194,7 @@ export default function UploadPage() {
       )}
 
       {/* Selected file → options + run */}
-      {file && !processing && !done && (
+      {file && (
         <>
           <Card>
             <CardBody className="space-y-5">
@@ -282,68 +286,10 @@ export default function UploadPage() {
         </>
       )}
 
-      {/* Live processing */}
-      {processing && followed && (
-        <Card className="border-primary-200">
-          <CardBody className="space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <Loader2 className="mt-0.5 h-6 w-6 animate-spin text-primary-600" />
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900">Harmonizing {followed.studyName}…</h3>
-                  <p className="mt-0.5 text-sm text-slate-500">
-                    {followed.message}
-                    {followed.rowCount != null && (
-                      <> · {followed.rowCount.toLocaleString()} rows</>
-                    )}
-                    {followed.columnCount != null && <> · {followed.columnCount} columns</>}
-                  </p>
-                </div>
-              </div>
-              <Button variant="ghost" size="sm" className="text-rose-600 hover:bg-rose-50" icon={<X className="h-3.5 w-3.5" />} onClick={() => cancel(followed.studyId)}>
-                Cancel
-              </Button>
-            </div>
-
-            {/* Progress bar */}
-            <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full bg-primary-500 transition-all duration-500"
-                style={{ width: `${Math.max(5, followed.pct)}%` }}
-              />
-            </div>
-
-            {/* Stage pills */}
-            <div className="flex flex-wrap gap-2">
-              {[
-                { key: 'parse', label: 'Read file' },
-                { key: 'schema', label: 'Schema mapping' },
-                { key: 'ontology', label: 'Ontology' },
-                { key: 'done', label: 'Finalize' },
-              ].map((s) => {
-                const reached = followed.pct >= stagePct(s.key);
-                const active = followed.stage === s.key;
-                return (
-                  <span
-                    key={s.key}
-                    className={`chip ${active ? 'bg-primary-600 text-white' : reached ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}
-                  >
-                    {reached && !active ? <CheckCircle2 className="h-3 w-3" /> : null}
-                    {s.label}
-                  </span>
-                );
-              })}
-            </div>
-
-            <p className="text-xs text-slate-400">
-              You can leave this page — progress keeps running and stays visible in the tray (bottom-right), even after a refresh.
-            </p>
-          </CardBody>
-        </Card>
-      )}
-
-      {/* Success */}
-      {done && followed && (
+      {/* Success — the most-recently-started run, once it finishes. Every run
+          also shows in the docked tray, so this is a convenience, not the only
+          place progress/results appear. Hidden as soon as a new file is picked. */}
+      {done && followed && !file && (
         <Card className="border-emerald-200 bg-emerald-50/40">
           <CardBody className="space-y-5">
             <div className="flex items-start gap-3">
@@ -421,13 +367,3 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-/** Progress threshold (%) at which a stage is considered reached. */
-function stagePct(key: string): number {
-  switch (key) {
-    case 'parse': return 10;
-    case 'schema': return 30;
-    case 'ontology': return 90;
-    case 'done': return 100;
-    default: return 100;
-  }
-}
