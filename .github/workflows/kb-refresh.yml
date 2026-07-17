@@ -11,14 +11,17 @@ name: Refresh KB bundle
 # Republishing changes the bundle's sha256, so the job opens a PR bumping
 # KB_BUNDLE_SHA256 in .env.example — merge it to keep integrity checks valid.
 #
-# First time: run it manually (Actions -> Refresh KB bundle -> Run workflow) and
-# confirm it succeeds before relying on the schedule.
+# It carries EFO + the warmed schema cache forward from the current published
+# bundle (neither is rebuildable), refreshes the fetchable ontologies, and
+# verifies the result is a superset before republishing.
+#
+# Manual-only for now: enable the `schedule:` trigger below only after a manual
+# run has been validated end-to-end.
 
 on:
   workflow_dispatch: {}
-  schedule:
-    # 03:00 UTC on the 1st of Jan / Apr / Jul / Oct (quarterly).
-    - cron: "0 3 1 */3 *"
+  # schedule:
+  #   - cron: "0 3 1 */3 *"   # quarterly — enable after validating a manual run
 
 permissions:
   contents: write        # upload the release asset + push the sha-bump branch
@@ -58,9 +61,24 @@ jobs:
         # offline runtime use.
         run: python -m scripts.build_kb
 
+      - name: Fetch the current published bundle (source of EFO + warmed cache)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /tmp/cur
+          gh release download kb-latest -p kb_offline_bundle.tar.gz -D /tmp/cur
+
+      - name: Graft EFO + warmed schema cache forward (not rebuildable)
+        working-directory: backend
+        run: python -m scripts.graft_efo --from-bundle /tmp/cur/kb_offline_bundle.tar.gz
+
       - name: Package the offline bundle
         working-directory: backend
         run: python -m scripts.package_kb -o ../kb/kb_offline_bundle.tar.gz
+
+      - name: Verify the bundle is a superset (EFO + 4 corpora + KB + models)
+        run: |
+          python -c "import sys,tarfile; n=set(tarfile.open('kb/kb_offline_bundle.tar.gz').getnames()); req={'kb.mhkb.tar.gz','corpus/retrieved_ontologies/efo_phenotype_corpus.csv','corpus/retrieved_ontologies/ncit_disease_corpus.csv','corpus/retrieved_ontologies/ncit_treatment_corpus.csv','corpus/retrieved_ontologies/uberon_bodysite_corpus.csv'}; tops={x.split('/')[0] for x in n}; miss=[r for r in req if r not in n]+[t for t in ('model_cache','hf_hub') if t not in tops]; sys.exit('NOT A SUPERSET: %s' % miss) if miss else print('verified superset: EFO + 4 corpora + KB + models')"
 
       - name: Compute sha256
         id: sha
