@@ -63,10 +63,19 @@ export default function RegisterPage() {
   };
 
   if (done) {
+    // The first account (bootstrap admin) is auto-verified and can sign in right
+    // away — its server message says so and never mentions email. Only show the
+    // "check your inbox" screen when verification is actually required, so we
+    // don't tell the admin to wait for an email that never comes.
+    const needsVerification = /verify/i.test(done);
     return (
       <AuthLayout
-        title="Check your inbox"
-        subtitle="One more step to activate your account."
+        title={needsVerification ? 'Check your inbox' : "You're all set"}
+        subtitle={
+          needsVerification
+            ? 'One more step to activate your account.'
+            : 'Your admin account is ready — sign in to get started.'
+        }
         footer={
           <>
             Ready to continue?{' '}
@@ -78,12 +87,18 @@ export default function RegisterPage() {
       >
         <div className="space-y-4 text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
-            <MailCheck className="h-7 w-7 text-emerald-600" />
+            {needsVerification ? (
+              <MailCheck className="h-7 w-7 text-emerald-600" />
+            ) : (
+              <UserPlus className="h-7 w-7 text-emerald-600" />
+            )}
           </div>
           <p className="text-sm text-slate-600">{done}</p>
-          <p className="text-xs text-slate-400">
-            Didn’t get it? Check spam, or you can request a new link from the sign-in page.
-          </p>
+          {needsVerification && (
+            <p className="text-xs text-slate-400">
+              Didn’t get it? Check spam, or you can request a new link from the sign-in page.
+            </p>
+          )}
           <Button className="w-full" onClick={() => navigate('/login')}>
             Go to sign in
           </Button>
