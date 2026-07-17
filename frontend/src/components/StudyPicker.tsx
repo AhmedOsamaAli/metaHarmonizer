@@ -24,12 +24,16 @@ export default function StudyPicker({
 }) {
   const navigate = useNavigate();
 
+  // Cancelled studies are hidden from the pick list — you can't review/export
+  // them, and they auto-delete after a week anyway.
+  const visible = (studies ?? []).filter((s) => s.status !== 'cancelled');
+
   return (
     <div>
       <PageHeader title={title} description={description} />
       {loading ? (
         <LoadingBlock label="Loading studies…" />
-      ) : !studies?.length ? (
+      ) : !visible.length ? (
         <EmptyState
           icon={<Upload className="h-6 w-6" />}
           title="No studies yet"
@@ -43,7 +47,7 @@ export default function StudyPicker({
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           <AnimatePresence>
-            {studies.map((s) => (
+            {visible.map((s) => (
               <StudyListCard key={s.id} study={s} basePath={basePath} />
             ))}
           </AnimatePresence>

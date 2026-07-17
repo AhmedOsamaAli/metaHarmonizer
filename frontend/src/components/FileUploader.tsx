@@ -5,11 +5,13 @@ interface Props {
   onFileSelected: (file: File) => void;
   accept?: string;
   disabled?: boolean;
+  /** Name of the currently-selected file, shown in the dropzone. The parent
+   *  clears it (e.g. after "Run harmonization") to reset the dropzone. */
+  selectedName?: string | null;
 }
 
-export default function FileUploader({ onFileSelected, accept = '.csv,.tsv,.txt', disabled }: Props) {
+export default function FileUploader({ onFileSelected, accept = '.csv,.tsv,.txt', disabled, selectedName }: Props) {
   const [dragActive, setDragActive] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -17,7 +19,6 @@ export default function FileUploader({ onFileSelected, accept = '.csv,.tsv,.txt'
       setDragActive(false);
       const file = e.dataTransfer.files?.[0];
       if (file) {
-        setFileName(file.name);
         onFileSelected(file);
       }
     },
@@ -28,7 +29,6 @@ export default function FileUploader({ onFileSelected, accept = '.csv,.tsv,.txt'
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-        setFileName(file.name);
         onFileSelected(file);
       }
     },
@@ -50,8 +50,8 @@ export default function FileUploader({ onFileSelected, accept = '.csv,.tsv,.txt'
       <span className={`grid h-14 w-14 place-items-center rounded-2xl transition ${dragActive ? 'bg-primary-100 text-primary-600' : 'bg-slate-100 text-slate-400'}`}>
         <Upload className="h-7 w-7" />
       </span>
-      {fileName ? (
-        <p className="mt-3 text-sm font-semibold text-primary-700">{fileName}</p>
+      {selectedName ? (
+        <p className="mt-3 text-sm font-semibold text-primary-700">{selectedName}</p>
       ) : (
         <>
           <p className="mt-3 text-sm text-slate-600">

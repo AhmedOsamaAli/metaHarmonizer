@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, AlertCircle, FileSpreadsheet, ArrowRight, Sparkles, Table2 } from 'lucide-react';
 import { toast } from 'sonner';
 import FileUploader from '../components/FileUploader';
+import JobsPanel from '../components/JobsPanel';
 import ColumnTokenInput from '../components/ColumnTokenInput';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardBody } from '../components/ui/Card';
@@ -124,6 +125,7 @@ export default function UploadPage() {
         <FileUploader
           onFileSelected={handleFileSelected}
           disabled={isGuest || state === 'uploading'}
+          selectedName={file?.name ?? null}
         />
         {isGuest && (
           <p className="mt-2 text-center text-xs text-slate-400">
@@ -131,6 +133,9 @@ export default function UploadPage() {
           </p>
         )}
       </div>
+
+      {/* Live + failed harmonization runs (replaces the old floating tray). */}
+      <JobsPanel />
 
       {/* File preview — header + first rows, parsed client-side before upload */}
       {file && preview && (
