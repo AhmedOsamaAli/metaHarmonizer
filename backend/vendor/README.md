@@ -9,6 +9,13 @@ Built from [`shbrief/MetaHarmonizer`](https://github.com/shbrief/MetaHarmonizer)
 `main` (v0.4.0, src-layout refactor, PR #81), with only the `src/` package tree
 checked out.
 
+**Patched:** this wheel additionally carries `metaharmonizer/scripts/knowledge_db.py`
+(the KB export/import CLI). The pinned commit predated that module, but
+`scripts.seed_kb` and `scripts.package_kb` require it (`python -m
+metaharmonizer.scripts.knowledge_db import|export`) — without it a Docker/CI
+`kb-import` fails with `No module named metaharmonizer.scripts.knowledge_db`. Re-pin
+from a source that already contains it on the next version bump (then drop this note).
+
 **Why not `pip install git+...`**: several files under `examples/data/` and
 `data/corpus/` have `:` in their names (e.g.
 `disease_corpus_from_NCIT:C3262.csv`), which NTFS forbids. A full git checkout
