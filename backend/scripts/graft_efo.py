@@ -1,17 +1,17 @@
 """Graft the un-rebuildable extras from an existing bundle into a freshly-built KB.
 
 ``build_kb`` only builds the fetchable launch tuples (disease/ncit,
-bodysite/uberon, treatment/ncit). Two things in the shipped bundle are **not**
-reproducible by a from-scratch CI build and must be carried forward:
+bodysite/uberon, treatment/ncit). **EFO / phenotype** is a hand-merged corpus
+whose codes aren't OLS-fetchable and which ships no concept table, so
+``build_kb`` cannot regenerate it — it must be carried forward from the current
+bundle.
 
-  * **EFO / phenotype** — a hand-merged corpus whose codes aren't OLS-fetchable
-    and which ships no concept table, so ``build_kb`` cannot regenerate it.
-  * **nci_schema_cache.json** — the warmed schema value->field cache, produced
-    by running the app, not by ``build_kb``.
+The warmed ``nci_schema_cache.json`` is deliberately **not** carried: it maps
+value -> NCiT code and a cache hit returns the stored code without re-fetching,
+so a stale entry would outlive a KB refresh. Instances re-warm it fresh.
 
-Run this AFTER ``build_kb`` and BEFORE ``package_kb`` so the repackaged bundle is
-a *superset* of the source bundle (refreshed fetchable ontologies + preserved
-EFO + preserved schema cache) instead of dropping EFO.
+Run this AFTER ``build_kb`` and BEFORE ``package_kb`` so the repackaged bundle
+refreshes the fetchable ontologies while preserving EFO.
 
     python -m scripts.graft_efo --from-bundle <current_kb_offline_bundle.tar.gz>
 
@@ -28,9 +28,6 @@ import sys
 import tarfile
 import tempfile
 from pathlib import Path
-
-_BACKEND = Path(__file__).resolve().parents[1]
-_SCHEMA_CACHE_DEST = _BACKEND / "data" / "nci_schema_cache.json"
 
 
 def _safe_extract(tar: tarfile.TarFile, dest: Path) -> None:
@@ -98,12 +95,10 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("[graft] WARNING: no efo_phenotype_corpus.csv in source bundle")
 
-        # 2. Warmed schema cache — only if the fresh build didn't produce one.
-        old_cache = tmp_path / "nci_schema_cache.json"
-        if old_cache.exists() and not _SCHEMA_CACHE_DEST.exists():
-            _SCHEMA_CACHE_DEST.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(old_cache, _SCHEMA_CACHE_DEST)
-            print(f"[graft] schema cache -> {_SCHEMA_CACHE_DEST}")
+        # 2. The warmed schema cache is intentionally NOT carried forward: it
+        #    maps value -> NCiT code, and a cache hit returns the stored code
+        #    without re-fetching, so a stale entry would outlive a KB refresh.
+        #    The instance re-warms it fresh against the new KB at runtime.
 
         # 3. EFO KB artifacts (FAISS index + sqlite tables) from the engine archive.
         kb_archive = tmp_path / "kb.mhkb.tar.gz"
