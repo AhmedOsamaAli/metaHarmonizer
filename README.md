@@ -40,43 +40,21 @@ Only `backend/app/engine_adapter/` may import the upstream `metaharmonizer` pack
 
 ## Quick start
 
-Requires Docker (or Postgres 16 + Redis 7 locally), Python 3.12+, Node 20+.
+**Docker is the one supported path**, identical on Windows, macOS, and Linux. No config editing — `.env.example` is preconfigured with a dev login secret and the public knowledge-base download URL.
 
-> New here? **[SETUP.md](SETUP.md)** is a step-by-step cross-platform guide (Windows / macOS / Linux), including a **no-login, ML-free demo** (`ENGINE_IMPL=mock`, `AUTH_MODE=none`) that runs with one command.
+> Prerequisites: Docker Desktop (or Docker Engine + Compose), ~15 GB free disk, ~8 GB RAM.
 
 ```bash
 git clone https://github.com/AhmedOsamaAli/metaHarmonizer.git
 cd metaHarmonizer
-cp .env.example .env        # local Docker boots as-is (a dev JWT secret is auto-set)
-# For native runs or production, set a strong secret in .env:
-#   JWT_SECRET=$(python -c "import secrets;print(secrets.token_urlsafe(48))")
+cp .env.example .env                             # Windows PowerShell:  copy .env.example .env
+docker compose --profile kb run --rm kb-import   # one-time: download + install the KB & models (~1.4 GB)
+docker compose up --build                        # SPA + API + worker + Postgres + Redis behind Caddy
 ```
 
-**Full stack (Docker):**
+Open **http://localhost:8080** and register — the **first** account becomes the admin; later accounts are curators.
 
-```bash
-docker compose up --build      # SPA + API + worker + Postgres + Redis behind Caddy
-```
-
-Open http://localhost:8080. The **first** account to register becomes the admin; later accounts are curators.
-
-**Backend only (native):**
-
-```bash
-docker compose up -d postgres redis
-cd backend && python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-alembic upgrade head
-uvicorn app.main:app --reload --port 8000     # set ENGINE_IMPL=mock for instant, ML-free startup
-```
-
-**Frontend only (native):**
-
-```bash
-cd frontend && npm install && npm run dev      # proxies /api to :8000
-```
-
-Interactive API reference (OpenAPI/Swagger): `http://localhost:8000/docs`.
+Skip-login, the optional Stage-4 LLM, native dev setup, and troubleshooting are all in **[SETUP.md](SETUP.md)**. Interactive API reference (OpenAPI/Swagger): `http://localhost:8000/docs`.
 
 ## Configuration
 
