@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import jwt
 from fastapi import Depends, Request
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
@@ -38,18 +39,36 @@ class ForbiddenError(AppError):
     status_code = 403
 
 
-def _dev_admin() -> User:
-    """Synthetic user used only when AUTH_MODE=none."""
-    return User(
-        id=0,
-        email="dev@localhost",
-        name="Dev (auth disabled)",
-        role="admin",
-        is_active=True,
-        email_verified=True,
-        approved=True,
-        admin_requested=False,
-    )
+# Stable identity for the AUTH_MODE=none admin.
+_DEV_ADMIN_EMAIL = "dev@localhost"
+
+
+async def _ensure_dev_admin(db: AsyncSession) -> User:
+    """Return the real, persisted admin used when AUTH_MODE=none.
+
+    A purely synthetic in-memory user (id=0) can authenticate, but anything it
+    owns -- e.g. ``studies.owner_id`` -- is a foreign key into ``users.id`` and
+    would fail with a FK violation on insert. So fetch-or-create a genuine row
+    the first time and reuse it after. It has no password (login is disabled).
+    """
+    user = await users_repo.get_by_email(db, _DEV_ADMIN_EMAIL)
+    if user is None:
+        try:
+            user = await users_repo.create_user(
+                db,
+                email=_DEV_ADMIN_EMAIL,
+                password_hash=None,
+                name="Dev (auth disabled)",
+                role="admin",
+                approved=True,
+            )
+            await users_repo.set_email_verified(db, user)
+            await db.commit()
+        except IntegrityError:
+            # A concurrent first request already created it -- reuse that row.
+            await db.rollback()
+            user = await users_repo.get_by_email(db, _DEV_ADMIN_EMAIL)
+    return user
 
 
 async def _user_from_api_token(request: Request, db: AsyncSession, token: str) -> User:
@@ -72,7 +91,7 @@ async def current_user(request: Request, db: AsyncSession = Depends(get_db)) -> 
     (``mh_...``). When ``AUTH_MODE=none`` a synthetic admin is returned.
     """
     if settings.auth_mode == "none":
-        user = _dev_admin()
+        user = await _ensure_dev_admin(db)
         request.state.user_id = user.id
         request.state.token_scope = "write"
         return user
