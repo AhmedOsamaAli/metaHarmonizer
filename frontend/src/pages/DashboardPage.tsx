@@ -7,7 +7,6 @@ import {
   Database,
   Columns3,
   Clock,
-  Gauge,
   CircleCheckBig,
   TriangleAlert,
 } from 'lucide-react';
@@ -18,6 +17,7 @@ import { Card, CardBody } from '../components/ui/Card';
 import { EmptyState, LoadingBlock } from '../components/ui/Feedback';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
 import RadialProgress from '../components/ui/RadialProgress';
+import PipelineStack3D from '../components/PipelineStack3D';
 import { Stagger, StaggerItem } from '../components/ui/motion';
 import type { StageBreakdown } from '../api/types';
 
@@ -36,6 +36,7 @@ export default function DashboardPage() {
 
   const greeting = getGreeting();
   const firstName = (user?.name || user?.email || '').split(/[\s@]/)[0];
+  const completedStudies = data?.studies?.filter((s) => s.review_progress >= 1).length ?? 0;
 
   return (
     <div className="space-y-7">
@@ -134,13 +135,11 @@ export default function DashboardPage() {
               hint="awaiting a curator"
             />
             <StatTile
-              icon={<Gauge className="h-5 w-5" />}
+              icon={<CircleCheckBig className="h-5 w-5" />}
               tone="from-accent-500 to-accent-700"
-              label="Avg confidence"
-              value={data.avg_confidence * 100}
-              decimals={1}
-              suffix="%"
-              hint="across all matches"
+              label="Completed studies"
+              value={completedStudies}
+              hint={`of ${data.total_studies} fully reviewed`}
             />
           </Stagger>
 
@@ -177,7 +176,7 @@ export default function DashboardPage() {
 
             <Card>
               <CardBody>
-                <div className="mb-4 flex items-center gap-2">
+                <div className="mb-3 flex items-center gap-2">
                   <Layers className="h-4 w-4 text-slate-400" />
                   <h3 className="text-sm font-semibold text-slate-800">Stage mix</h3>
                 </div>
@@ -185,6 +184,21 @@ export default function DashboardPage() {
               </CardBody>
             </Card>
           </div>
+
+          {/* 3D pipeline explainer */}
+          <Card>
+            <CardBody>
+              <div className="mb-1 flex items-center gap-2">
+                <Layers className="h-4 w-4 text-slate-400" />
+                <h3 className="text-sm font-semibold text-slate-800">Harmonization pipeline</h3>
+              </div>
+              <p className="mb-2 text-xs text-slate-500">
+                Every column cascades through four stages until it finds a match — the
+                deeper it falls, the harder it was to resolve.
+              </p>
+              <PipelineStack3D stages={data.stage_breakdown} total={data.total_columns} />
+            </CardBody>
+          </Card>
         </>
       )}
     </div>
