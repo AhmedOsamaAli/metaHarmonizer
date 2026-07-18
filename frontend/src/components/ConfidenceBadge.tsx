@@ -19,13 +19,13 @@ export default function ConfidenceBadge({ score, size = 'md' }: Props) {
   let cls: string;
   let text: string;
   if (score >= 0.9) {
-    cls = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20';
+    cls = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/25';
     text = 'High';
   } else if (score >= 0.5) {
-    cls = 'bg-amber-50 text-amber-700 ring-amber-600/20';
+    cls = 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/25';
     text = 'Med';
   } else {
-    cls = 'bg-rose-50 text-rose-700 ring-rose-600/20';
+    cls = 'bg-rose-50 text-rose-700 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/25';
     text = 'Low';
   }
 

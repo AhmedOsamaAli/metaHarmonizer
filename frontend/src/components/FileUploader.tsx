@@ -38,7 +38,7 @@ export default function FileUploader({ onFileSelected, accept = '.csv,.tsv,.txt'
   return (
     <label
       className={`flex flex-col items-center justify-center w-full h-52 border-2 border-dashed rounded-2xl cursor-pointer transition
-        ${dragActive ? 'border-primary-500 bg-primary-50' : 'border-slate-300 bg-white hover:border-primary-300 hover:bg-slate-50'}
+        ${dragActive ? 'border-primary-500 bg-primary-50 dark:bg-primary-500/10' : 'border-slate-300 bg-white hover:border-primary-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-primary-500 dark:hover:bg-slate-800'}
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       onDragOver={(e) => {
         e.preventDefault();
@@ -47,17 +47,17 @@ export default function FileUploader({ onFileSelected, accept = '.csv,.tsv,.txt'
       onDragLeave={() => setDragActive(false)}
       onDrop={handleDrop}
     >
-      <span className={`grid h-14 w-14 place-items-center rounded-2xl transition ${dragActive ? 'bg-primary-100 text-primary-600' : 'bg-slate-100 text-slate-400'}`}>
+      <span className={`grid h-14 w-14 place-items-center rounded-2xl transition ${dragActive ? 'bg-primary-100 text-primary-600 dark:bg-primary-500/20 dark:text-primary-300' : 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500'}`}>
         <Upload className="h-7 w-7" />
       </span>
       {selectedName ? (
-        <p className="mt-3 text-sm font-semibold text-primary-700">{selectedName}</p>
+        <p className="mt-3 text-sm font-semibold text-primary-700 dark:text-primary-300">{selectedName}</p>
       ) : (
         <>
-          <p className="mt-3 text-sm text-slate-600">
-            <span className="font-semibold text-primary-600">Click to upload</span> or drag and drop
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+            <span className="font-semibold text-primary-600 dark:text-primary-400">Click to upload</span> or drag and drop
           </p>
-          <p className="mt-1 text-xs text-slate-400">CSV, TSV, or TXT · up to 50&nbsp;MB</p>
+          <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">CSV, TSV, or TXT · up to 50&nbsp;MB</p>
         </>
       )}
       <input

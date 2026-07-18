@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Brand from './components/Brand';
 import UserMenu from './components/UserMenu';
 import NotificationBell from './components/NotificationBell';
+import ThemeToggle from './components/ThemeToggle';
 import ProtectedRoute from './components/ProtectedRoute';
 import { LoadingBlock } from './components/ui/Feedback';
 import { useAuth } from './context/AuthContext';
@@ -43,7 +44,7 @@ function TopNav() {
   const { hasRole, isGuest, exitGuest } = useAuth();
   const navigate = useNavigate();
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-900/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Brand />
 
@@ -56,8 +57,8 @@ function TopNav() {
               className={({ isActive }) =>
                 `relative flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition ${
                   isActive
-                    ? 'text-primary-700'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'text-primary-700 dark:text-primary-300'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100'
                 }`
               }
             >
@@ -66,7 +67,7 @@ function TopNav() {
                   {isActive && (
                     <motion.span
                       layoutId="nav-active-pill"
-                      className="absolute inset-0 rounded-xl bg-primary-50"
+                      className="absolute inset-0 rounded-xl bg-primary-50 dark:bg-primary-500/15"
                       transition={{ type: 'spring', stiffness: 400, damping: 32 }}
                     />
                   )}
@@ -82,8 +83,8 @@ function TopNav() {
               className={({ isActive }) =>
                 `flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition ${
                   isActive
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100'
                 }`
               }
             >
@@ -97,8 +98,8 @@ function TopNav() {
               className={({ isActive }) =>
                 `flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition ${
                   isActive
-                    ? 'bg-primary-50 text-primary-700'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100'
                 }`
               }
             >
@@ -109,6 +110,7 @@ function TopNav() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {isGuest ? (
             <>
               <button
@@ -117,7 +119,7 @@ function TopNav() {
                   exitGuest();
                   navigate('/login');
                 }}
-                className="rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-xl px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
               >
                 Sign in
               </button>
@@ -142,7 +144,7 @@ function TopNav() {
       </div>
 
       {/* Mobile nav */}
-      <nav className="flex items-center gap-1 overflow-x-auto border-t border-slate-100 px-3 py-2 md:hidden">
+      <nav className="flex items-center gap-1 overflow-x-auto border-t border-slate-100 px-3 py-2 md:hidden dark:border-slate-800">
         {NAV_ITEMS.filter((i) => hasRole(i.minRole ?? 'curator')).map(({ to, icon: Icon, label, end }) => (
           <NavLink
             key={to}
@@ -150,7 +152,7 @@ function TopNav() {
             end={end}
             className={({ isActive }) =>
               `flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
-                isActive ? 'bg-primary-50 text-primary-700' : 'text-slate-600'
+                isActive ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300' : 'text-slate-600 dark:text-slate-300'
               }`
             }
           >
@@ -169,13 +171,13 @@ function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex min-h-screen flex-col">
       {/* Layered ambient background */}
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-slate-50" />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-slate-50 dark:bg-slate-950" />
       <div className="pointer-events-none fixed inset-0 -z-10 bg-mesh-primary" />
       <div className="pointer-events-none fixed inset-0 -z-10 bg-grid-slate bg-grid [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" />
 
       <TopNav />
       {isGuest && (
-        <div className="sticky top-16 z-30 flex flex-wrap items-center justify-center gap-x-1.5 border-b border-amber-200 bg-amber-50/95 px-4 py-2 text-center text-xs font-medium text-amber-900 backdrop-blur">
+        <div className="sticky top-16 z-30 flex flex-wrap items-center justify-center gap-x-1.5 border-b border-amber-200 bg-amber-50/95 px-4 py-2 text-center text-xs font-medium text-amber-900 backdrop-blur dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
           <span>Preview mode — no account, read-only.</span>
           <button
             type="button"
@@ -206,7 +208,7 @@ function AppLayout({ children }: { children: ReactNode }) {
           <div className="animate-fade-in">{children}</div>
         </Suspense>
       </main>
-      <footer className="border-t border-slate-200 bg-white/60 py-4 text-center text-xs text-slate-400 backdrop-blur">
+      <footer className="border-t border-slate-200 bg-white/60 py-4 text-center text-xs text-slate-400 backdrop-blur dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-500">
         MetaHarmonizer Dashboard · Biomedical Metadata Harmonization · cBioPortal Compatible
       </footer>
     </div>

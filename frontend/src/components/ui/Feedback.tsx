@@ -31,15 +31,15 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 py-16 text-center">
+    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-6 py-16 text-center dark:border-slate-700 dark:bg-slate-900/40">
       {icon && (
-        <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-slate-400 shadow-soft">
+        <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-slate-400 shadow-soft dark:bg-slate-800 dark:text-slate-500">
           {icon}
         </div>
       )}
       <div>
-        <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
-        {description && <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">{description}</p>}
+        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</h3>
+        {description && <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">{description}</p>}
       </div>
       {action}
     </div>

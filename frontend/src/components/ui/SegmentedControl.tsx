@@ -40,7 +40,7 @@ export default function SegmentedControl<T extends string>({
     <div
       role="tablist"
       className={cn(
-        'inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1',
+        'inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-800/60',
         className,
       )}
     >
@@ -57,8 +57,8 @@ export default function SegmentedControl<T extends string>({
               'inline-flex items-center gap-1.5 rounded-lg font-medium transition',
               size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm',
               active
-                ? 'bg-white text-slate-900 shadow-soft'
-                : 'text-slate-500 hover:text-slate-800',
+                ? 'bg-white text-slate-900 shadow-soft dark:bg-slate-700 dark:text-slate-100'
+                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100',
             )}
           >
             {s.icon}
@@ -67,7 +67,7 @@ export default function SegmentedControl<T extends string>({
               <span
                 className={cn(
                   'rounded-full px-1.5 py-0.5 text-xs font-semibold',
-                  active ? COUNT_TONE[s.tone ?? 'primary'] : 'bg-slate-200/70 text-slate-500',
+                  active ? COUNT_TONE[s.tone ?? 'primary'] : 'bg-slate-200/70 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
                 )}
               >
                 {s.count}
