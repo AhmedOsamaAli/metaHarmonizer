@@ -168,6 +168,11 @@ async def harmonize_study(
         save_path.unlink(missing_ok=True)
 
     study_name = Path(file.filename).stem
+    # Stamp the KB snapshot in effect so the study's ontology mappings are
+    # reproducible against the exact engine + knowledge base that produced them.
+    from app.repositories import ontology_snapshots as onto_repo
+
+    current_snapshot = await onto_repo.get_current(db_session)
     await studies_repo.create_study(
         db_session,
         study_id=study_id,
@@ -177,6 +182,7 @@ async def harmonize_study(
         column_count=len(shape_df.columns),
         owner_id=getattr(user, "id", None),
         schema_version_id=chosen_schema.id if chosen_schema else None,
+        ontology_snapshot_id=current_snapshot.id if current_snapshot else None,
     )
     await studies_repo.update_status(db_session, study_id, "queued")
 

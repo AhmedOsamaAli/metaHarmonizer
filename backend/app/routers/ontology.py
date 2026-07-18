@@ -15,6 +15,7 @@ from app.models import OntologyEditRequest, OntologyMappingOut, OntologySearchRe
 from app.repositories import audit as audit_repo
 from app.repositories import learned_decisions as ld_repo
 from app.repositories import ontology as ontology_repo
+from app.repositories import ontology_snapshots as onto_snap_repo
 from app.repositories import studies as studies_repo
 from app.services.harmonizer import ONTOLOGY_MAP, _STATIC_NCIT, _load_field_value_dict
 
@@ -100,6 +101,16 @@ async def search_ontology(
             score=round(score / 100, 3),
         ))
     return output
+
+
+@router.get("/snapshots")
+async def list_ontology_snapshots(
+    _user=Depends(require_role("curator")),
+    db: AsyncSession = Depends(get_db),
+):
+    """Ontology KB snapshots (reproducibility pins), current first. The current
+    snapshot is the engine + KB bundle that new studies are stamped with."""
+    return await onto_snap_repo.list_snapshots(db)
 
 
 @router.get("/mappings/{study_id}", response_model=list[OntologyMappingOut])

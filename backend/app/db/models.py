@@ -94,6 +94,13 @@ class OntologySnapshot(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     label: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     is_current: Mapped[bool] = mapped_column(nullable=False, default=False, server_default="false")
+    # Identity of the KB/engine that produced this snapshot: the upstream
+    # metaharmonizer package version + the offline KB bundle identity (its
+    # sha256, or a pin id). Lets a study's ontology mappings be traced to the
+    # exact engine + knowledge base — the reproducibility half of the two-axis
+    # pin (schema_version_id + ontology_snapshot_id).
+    engine_version: Mapped[str | None] = mapped_column(String(100))
+    source: Mapped[str | None] = mapped_column(Text)
 
 
 # Studies

@@ -58,6 +58,31 @@ async def lifespan(app: FastAPI):
 
         logging.getLogger("app").warning("schema version seed skipped", exc_info=True)
 
+    # Seed / bump the current ontology snapshot — the reproducibility pin for the
+    # KB bundle in effect (engine version + bundle sha). Idempotent: unchanged if
+    # the identity matches; bumps to a new current snapshot on a KB refresh or
+    # engine upgrade. New studies are stamped with the current snapshot.
+    try:
+        import os
+        from importlib.metadata import PackageNotFoundError
+        from importlib.metadata import version as _pkg_version
+
+        from app.db.session import SessionLocal
+        from app.repositories import ontology_snapshots as onto_repo
+
+        try:
+            engine_version = _pkg_version("metaharmonizer")
+        except PackageNotFoundError:
+            engine_version = None
+        kb_source = os.environ.get("KB_BUNDLE_SHA256") or None
+        async with SessionLocal() as db:
+            await onto_repo.ensure_current(db, engine_version=engine_version, source=kb_source)
+            await db.commit()
+    except Exception:  # noqa: BLE001 — seeding must never block startup
+        import logging
+
+        logging.getLogger("app").warning("ontology snapshot seed skipped", exc_info=True)
+
     yield
 
 

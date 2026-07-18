@@ -36,6 +36,7 @@ def _to_dict(s: Study) -> dict:
         "owner_id": s.owner_id,
         "exported": s.exported,
         "schema_version_id": s.schema_version_id,
+        "ontology_snapshot_id": s.ontology_snapshot_id,
     }
 
 
@@ -49,6 +50,7 @@ async def create_study(
     column_count: int,
     owner_id: int | None = None,
     schema_version_id: int | None = None,
+    ontology_snapshot_id: int | None = None,
 ) -> dict:
     study = Study(
         id=study_id,
@@ -59,6 +61,7 @@ async def create_study(
         column_count=column_count,
         owner_id=owner_id,
         schema_version_id=schema_version_id,
+        ontology_snapshot_id=ontology_snapshot_id,
     )
     db.add(study)
     await db.flush()
