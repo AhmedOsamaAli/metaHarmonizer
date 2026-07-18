@@ -254,7 +254,6 @@ export default function MappingReview() {
     try {
       const m = await acceptMapping(id, remember);
       updateMapping(m);
-      showToast(`Accepted: ${m.raw_column} → ${m.curator_field || m.matched_field}`);
     } catch {
       showToast('Failed to accept mapping', 'error');
     }
@@ -263,7 +262,6 @@ export default function MappingReview() {
     try {
       const m = await rejectMapping(id);
       updateMapping(m);
-      showToast(`Rejected: ${m.raw_column}`);
     } catch {
       showToast('Failed to reject mapping', 'error');
     }
@@ -273,7 +271,6 @@ export default function MappingReview() {
     try {
       const m = await editMapping(editingId, editField, editNote, remember);
       updateMapping(m);
-      showToast(`Edited: ${m.raw_column} → ${editField}`);
     } catch {
       showToast('Failed to edit mapping', 'error');
     }
@@ -287,7 +284,6 @@ export default function MappingReview() {
     try {
       const m = await editMapping(id, field, 'Applied alternative suggestion');
       updateMapping(m);
-      showToast(`Applied: ${m.raw_column} → ${field}`);
     } catch {
       showToast('Failed to apply alternative', 'error');
     }
@@ -302,7 +298,6 @@ export default function MappingReview() {
       const suggestions = await llmRematch(id);
       setLlmResults((prev) => ({ ...prev, [id]: suggestions }));
       setExpandedRow(id);
-      showToast(suggestions.length ? `LLM suggested ${suggestions.length} match(es)` : 'LLM returned no suggestions');
     } catch (err) {
       const msg =
         err instanceof ApiError && err.status === 503
@@ -323,7 +318,6 @@ export default function MappingReview() {
         const fresh = await getStudyMappings(selectedId);
         setMappings(fresh);
       }
-      showToast(`${action === 'accepted' ? 'Accepted' : 'Rejected'} ${selected.size} mappings`);
     } catch {
       showToast('Batch update failed', 'error');
     }
@@ -352,7 +346,6 @@ export default function MappingReview() {
       .filter((m) => m.status === 'pending' && groupInfo[m.id]?.key === groupKey)
       .map((m) => m.id);
     setSelected(new Set(ids));
-    if (ids.length > 1) toast.success(`Selected ${ids.length} in this group — use the batch buttons.`);
   };
 
   const toggleSort = (key: SortKey) => {
