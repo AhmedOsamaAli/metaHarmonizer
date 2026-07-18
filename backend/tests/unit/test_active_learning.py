@@ -115,40 +115,41 @@ def test_queue_stats():
     assert stats["risky"] == 2  # the two below 0.90
 
 
-def test_accepted_lookalikes_deprioritize_remaining():
-    # The curator has accepted 3 of a body_site look-alike group; the remaining
-    # pending look-alike should sink below an untouched, genuinely-new risky
-    # group even at similar raw confidence (G7 feedback re-rank).
+def test_group_holds_position_after_partial_accept():
+    # A group's rank comes from its riskiest look-alike across ALL statuses, so
+    # accepting one member never pushes the group down. body_site (riskiest
+    # 0.55) still leads disease (0.60) even after its 0.55 member is accepted
+    # and only a higher-confidence 0.62 look-alike remains pending.
     mappings = [
         _m("site_1", "body_site", 0.55, status="accepted"),
-        _m("site_2", "body_site", 0.55, status="accepted"),
-        _m("site_3", "body_site", 0.55, status="accepted"),
-        _m("site_4", "body_site", 0.55),  # pending near-duplicate of accepted
-        _m("new_dx", "disease", 0.58),  # untouched, genuinely new
+        _m("site_2", "body_site", 0.62),  # remaining pending look-alike
+        _m("dx", "disease", 0.60),
     ]
     queue = al.build_review_queue(mappings)
-    assert queue[0]["group_key"] == "disease"  # genuinely-new case leads
-    assert queue[-1]["group_key"] == "body_site"  # settled look-alike sinks
-    site = next(m for m in queue if m["group_key"] == "body_site")
-    assert site["group_accepted"] == 3
+    assert queue[0]["group_key"] == "body_site"  # holds its position
+    assert queue[-1]["group_key"] == "disease"
 
 
-def test_no_feedback_ordering_is_unchanged():
-    # With no acceptances, the penalty is zero — ordering is pure risky-first.
+def test_accept_does_not_reorder_groups():
     mappings = [
-        _m("dx", "disease", 0.58),
-        _m("site", "body_site", 0.55),
+        _m("site_1", "body_site", 0.55),
+        _m("site_2", "body_site", 0.56),
+        _m("dx", "disease", 0.60),
     ]
-    queue = al.build_review_queue(mappings)
-    assert queue[0]["group_key"] == "body_site"  # 0.55 leads 0.58
-    assert all(m["group_accepted"] == 0 for m in queue)
+    q1 = al.build_review_queue(mappings)
+    assert q1[0]["group_key"] == "body_site"
+    # Accept the riskiest body_site member; the group must NOT move down.
+    mappings[0]["status"] = "accepted"
+    q2 = al.build_review_queue(mappings)
+    assert q2[0]["group_key"] == "body_site"  # still leads (stable position)
+    assert [m["raw_column"] for m in q2 if m["group_key"] == "body_site"] == ["site_2"]
 
 
-def test_deprioritized_groups_stat():
+def test_group_leaves_queue_only_when_fully_cleared():
     mappings = [
-        _m("s1", "body_site", 0.55, status="accepted"),
-        _m("s2", "body_site", 0.55),  # remaining look-alike (pending)
-        _m("new", "disease", 0.60),
+        _m("site_1", "body_site", 0.55, status="accepted"),
+        _m("site_2", "body_site", 0.56),  # still pending -> group stays
     ]
-    stats = al.queue_stats(al.build_review_queue(mappings))
-    assert stats["deprioritized_groups"] == 1  # body_site partly accepted
+    assert [m["raw_column"] for m in al.build_review_queue(mappings)] == ["site_2"]
+    mappings[1]["status"] = "rejected"
+    assert al.build_review_queue(mappings) == []  # fully cleared -> gone

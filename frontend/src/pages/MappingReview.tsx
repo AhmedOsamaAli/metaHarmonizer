@@ -132,8 +132,8 @@ export default function MappingReview() {
   // (same suggested target) adjacent so a curator can batch a whole group. Off
   // by default — it's assistive ordering, never enforced.
   const [smartOrder, setSmartOrder] = useState(false);
-  const [groupInfo, setGroupInfo] = useState<Record<number, { key: string; size: number; min: number; rank: number; accepted: number }>>({});
-  const [queueStats, setQueueStats] = useState<{ groups: number; batchable_groups: number; risky: number; deprioritized_groups?: number } | null>(null);
+  const [groupInfo, setGroupInfo] = useState<Record<number, { key: string; size: number; min: number; rank: number }>>({});
+  const [queueStats, setQueueStats] = useState<{ groups: number; batchable_groups: number; risky: number } | null>(null);
 
   // Keyboard navigation: index of the focused row within the filtered list.
   const [cursor, setCursor] = useState(0);
@@ -170,14 +170,13 @@ export default function MappingReview() {
     }
     getReviewQueue(selectedId)
       .then((q) => {
-        const info: Record<number, { key: string; size: number; min: number; rank: number; accepted: number }> = {};
+        const info: Record<number, { key: string; size: number; min: number; rank: number }> = {};
         q.items.forEach((it, index) => {
           info[it.id] = {
             key: it.group_key,
             size: it.group_size,
             min: it.group_min_confidence,
-            rank: index, // the server's active-learning order (risk + feedback penalty)
-            accepted: it.group_accepted ?? 0,
+            rank: index, // the server's active-learning order (stable risky-first)
           };
         });
         setGroupInfo(info);
@@ -609,9 +608,6 @@ export default function MappingReview() {
           <span className="text-xs text-gray-500">
             {queueStats.risky} risky · {queueStats.batchable_groups} batchable group
             {queueStats.batchable_groups === 1 ? '' : 's'}
-            {(queueStats.deprioritized_groups ?? 0) > 0 && (
-              <> · {queueStats.deprioritized_groups} settled</>
-            )}
           </span>
         )}
         <span className="text-xs text-gray-400 ml-auto">
