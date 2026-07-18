@@ -149,7 +149,7 @@ export default function LoginPage() {
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
         >
           <Compass className="h-4 w-4" />
-          Explore the dashboard — no account needed
+          Explore a live demo — no account needed
         </button>
         <p className="mt-2 text-center text-xs text-slate-400">
           A guided, read-only walkthrough of what curators and admins do.

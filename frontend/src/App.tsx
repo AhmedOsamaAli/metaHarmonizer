@@ -1,5 +1,5 @@
 import { Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Upload, Table2, BarChart3, Download, Microscope, Shield, Activity } from 'lucide-react';
+import { Upload, Table2, BarChart3, Download, Microscope, Shield, Activity } from 'lucide-react';
 import { lazy, Suspense, type ReactNode } from 'react';
 import Brand from './components/Brand';
 import UserMenu from './components/UserMenu';
@@ -15,7 +15,6 @@ import RegisterPage from './pages/RegisterPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const UploadPage = lazy(() => import('./pages/UploadPage'));
 const MappingReview = lazy(() => import('./pages/MappingReview'));
 const OntologyReview = lazy(() => import('./pages/OntologyReview'));
@@ -27,12 +26,11 @@ const ActivityPage = lazy(() => import('./pages/ActivityPage'));
 
 const NAV_ITEMS: {
   to: string;
-  icon: typeof LayoutDashboard;
+  icon: typeof Upload;
   label: string;
   end: boolean;
   minRole?: Role;
 }[] = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/upload', icon: Upload, label: 'Upload', end: false, minRole: 'curator' },
   { to: '/review', icon: Table2, label: 'Mappings', end: false },
   { to: '/ontology', icon: Microscope, label: 'Ontology', end: false },
@@ -233,7 +231,7 @@ export default function App() {
       <Route path="/forgot" element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
       <Route path="/reset" element={<ResetPasswordPage />} />
 
-      <Route path="/" element={<Shell><DashboardPage /></Shell>} />
+      <Route path="/" element={<Navigate to="/review" replace />} />
       <Route path="/upload" element={<Shell role="curator"><UploadPage /></Shell>} />
       <Route path="/review" element={<Shell><MappingReview /></Shell>} />
       <Route path="/review/:studyId" element={<Shell><MappingReview /></Shell>} />
