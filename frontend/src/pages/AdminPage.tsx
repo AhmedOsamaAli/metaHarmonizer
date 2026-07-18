@@ -132,15 +132,15 @@ export default function AdminPage() {
 
       {/* Pending admin-access requests */}
       {pendingRequests.length > 0 && (
-        <Card className="overflow-hidden border-amber-200">
-          <div className="flex items-center gap-2 border-b border-amber-100 bg-amber-50/70 px-5 py-3">
-            <ShieldCheck className="h-4 w-4 text-amber-600" />
-            <h3 className="text-sm font-semibold text-amber-800">
+        <Card className="overflow-hidden border-amber-200 dark:border-amber-500/30">
+          <div className="flex items-center gap-2 border-b border-amber-100 bg-amber-50/70 px-5 py-3 dark:border-amber-500/20 dark:bg-amber-500/10">
+            <ShieldCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-300">
               Admin access requests
-              <span className="ml-1.5 font-normal text-amber-600">({pendingRequests.length})</span>
+              <span className="ml-1.5 font-normal text-amber-600 dark:text-amber-400">({pendingRequests.length})</span>
             </h3>
           </div>
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {pendingRequests.map((u) => (
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
@@ -159,7 +159,7 @@ export default function AdminPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-rose-600 hover:bg-rose-50"
+                    className="text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
                     icon={<X className="h-3.5 w-3.5" />}
                     loading={rejectM.isPending && rejectM.variables === u.id}
                     onClick={() => rejectM.mutate(u.id)}
@@ -175,15 +175,15 @@ export default function AdminPage() {
 
       {/* Pending account approvals (untrusted-domain signups) */}
       {pendingApprovals.length > 0 && (
-        <Card className="overflow-hidden border-sky-200">
-          <div className="flex items-center gap-2 border-b border-sky-100 bg-sky-50/70 px-5 py-3">
-            <ShieldCheck className="h-4 w-4 text-sky-600" />
-            <h3 className="text-sm font-semibold text-sky-800">
+        <Card className="overflow-hidden border-sky-200 dark:border-sky-500/30">
+          <div className="flex items-center gap-2 border-b border-sky-100 bg-sky-50/70 px-5 py-3 dark:border-sky-500/20 dark:bg-sky-500/10">
+            <ShieldCheck className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+            <h3 className="text-sm font-semibold text-sky-800 dark:text-sky-300">
               Pending approvals
-              <span className="ml-1.5 font-normal text-sky-600">({pendingApprovals.length})</span>
+              <span className="ml-1.5 font-normal text-sky-600 dark:text-sky-400">({pendingApprovals.length})</span>
             </h3>
           </div>
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {pendingApprovals.map((u) => (
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
@@ -191,7 +191,7 @@ export default function AdminPage() {
                   <p className="flex items-center gap-1.5 truncate text-xs text-slate-500">
                     {u.email}
                     {u.admin_requested && (
-                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
                         also requested admin
                       </span>
                     )}
@@ -209,7 +209,7 @@ export default function AdminPage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-rose-600 hover:bg-rose-50"
+                    className="text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
                     icon={<X className="h-3.5 w-3.5" />}
                     loading={rejectAccountM.isPending && rejectAccountM.variables === u.id}
                     onClick={() => rejectAccountM.mutate(u.id)}
@@ -232,21 +232,21 @@ export default function AdminPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/80 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <tr className="border-b border-slate-100 bg-slate-50/80 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/50">
                   <th className="px-5 py-3">User</th>
                   <th className="px-5 py-3">Role</th>
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {users.data.map((u) => {
                   const isSelf = u.id === me?.id;
                   return (
-                    <tr key={u.id} className="hover:bg-slate-50/60">
+                    <tr key={u.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40">
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-xs font-bold text-slate-600 dark:text-slate-300">
+                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-xs font-bold text-slate-600 dark:bg-slate-700/60 dark:text-slate-300">
                             {(u.name || u.email).slice(0, 2).toUpperCase()}
                           </span>
                           <div className="min-w-0">
@@ -306,7 +306,7 @@ export default function AdminPage() {
                             size="sm"
                             disabled={isSelf}
                             icon={u.is_active ? <Ban className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                            className={u.is_active ? 'text-rose-600 hover:bg-rose-50' : ''}
+                            className={u.is_active ? 'text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10' : ''}
                             loading={activeM.isPending && activeM.variables?.id === u.id}
                             onClick={() => activeM.mutate({ id: u.id, isActive: !u.is_active })}
                           >
@@ -417,7 +417,7 @@ function SchemaVersionsCard() {
               setToId(null);
               setDiff(null);
             }}
-            className="mt-1 rounded border border-slate-200 px-2 py-1.5 text-sm"
+            className="mt-1 rounded border border-slate-200 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
           >
             {engineSchemas.data?.map((s) => (
               <option key={s.key} value={s.key}>{s.label}</option>
@@ -427,7 +427,7 @@ function SchemaVersionsCard() {
 
         {/* Upload form */}
         <form
-          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3"
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40"
           onSubmit={(e) => {
             e.preventDefault();
             if (label.trim() && file && activeTarget) uploadM.mutate();
@@ -442,7 +442,7 @@ function SchemaVersionsCard() {
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g. v2"
-              className="mt-1 w-28 rounded border border-slate-200 px-2 py-1.5 text-sm focus:border-primary-400 focus:outline-none"
+              className="mt-1 w-28 rounded border border-slate-200 px-2 py-1.5 text-sm focus:border-primary-400 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             />
           </div>
           <div>
@@ -455,7 +455,7 @@ function SchemaVersionsCard() {
               type="file"
               accept=".csv"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="mt-1 text-sm file:mr-2 file:rounded file:border-0 file:bg-primary-50 file:px-2 file:py-1 file:text-primary-700"
+              className="mt-1 text-sm file:mr-2 file:rounded file:border-0 file:bg-primary-50 file:px-2 file:py-1 file:text-primary-700 dark:file:bg-primary-500/15 dark:file:text-primary-300"
             />
           </div>
           <Button
@@ -474,7 +474,7 @@ function SchemaVersionsCard() {
         ) : !versions.data?.length ? (
           <EmptyState title="No schema versions yet" />
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-slate-100 dark:divide-slate-800">
             {versions.data.map((v) => (
               <li key={v.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="flex items-center gap-2">
@@ -506,7 +506,7 @@ function SchemaVersionsCard() {
 
         {/* Schema diff (G6 layer A) */}
         {(versions.data?.length ?? 0) >= 2 && (
-          <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+          <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40">
             <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
               <GitCompare className="h-4 w-4" />
               Compare versions
@@ -516,7 +516,7 @@ function SchemaVersionsCard() {
                 aria-label="From version"
                 value={fromId ?? ''}
                 onChange={(e) => setFromId(Number(e.target.value) || null)}
-                className="rounded border border-slate-200 px-2 py-1.5 text-sm"
+                className="rounded border border-slate-200 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
                 <option value="">From…</option>
                 {versions.data!.map((v) => (
@@ -528,7 +528,7 @@ function SchemaVersionsCard() {
                 aria-label="To version"
                 value={toId ?? ''}
                 onChange={(e) => setToId(Number(e.target.value) || null)}
-                className="rounded border border-slate-200 px-2 py-1.5 text-sm"
+                className="rounded border border-slate-200 px-2 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
                 <option value="">To…</option>
                 {versions.data!.map((v) => (
@@ -558,7 +558,7 @@ function SchemaVersionsCard() {
                     <span className="text-xs font-semibold text-emerald-700">Added fields</span>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {diff.added_fields.map((f) => (
-                        <span key={f.field} className="rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-xs text-emerald-700">
+                        <span key={f.field} className="rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-xs text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                           {f.field}
                         </span>
                       ))}
@@ -570,7 +570,7 @@ function SchemaVersionsCard() {
                     <span className="text-xs font-semibold text-red-700">Removed fields</span>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {diff.removed_fields.map((f) => (
-                        <span key={f.field} className="rounded bg-red-50 px-1.5 py-0.5 font-mono text-xs text-red-700 line-through">
+                        <span key={f.field} className="rounded bg-red-50 px-1.5 py-0.5 font-mono text-xs text-red-700 line-through dark:bg-red-500/15 dark:text-red-300">
                           {f.field}
                         </span>
                       ))}
@@ -647,7 +647,7 @@ function LearnedDecisionsCard() {
             type="button"
             onClick={() => candidates.refetch()}
             disabled={candidates.isFetching}
-            className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             title="Refresh the queue and agreement stats (another admin may have promoted something)"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${candidates.isFetching ? 'animate-spin' : ''}`} />
@@ -668,7 +668,7 @@ function LearnedDecisionsCard() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400">
+                <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400 dark:border-slate-800">
                   <th className="px-2 py-2">Kind</th>
                   <th className="px-2 py-2">Key</th>
                   <th className="px-2 py-2">Decision → target</th>
@@ -679,7 +679,7 @@ function LearnedDecisionsCard() {
               </thead>
               <tbody>
                 {rows.map((c) => (
-                  <tr key={`${c.kind}:${c.source_key}`} className="border-b border-slate-50">
+                  <tr key={`${c.kind}:${c.source_key}`} className="border-b border-slate-50 dark:border-slate-800/60">
                     <td className="px-2 py-2">
                       <Badge tone={c.kind === 'schema' ? 'primary' : 'slate'}>{c.kind}</Badge>
                     </td>
@@ -795,7 +795,7 @@ function AliasDictCard() {
 
         {/* Bulk upload */}
         <form
-          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3"
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40"
           onSubmit={(e) => {
             e.preventDefault();
             if (file) uploadM.mutate();
@@ -811,7 +811,7 @@ function AliasDictCard() {
               type="file"
               accept=".csv,.tsv,.txt"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="mt-1 text-sm file:mr-2 file:rounded file:border-0 file:bg-primary-50 file:px-2 file:py-1 file:text-primary-700"
+              className="mt-1 text-sm file:mr-2 file:rounded file:border-0 file:bg-primary-50 file:px-2 file:py-1 file:text-primary-700 dark:file:bg-primary-500/15 dark:file:text-primary-300"
             />
           </div>
           <Button type="submit" loading={uploadM.isPending} disabled={!file} icon={<Upload className="h-4 w-4" />}>
@@ -821,7 +821,7 @@ function AliasDictCard() {
 
         {/* Add one */}
         <form
-          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3"
+          className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40"
           onSubmit={(e) => {
             e.preventDefault();
             if (addSource.trim() && addField.trim()) addM.mutate();
@@ -836,7 +836,7 @@ function AliasDictCard() {
               value={addSource}
               onChange={(e) => setAddSource(e.target.value)}
               placeholder="e.g. patient_sex"
-              className="mt-1 w-40 rounded border border-slate-200 px-2 py-1.5 text-sm focus:border-primary-400 focus:outline-none"
+              className="mt-1 w-40 rounded border border-slate-200 px-2 py-1.5 text-sm focus:border-primary-400 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             />
           </div>
           <div>
@@ -849,8 +849,8 @@ function AliasDictCard() {
               value={addField}
               onChange={(e) => setAddField(e.target.value)}
               placeholder="e.g. sex"
-              className={`mt-1 w-40 rounded border px-2 py-1.5 text-sm focus:outline-none ${
-                unknownField ? 'border-amber-400' : 'border-slate-200 focus:border-primary-400'
+              className={`mt-1 w-40 rounded border px-2 py-1.5 text-sm focus:outline-none dark:bg-slate-900 dark:text-slate-200 ${
+                unknownField ? 'border-amber-400' : 'border-slate-200 focus:border-primary-400 dark:border-slate-700'
               }`}
             />
             <datalist id="schema-fields-list">
@@ -883,7 +883,7 @@ function AliasDictCard() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search aliases or fields…"
-                className="w-full rounded border border-slate-200 py-1.5 pl-8 pr-2 text-sm focus:border-primary-400 focus:outline-none"
+                className="w-full rounded border border-slate-200 py-1.5 pl-8 pr-2 text-sm focus:border-primary-400 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               />
             </div>
             <button
@@ -891,7 +891,7 @@ function AliasDictCard() {
               onClick={() =>
                 adminExportAliases('merged').catch(() => toast.error('Export failed'))
               }
-              className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+              className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               title="Download the full (built-in + custom) alias dictionary as CSV"
             >
               <Download className="h-4 w-4" />
@@ -902,7 +902,7 @@ function AliasDictCard() {
               onClick={() =>
                 adminExportAliases('custom').catch(() => toast.error('Export failed'))
               }
-              className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+              className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               title="Download only the admin-added (custom) aliases as CSV"
             >
               <Download className="h-4 w-4" />
@@ -914,9 +914,9 @@ function AliasDictCard() {
           ) : rows.length === 0 ? (
             <p className="py-6 text-center text-sm text-slate-400">No aliases match.</p>
           ) : (
-            <div className="max-h-72 overflow-y-auto rounded-lg border border-slate-100">
+            <div className="max-h-72 overflow-y-auto rounded-lg border border-slate-100 dark:border-slate-800">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-slate-50">
+                <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800">
                   <tr className="text-left text-xs uppercase tracking-wide text-slate-400">
                     <th className="px-3 py-2">Alias</th>
                     <th className="px-3 py-2">Field</th>
@@ -926,7 +926,7 @@ function AliasDictCard() {
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={`${r.source}::${r.field_name}`} className="border-t border-slate-50">
+                    <tr key={`${r.source}::${r.field_name}`} className="border-t border-slate-50 dark:border-slate-800/60">
                       <td className="px-3 py-1.5 font-mono text-xs text-slate-700 dark:text-slate-300">{r.source}</td>
                       <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{r.field_name}</td>
                       <td className="px-3 py-1.5">
@@ -939,7 +939,7 @@ function AliasDictCard() {
                           <button
                             title="Remove alias"
                             onClick={() => delM.mutate(r)}
-                            className="rounded p-1 text-rose-500 hover:bg-rose-50"
+                            className="rounded p-1 text-rose-500 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -957,7 +957,7 @@ function AliasDictCard() {
         </div>
 
         <p className="text-xs text-slate-400">
-          Bulk row example: <code className="rounded bg-slate-100 px-1">SEX,&quot;gender,patient_sex,gender_at_birth&quot;</code>
+          Bulk row example: <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">SEX,&quot;gender,patient_sex,gender_at_birth&quot;</code>
         </p>
       </CardBody>
     </Card>

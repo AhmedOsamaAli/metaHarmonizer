@@ -13,7 +13,7 @@ export default function RememberToggle() {
         <label
             className={`inline-flex cursor-pointer select-none items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                 on
-                    ? 'border-primary-300 bg-primary-50 text-primary-700'
+                    ? 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-500/40 dark:bg-primary-500/15 dark:text-primary-300'
                     : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
             }`}
             title="When on, your accept/edit decisions are remembered and pre-applied to your future studies."

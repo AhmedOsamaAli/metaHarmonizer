@@ -6,8 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import type { Role } from '../api/types';
 
 const ROLE_TONE: Record<Role, string> = {
-  admin: 'bg-primary-50 text-primary-700',
-  curator: 'bg-accent-100 text-accent-700',
+  admin: 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300',
+  curator: 'bg-accent-100 text-accent-700 dark:bg-accent-500/15 dark:text-accent-300',
 };
 
 export default function UserMenu() {
@@ -72,7 +72,7 @@ export default function UserMenu() {
             <Item
               icon={<ShieldCheck className="h-4 w-4" />}
               onSelect={user.admin_requested ? () => {} : handleRequestAdmin}
-              className={user.admin_requested ? 'text-slate-400' : 'text-accent-700 focus:bg-accent-50'}
+              className={user.admin_requested ? 'text-slate-400' : 'text-accent-700 focus:bg-accent-50 dark:text-accent-300 dark:focus:bg-accent-500/10'}
             >
               {user.admin_requested ? 'Admin access requested' : 'Request admin access'}
             </Item>
@@ -88,7 +88,7 @@ export default function UserMenu() {
           <Item
             icon={<LogOut className="h-4 w-4" />}
             onSelect={handleLogout}
-            className="text-rose-600 focus:bg-rose-50"
+            className="text-rose-600 focus:bg-rose-50 dark:text-rose-400 dark:focus:bg-rose-500/10"
           >
             Sign out
           </Item>

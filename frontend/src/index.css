@@ -86,6 +86,42 @@
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
   }
 
+  /* Custom checkbox — brand-filled, dark-mode aware, with a crisp white tick. */
+  .checkbox {
+    @apply h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-[5px] border border-slate-300 bg-white align-middle
+      transition-[background-color,border-color,box-shadow] duration-150
+      hover:border-primary-400
+      checked:border-primary-600 checked:bg-primary-600
+      indeterminate:border-primary-600 indeterminate:bg-primary-600
+      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 focus-visible:ring-offset-1 focus-visible:ring-offset-white
+      dark:border-slate-600 dark:bg-slate-800 dark:hover:border-primary-500 dark:ring-offset-slate-900
+      dark:checked:border-primary-500 dark:checked:bg-primary-500;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 0.72rem;
+  }
+  .checkbox:checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.75 8.5l2.6 2.6L12.25 5' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+  .checkbox:indeterminate {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M4 8h8' stroke='white' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E");
+  }
+
+  /* Keyboard-shortcut key cap — legible on both light and dark surfaces. */
+  .kbd {
+    @apply inline-flex min-w-[1.1rem] items-center justify-center rounded border border-slate-300 bg-slate-100 px-1 font-mono text-[11px] font-semibold text-slate-600 shadow-[inset_0_-1px_0_rgb(15_23_42_/_0.08)]
+      dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:shadow-[inset_0_-1px_0_rgb(0_0_0_/_0.4)];
+  }
+
+  /* Popover / dropdown surface + rows (filter menus, pickers). */
+  .menu-panel {
+    @apply rounded-xl border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900;
+  }
+  .menu-item {
+    @apply flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50
+      dark:text-slate-200 dark:hover:bg-slate-800;
+  }
+
   .skeleton {
     @apply relative overflow-hidden rounded-md bg-slate-200/70 dark:bg-slate-800/70;
   }

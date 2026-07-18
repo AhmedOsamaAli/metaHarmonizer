@@ -28,22 +28,22 @@ import { EmptyState, LoadingBlock } from '../components/ui/Feedback';
 
 /** Human-readable verb + icon + colour per audit action. */
 const ACTION_META: Record<string, { verb: string; icon: ReactNode; tone: string; dot: string }> = {
-  accept: { verb: 'Accepted a mapping', icon: <Check className="h-4 w-4" />, tone: 'text-emerald-600 bg-emerald-50', dot: 'bg-emerald-500' },
-  reject: { verb: 'Rejected a mapping', icon: <X className="h-4 w-4" />, tone: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
-  edit: { verb: 'Edited a mapping', icon: <Pencil className="h-4 w-4" />, tone: 'text-amber-600 bg-amber-50', dot: 'bg-amber-500' },
-  batch_accepted: { verb: 'Batch-accepted mappings', icon: <Layers className="h-4 w-4" />, tone: 'text-emerald-600 bg-emerald-50', dot: 'bg-emerald-500' },
-  batch_rejected: { verb: 'Batch-rejected mappings', icon: <Layers className="h-4 w-4" />, tone: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
-  llm_rematch: { verb: 'Ran an LLM rematch', icon: <Sparkles className="h-4 w-4" />, tone: 'text-purple-600 bg-purple-50', dot: 'bg-purple-500' },
-  onto_accept: { verb: 'Accepted an ontology term', icon: <Check className="h-4 w-4" />, tone: 'text-emerald-600 bg-emerald-50', dot: 'bg-emerald-500' },
-  onto_reject: { verb: 'Rejected an ontology term', icon: <X className="h-4 w-4" />, tone: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
-  onto_edit: { verb: 'Edited an ontology term', icon: <Pencil className="h-4 w-4" />, tone: 'text-amber-600 bg-amber-50', dot: 'bg-amber-500' },
-  study_delete: { verb: 'Deleted a study', icon: <Trash2 className="h-4 w-4" />, tone: 'text-rose-600 bg-rose-50', dot: 'bg-rose-500' },
-  study_complete: { verb: 'Completed a study', icon: <CircleCheck className="h-4 w-4" />, tone: 'text-emerald-600 bg-emerald-50', dot: 'bg-emerald-500' },
-  admin_set_role: { verb: 'Changed a user role', icon: <UserCog className="h-4 w-4" />, tone: 'text-indigo-600 bg-indigo-50', dot: 'bg-indigo-500' },
-  admin_approve_request: { verb: 'Approved an admin request', icon: <ShieldCheck className="h-4 w-4" />, tone: 'text-indigo-600 bg-indigo-50', dot: 'bg-indigo-500' },
-  admin_reject_request: { verb: 'Denied an admin request', icon: <ShieldCheck className="h-4 w-4" />, tone: 'text-slate-600 bg-slate-100', dot: 'bg-slate-400' },
-  admin_set_active: { verb: 'Changed account status', icon: <Power className="h-4 w-4" />, tone: 'text-amber-600 bg-amber-50', dot: 'bg-amber-500' },
-  admin_force_logout: { verb: 'Forced a sign-out', icon: <LogOut className="h-4 w-4" />, tone: 'text-amber-600 bg-amber-50', dot: 'bg-amber-500' },
+  accept: { verb: 'Accepted a mapping', icon: <Check className="h-4 w-4" />, tone: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/15', dot: 'bg-emerald-500' },
+  reject: { verb: 'Rejected a mapping', icon: <X className="h-4 w-4" />, tone: 'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-500/15', dot: 'bg-rose-500' },
+  edit: { verb: 'Edited a mapping', icon: <Pencil className="h-4 w-4" />, tone: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/15', dot: 'bg-amber-500' },
+  batch_accepted: { verb: 'Batch-accepted mappings', icon: <Layers className="h-4 w-4" />, tone: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/15', dot: 'bg-emerald-500' },
+  batch_rejected: { verb: 'Batch-rejected mappings', icon: <Layers className="h-4 w-4" />, tone: 'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-500/15', dot: 'bg-rose-500' },
+  llm_rematch: { verb: 'Ran an LLM rematch', icon: <Sparkles className="h-4 w-4" />, tone: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-500/15', dot: 'bg-purple-500' },
+  onto_accept: { verb: 'Accepted an ontology term', icon: <Check className="h-4 w-4" />, tone: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/15', dot: 'bg-emerald-500' },
+  onto_reject: { verb: 'Rejected an ontology term', icon: <X className="h-4 w-4" />, tone: 'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-500/15', dot: 'bg-rose-500' },
+  onto_edit: { verb: 'Edited an ontology term', icon: <Pencil className="h-4 w-4" />, tone: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/15', dot: 'bg-amber-500' },
+  study_delete: { verb: 'Deleted a study', icon: <Trash2 className="h-4 w-4" />, tone: 'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-500/15', dot: 'bg-rose-500' },
+  study_complete: { verb: 'Completed a study', icon: <CircleCheck className="h-4 w-4" />, tone: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-500/15', dot: 'bg-emerald-500' },
+  admin_set_role: { verb: 'Changed a user role', icon: <UserCog className="h-4 w-4" />, tone: 'text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-500/15', dot: 'bg-indigo-500' },
+  admin_approve_request: { verb: 'Approved an admin request', icon: <ShieldCheck className="h-4 w-4" />, tone: 'text-indigo-600 bg-indigo-50 dark:text-indigo-400 dark:bg-indigo-500/15', dot: 'bg-indigo-500' },
+  admin_reject_request: { verb: 'Denied an admin request', icon: <ShieldCheck className="h-4 w-4" />, tone: 'text-slate-600 bg-slate-100 dark:text-slate-300 dark:bg-slate-700/50', dot: 'bg-slate-400' },
+  admin_set_active: { verb: 'Changed account status', icon: <Power className="h-4 w-4" />, tone: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/15', dot: 'bg-amber-500' },
+  admin_force_logout: { verb: 'Forced a sign-out', icon: <LogOut className="h-4 w-4" />, tone: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/15', dot: 'bg-amber-500' },
 };
 
 const ACTION_OPTIONS = Object.keys(ACTION_META);
@@ -63,7 +63,7 @@ function meta(action: string) {
     ACTION_META[action] ?? {
       verb: action,
       icon: <Activity className="h-4 w-4" />,
-      tone: 'text-slate-600 bg-slate-100',
+      tone: 'text-slate-600 bg-slate-100 dark:text-slate-300 dark:bg-slate-700/50',
       dot: 'bg-slate-400',
     }
   );
@@ -222,7 +222,7 @@ export default function ActivityPage() {
           />
 
           {hasFilters && (
-            <button onClick={clearFilters} className="btn btn-sm border border-slate-200 text-slate-600 hover:bg-slate-50">
+            <button onClick={clearFilters} className="btn btn-sm border border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">
               Clear
             </button>
           )}
@@ -244,7 +244,7 @@ export default function ActivityPage() {
             <div key={day}>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{day}</h3>
               <Card>
-                <ul className="divide-y divide-slate-100">
+                <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                   {items.map((e) => {
                     const m = meta(e.action);
                     return (
@@ -275,7 +275,7 @@ export default function ActivityPage() {
               <button
                 onClick={() => query.fetchNextPage()}
                 disabled={query.isFetchingNextPage}
-                className="btn btn-sm border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                className="btn btn-sm border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               >
                 {query.isFetchingNextPage ? 'Loading…' : 'Load more'}
               </button>
@@ -314,11 +314,11 @@ function ActionFilter({ value, onChange }: { value: string; onChange: (v: string
         <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
       </button>
       {open && (
-        <div className="absolute z-20 mt-1 max-h-72 w-64 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+        <div className="absolute z-20 mt-1 max-h-72 w-64 overflow-auto menu-panel py-1">
           <button
             type="button"
             onClick={() => { onChange(''); setOpen(false); }}
-            className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            className="menu-item"
           >
             <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />
             All actions
@@ -330,7 +330,7 @@ function ActionFilter({ value, onChange }: { value: string; onChange: (v: string
                 key={a}
                 type="button"
                 onClick={() => { onChange(a); setOpen(false); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                className="menu-item"
               >
                 <span className={`grid h-6 w-6 place-items-center rounded ${m.tone}`}>{m.icon}</span>
                 {m.verb}
@@ -393,22 +393,22 @@ function UserFilter({
         <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
       </button>
       {open && (
-        <div className="absolute z-20 mt-1 w-64 rounded-xl border border-slate-200 bg-white shadow-lg">
-          <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
+        <div className="absolute z-20 mt-1 w-64 menu-panel">
+          <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-slate-800">
             <Search className="h-4 w-4 text-slate-400" />
             <input
               ref={inputRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search name or email…"
-              className="w-full text-sm outline-none"
+              className="w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100"
             />
           </div>
           <div className="max-h-64 overflow-auto py-1">
             <button
               type="button"
               onClick={() => { onChange(null); setOpen(false); }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+              className="menu-item"
             >
               Everyone
             </button>
@@ -421,7 +421,7 @@ function UserFilter({
                 key={u.id}
                 type="button"
                 onClick={() => { onChange(u); setOpen(false); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                className="menu-item"
               >
                 <Avatar user={u} />
                 <span className="min-w-0">
@@ -476,13 +476,13 @@ function WhenFilter({
           ))}
         </select>
         {custom && (
-          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5">
+          <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800">
             <input
               type="date"
               value={from}
               max={to || undefined}
               onChange={(e) => onFrom(e.target.value)}
-              className="bg-transparent text-xs text-slate-700 outline-none"
+              className="bg-transparent text-xs text-slate-700 outline-none dark:text-slate-200 [color-scheme:light] dark:[color-scheme:dark]"
               aria-label="From date"
             />
             <span className="text-slate-400">→</span>
@@ -491,7 +491,7 @@ function WhenFilter({
               value={to}
               min={from || undefined}
               onChange={(e) => onTo(e.target.value)}
-              className="bg-transparent text-xs text-slate-700 outline-none"
+              className="bg-transparent text-xs text-slate-700 outline-none dark:text-slate-200 [color-scheme:light] dark:[color-scheme:dark]"
               aria-label="To date"
             />
           </div>
@@ -548,22 +548,22 @@ function StudyFilter({
         <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
       </button>
       {open && (
-        <div className="absolute z-20 mt-1 w-72 rounded-xl border border-slate-200 bg-white shadow-lg">
-          <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
+        <div className="absolute z-20 mt-1 w-72 menu-panel">
+          <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2 dark:border-slate-800">
             <Search className="h-4 w-4 text-slate-400" />
             <input
               ref={inputRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Search study name or id…"
-              className="w-full text-sm outline-none"
+              className="w-full bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400 dark:text-slate-100"
             />
           </div>
           <div className="max-h-64 overflow-auto py-1">
             <button
               type="button"
               onClick={() => { onChange(''); setOpen(false); }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
+              className="menu-item"
             >
               Any study
             </button>
@@ -578,7 +578,7 @@ function StudyFilter({
                 key={s.id}
                 type="button"
                 onClick={() => { onChange(s.id); setOpen(false); }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                className="menu-item"
               >
                 <FileSpreadsheet className="h-4 w-4 shrink-0 text-primary-500" />
                 <span className="min-w-0">
@@ -596,7 +596,7 @@ function StudyFilter({
 
 function Avatar({ user }: { user: User }) {
   const initials = (user.name || user.email).slice(0, 2).toUpperCase();
-  const tone = user.role === 'admin' ? 'bg-indigo-100 text-indigo-700' : 'bg-primary-100 text-primary-700';
+  const tone = user.role === 'admin' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300' : 'bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300';
   return (
     <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[10px] font-semibold ${tone}`}>
       {initials}

@@ -190,7 +190,7 @@ export default function QualityDashboard() {
                   <span className="w-24 shrink-0 truncate text-xs font-medium text-slate-600 dark:text-slate-300">
                     {STAGE_LABELS[c.stage] ?? c.stage}
                   </span>
-                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                     <div className="h-full rounded-full" style={{ width: `${c.avg * 100}%`, backgroundColor: STAGE_COLORS[c.stage] ?? '#94a3b8' }} />
                   </div>
                   <span className="w-10 shrink-0 text-right text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -224,7 +224,7 @@ export default function QualityDashboard() {
               </button>
             </div>
             {needsReview.length ? (
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                 {needsReview.map((m) => (
                   <li key={m.id} className="flex items-center justify-between gap-3 py-2">
                     <div className="min-w-0">
@@ -303,7 +303,7 @@ function confColor(minVal: number): string {
 function ChartTooltip({ active, payload, label }: TooltipProps<number, string>) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs shadow-card backdrop-blur">
+    <div className="rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs shadow-card backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
       {label !== undefined && label !== '' && (
         <p className="mb-0.5 font-medium text-slate-500">{label}</p>
       )}
@@ -365,9 +365,9 @@ function ReadinessBanner({
   const state = blocking ? 'blocked' : needsWork ? 'review' : 'ready';
 
   const meta = {
-    ready: { tone: 'border-emerald-200 bg-emerald-50', icon: <CheckCircle2 className="h-5 w-5 text-emerald-600" />, title: 'Ready to export', sub: 'All columns are reviewed and confirmed.' },
-    review: { tone: 'border-amber-200 bg-amber-50', icon: <AlertTriangle className="h-5 w-5 text-amber-600" />, title: 'Needs review', sub: 'Some columns still need a curator decision.' },
-    blocked: { tone: 'border-rose-200 bg-rose-50', icon: <XCircle className="h-5 w-5 text-rose-600" />, title: 'Not ready', sub: 'Nothing is confirmed yet — start reviewing.' },
+    ready: { tone: 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10', icon: <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />, title: 'Ready to export', sub: 'All columns are reviewed and confirmed.' },
+    review: { tone: 'border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10', icon: <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />, title: 'Needs review', sub: 'Some columns still need a curator decision.' },
+    blocked: { tone: 'border-rose-200 bg-rose-50 dark:border-rose-500/30 dark:bg-rose-500/10', icon: <XCircle className="h-5 w-5 text-rose-600 dark:text-rose-400" />, title: 'Not ready', sub: 'Nothing is confirmed yet — start reviewing.' },
   }[state];
 
   return (
@@ -386,14 +386,14 @@ function ReadinessBanner({
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         ) : (
-          <button onClick={onReview} className="flex shrink-0 items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50">
+          <button onClick={onReview} className="flex shrink-0 items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-700">
             Review pending
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         )}
       </div>
 
-      <ul className="mt-3 space-y-1.5 border-t border-black/5 pt-3">
+      <ul className="mt-3 space-y-1.5 border-t border-black/5 pt-3 dark:border-white/10">
         {checks.map((c) => (
           <li key={c.label} className="flex items-center gap-2 text-xs">
             {c.done ? (
@@ -441,7 +441,7 @@ function Kpi({
   return (
     <Card
       onClick={onClick}
-      className={`p-4 ${onClick ? 'cursor-pointer transition hover:border-primary-300 hover:shadow-sm' : ''}`}
+      className={`p-4 ${onClick ? 'cursor-pointer transition hover:border-primary-300 hover:shadow-sm dark:hover:border-primary-500/50 dark:hover:bg-slate-800/60' : ''}`}
     >
       <div className="flex items-center gap-2 text-slate-400">
         {icon}

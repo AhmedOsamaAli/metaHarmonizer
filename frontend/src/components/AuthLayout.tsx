@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import LogoMark from './LogoMark';
 
 /** Two-pane auth screen: brand/marketing on the left, form card on the right. */
 export default function AuthLayout({
@@ -17,9 +18,7 @@ export default function AuthLayout({
       {/* Brand panel */}
       <div className="relative hidden overflow-hidden bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div className="flex items-center gap-3 text-white">
-          <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white/15 text-2xl backdrop-blur">
-            🔬
-          </span>
+          <LogoMark size={44} className="shadow-lg" />
           <span className="text-xl font-extrabold tracking-tight">MetaHarmonizer</span>
         </div>
 
@@ -55,14 +54,12 @@ export default function AuthLayout({
       </div>
 
       {/* Form panel */}
-      <div className="flex items-center justify-center bg-slate-50 px-4 py-12 sm:px-8">
+      <div className="flex items-center justify-center bg-slate-50 px-4 py-12 dark:bg-slate-950 sm:px-8">
         <div className="w-full max-w-sm animate-fade-in">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-600 text-lg">
-              🔬
-            </span>
+            <LogoMark size={36} className="shadow-sm" />
             <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-              Meta<span className="text-primary-600">Harmonizer</span>
+              Meta<span className="text-primary-600 dark:text-primary-400">Harmonizer</span>
             </span>
           </div>
 

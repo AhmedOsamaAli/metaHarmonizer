@@ -634,7 +634,7 @@ export default function MappingReview() {
           title="Order risky mappings first and keep look-alikes together so you can batch a whole group"
           className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition ${
             smartOrder
-              ? 'border-primary-300 bg-primary-50 text-primary-700'
+              ? 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-500/40 dark:bg-primary-500/15 dark:text-primary-300'
               : 'border-slate-200 text-slate-500 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
           }`}
         >
@@ -654,10 +654,10 @@ export default function MappingReview() {
 
       {/* Keyboard hint */}
       <p className="-mt-2 px-1 text-[11px] text-slate-400">
-        Shortcuts: <kbd className="rounded bg-slate-100 px-1">j</kbd>/<kbd className="rounded bg-slate-100 px-1">k</kbd> move ·
-        <kbd className="rounded bg-slate-100 px-1">a</kbd> accept · <kbd className="rounded bg-slate-100 px-1">r</kbd> reject ·
-        <kbd className="rounded bg-slate-100 px-1">e</kbd> edit · <kbd className="rounded bg-slate-100 px-1">x</kbd> select ·
-        <kbd className="rounded bg-slate-100 px-1">Enter</kbd> details · <kbd className="rounded bg-slate-100 px-1">/</kbd> search
+        Shortcuts: <kbd className="kbd">j</kbd>/<kbd className="kbd">k</kbd> move ·
+        <kbd className="kbd">a</kbd> accept · <kbd className="kbd">r</kbd> reject ·
+        <kbd className="kbd">e</kbd> edit · <kbd className="kbd">x</kbd> select ·
+        <kbd className="kbd">Enter</kbd> details · <kbd className="kbd">/</kbd> search
       </p>
 
       {/* Table */}
@@ -675,7 +675,7 @@ export default function MappingReview() {
                     type="checkbox"
                     checked={selected.size === filteredMappings.length && filteredMappings.length > 0}
                     onChange={toggleSelectAll}
-                    className="rounded"
+                    className="checkbox"
                   />
                 </th>
                 <SortableHeader label="Raw Column" sortKey="raw_column" current={sortKey} asc={sortAsc} onSort={toggleSort} />
@@ -690,7 +690,7 @@ export default function MappingReview() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
               {filteredMappings.map((m, idx) => (
                 <React.Fragment key={m.id}>
                   <tr
@@ -698,20 +698,20 @@ export default function MappingReview() {
                     onClick={() => setCursor(idx)}
                     className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
                       idx === cursor ? 'ring-2 ring-inset ring-primary-400' : ''
-                    } ${selected.has(m.id) ? 'bg-primary-50' : ''}`}
+                    } ${selected.has(m.id) ? 'bg-primary-50 dark:bg-primary-500/10' : ''}`}
                   >
                     <td className="px-3 py-2.5">
                       <input
                         type="checkbox"
                         checked={selected.has(m.id)}
                         onChange={() => toggleSelect(m.id)}
-                        className="rounded"
+                        className="checkbox"
                       />
                     </td>
                     <td className="px-3 py-2.5 font-mono text-xs font-medium text-slate-900 dark:text-slate-100">
                       {m.raw_column}
                     </td>
-                    <td className="px-3 py-2.5 font-mono text-xs text-primary-700">
+                    <td className="px-3 py-2.5 font-mono text-xs text-primary-700 dark:text-primary-300">
                       {m.curator_field || m.matched_field || (
                         <span className="text-slate-400 italic">unmapped</span>
                       )}
@@ -746,7 +746,7 @@ export default function MappingReview() {
                         {m.status !== 'accepted' && (
                           <button
                             onClick={() => handleAccept(m.id)}
-                            className="p-1 rounded hover:bg-green-100 text-green-600"
+                            className="p-1 rounded text-green-600 hover:bg-green-100 dark:text-green-400 dark:hover:bg-green-500/15"
                             title="Accept"
                           >
                             <Check className="w-4 h-4" />
@@ -755,7 +755,7 @@ export default function MappingReview() {
                         {m.status !== 'rejected' && (
                           <button
                             onClick={() => handleReject(m.id)}
-                            className="p-1 rounded hover:bg-red-100 text-red-600"
+                            className="p-1 rounded text-red-600 hover:bg-red-100 dark:text-red-400 dark:hover:bg-red-500/15"
                             title="Reject"
                           >
                             <X className="w-4 h-4" />
@@ -763,14 +763,14 @@ export default function MappingReview() {
                         )}
                         <button
                           onClick={() => openEdit(m)}
-                          className="p-1 rounded hover:bg-blue-100 text-blue-600"
+                          className="p-1 rounded text-blue-600 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-500/15"
                           title="Edit"
                         >
                           <Pencil className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => setExpandedRow(expandedRow === m.id ? null : m.id)}
-                          className="p-1 rounded hover:bg-slate-200 text-slate-500"
+                          className="p-1 rounded text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700"
                           title="Details"
                         >
                           {expandedRow === m.id ? (
@@ -796,7 +796,7 @@ export default function MappingReview() {
                               <ul className="space-y-1">
                                 {m.alternatives.map((alt, i) => (
                                   <li key={`${alt.field}-${i}`} className="flex items-center gap-2">
-                                    <span className="font-mono text-primary-700">
+                                    <span className="font-mono text-primary-700 dark:text-primary-300">
                                       {alt.field}
                                     </span>
                                     <ConfidenceBadge
@@ -809,7 +809,7 @@ export default function MappingReview() {
                                     {m.status !== 'accepted' && (
                                       <button
                                         onClick={() => handleApplyAlternative(m.id, alt.field)}
-                                        className="ml-auto rounded-md px-2 py-0.5 text-[11px] font-semibold text-primary-600 hover:bg-primary-50"
+                                        className="ml-auto rounded-md px-2 py-0.5 text-[11px] font-semibold text-primary-600 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-500/10"
                                       >
                                         Apply
                                       </button>

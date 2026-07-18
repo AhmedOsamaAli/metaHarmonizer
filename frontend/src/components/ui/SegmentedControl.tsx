@@ -11,11 +11,11 @@ export interface Segment<T extends string> {
 }
 
 const COUNT_TONE: Record<NonNullable<Segment<string>['tone']>, string> = {
-  primary: 'bg-primary-50 text-primary-700',
-  emerald: 'bg-emerald-50 text-emerald-700',
-  amber: 'bg-amber-50 text-amber-700',
-  rose: 'bg-rose-50 text-rose-700',
-  slate: 'bg-slate-200/70 text-slate-600 dark:text-slate-300',
+  primary: 'bg-primary-50 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300',
+  emerald: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+  amber: 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
+  rose: 'bg-rose-50 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300',
+  slate: 'bg-slate-200/70 text-slate-600 dark:bg-slate-600/50 dark:text-slate-300',
 };
 
 /**

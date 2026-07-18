@@ -77,7 +77,7 @@ export default function ColumnTokenInput({
         {value.map((col) => (
           <span
             key={col}
-            className="inline-flex items-center gap-1 rounded-md bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700"
+            className="inline-flex items-center gap-1 rounded-md bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-700 dark:bg-primary-500/20 dark:text-primary-300"
           >
             {col}
             <button
@@ -86,7 +86,7 @@ export default function ColumnTokenInput({
                 e.stopPropagation();
                 remove(col);
               }}
-              className="rounded hover:bg-primary-200"
+              className="rounded hover:bg-primary-200 dark:hover:bg-primary-500/30"
               aria-label={`Remove ${col}`}
             >
               <X className="h-3 w-3" />

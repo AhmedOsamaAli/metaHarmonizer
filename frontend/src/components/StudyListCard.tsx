@@ -74,7 +74,7 @@ export default function StudyListCard({ study, basePath }: { study: Study; baseP
       layout
       exit={{ opacity: 0, scale: 0.6, transition: { duration: 0.35, ease: 'easeIn' } }}
     >
-      <Card className="relative overflow-hidden transition hover:border-primary-300 hover:shadow-card">
+      <Card className="relative overflow-hidden transition hover:border-primary-300 hover:shadow-card dark:hover:border-primary-500/50">
         <AnimatePresence>
           {celebrating && (
             <motion.div
@@ -103,7 +103,7 @@ export default function StudyListCard({ study, basePath }: { study: Study; baseP
           className="group flex w-full items-center justify-between gap-3 p-4 text-left"
         >
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-600">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-300">
               <FileSpreadsheet className="h-5 w-5" />
             </span>
             <div className="min-w-0">
@@ -118,7 +118,7 @@ export default function StudyListCard({ study, basePath }: { study: Study; baseP
               )}
             </div>
           </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-primary-500" />
+          <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-primary-500 dark:text-slate-600" />
         </button>
 
         {/* Action footer — completing files the study away (removed from the
@@ -153,7 +153,7 @@ export default function StudyListCard({ study, basePath }: { study: Study; baseP
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
                 <AlertTriangle className="h-5 w-5" />
               </span>
               <div className="min-w-0">
@@ -168,7 +168,7 @@ export default function StudyListCard({ study, basePath }: { study: Study; baseP
               </div>
               <button
                 onClick={() => setConfirming(false)}
-                className="ml-auto rounded-lg p-1 text-slate-400 hover:bg-slate-100"
+                className="ml-auto rounded-lg p-1 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                 aria-label="Cancel"
               >
                 <X className="h-4 w-4" />

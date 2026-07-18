@@ -31,28 +31,28 @@ export default function ExportPage() {
       title: 'Harmonized CSV',
       desc: 'Data with columns renamed to curated schema fields and ontology IDs added.',
       format: 'harmonized' as const,
-      tone: 'bg-emerald-50 text-emerald-600',
+      tone: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400',
     },
     {
       icon: Database,
       title: 'cBioPortal Format',
       desc: 'Tab-separated file with cBioPortal clinical header lines, ready for the importer.',
       format: 'cbioportal' as const,
-      tone: 'bg-primary-50 text-primary-600',
+      tone: 'bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-300',
     },
     {
       icon: FolderArchive,
       title: 'cBioPortal Study Folder (ZIP)',
       desc: 'Full study folder (meta + clinical data files), ready to run through validateData.py.',
       format: 'cbioportal-study' as const,
-      tone: 'bg-indigo-50 text-indigo-600',
+      tone: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300',
     },
     {
       icon: FileJson,
       title: 'Mapping Report (JSON)',
       desc: 'Full audit trail of mapping decisions, curator edits, and metadata.',
       format: 'report' as const,
-      tone: 'bg-purple-50 text-purple-600',
+      tone: 'bg-purple-50 text-purple-600 dark:bg-purple-500/15 dark:text-purple-300',
     },
   ];
 
@@ -93,7 +93,7 @@ export default function ExportPage() {
         <Card className="transition hover:shadow-card">
           <CardBody className="flex items-center justify-between gap-4">
             <div className="flex items-start gap-4">
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-50 text-amber-600">
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300">
                 <Tags className="h-6 w-6" />
               </div>
               <div>
