@@ -118,10 +118,13 @@ export interface ReviewQueueItem extends Mapping {
     group_key: string;
     group_size: number;
     group_min_confidence: number;
+    /** How many mappings in this look-alike group are already accepted (G7
+     * feedback re-rank de-prioritizes the remaining ones). */
+    group_accepted?: number;
 }
 export interface ReviewQueue {
     items: ReviewQueueItem[];
-    stats: { pending: number; groups: number; batchable_groups: number; risky: number };
+    stats: { pending: number; groups: number; batchable_groups: number; risky: number; deprioritized_groups?: number };
 }
 export async function getReviewQueue(studyId: string): Promise<ReviewQueue> {
     return request<ReviewQueue>(`${BASE}/mappings/${studyId}/review-queue`);

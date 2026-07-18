@@ -132,8 +132,8 @@ export default function MappingReview() {
   // (same suggested target) adjacent so a curator can batch a whole group. Off
   // by default — it's assistive ordering, never enforced.
   const [smartOrder, setSmartOrder] = useState(false);
-  const [groupInfo, setGroupInfo] = useState<Record<number, { key: string; size: number; min: number }>>({});
-  const [queueStats, setQueueStats] = useState<{ groups: number; batchable_groups: number; risky: number } | null>(null);
+  const [groupInfo, setGroupInfo] = useState<Record<number, { key: string; size: number; min: number; rank: number; accepted: number }>>({});
+  const [queueStats, setQueueStats] = useState<{ groups: number; batchable_groups: number; risky: number; deprioritized_groups?: number } | null>(null);
 
   // Keyboard navigation: index of the focused row within the filtered list.
   const [cursor, setCursor] = useState(0);
@@ -170,10 +170,16 @@ export default function MappingReview() {
     }
     getReviewQueue(selectedId)
       .then((q) => {
-        const info: Record<number, { key: string; size: number; min: number }> = {};
-        for (const it of q.items) {
-          info[it.id] = { key: it.group_key, size: it.group_size, min: it.group_min_confidence };
-        }
+        const info: Record<number, { key: string; size: number; min: number; rank: number; accepted: number }> = {};
+        q.items.forEach((it, index) => {
+          info[it.id] = {
+            key: it.group_key,
+            size: it.group_size,
+            min: it.group_min_confidence,
+            rank: index, // the server's active-learning order (risk + feedback penalty)
+            accepted: it.group_accepted ?? 0,
+          };
+        });
         setGroupInfo(info);
         setQueueStats(q.stats);
       })
@@ -208,22 +214,18 @@ export default function MappingReview() {
       if (typeof av === 'string') return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
       return sortAsc ? av - bv : bv - av;
     });
-    // Smart review order (G7): override the column sort — riskiest group first,
-    // look-alikes (same group) kept adjacent, so a curator can batch a group.
+    // Smart review order (G7): follow the server's active-learning queue order —
+    // riskiest group first, look-alikes adjacent (batchable), and groups whose
+    // pattern the curator has already accepted nudged down (feedback re-rank).
+    // Rows not in the queue (already reviewed) sink to the bottom.
     if (smartOrder && Object.keys(groupInfo).length > 0) {
       result.sort((a, b) => {
         const ga = groupInfo[a.id];
         const gb = groupInfo[b.id];
-        // Rows without group info (already reviewed) sink to the bottom.
         if (!ga && !gb) return 0;
         if (!ga) return 1;
         if (!gb) return -1;
-        if (ga.min !== gb.min) return ga.min - gb.min; // riskiest group first
-        if (ga.key !== gb.key) return ga.key.localeCompare(gb.key); // keep group together
-        const ca = a.confidence_score ?? 0;
-        const cb = b.confidence_score ?? 0;
-        if (ca !== cb) return ca - cb; // within group, riskiest first
-        return a.raw_column.localeCompare(b.raw_column);
+        return ga.rank - gb.rank; // authoritative server ordering
       });
     }
     return result;
@@ -607,6 +609,9 @@ export default function MappingReview() {
           <span className="text-xs text-gray-500">
             {queueStats.risky} risky · {queueStats.batchable_groups} batchable group
             {queueStats.batchable_groups === 1 ? '' : 's'}
+            {(queueStats.deprioritized_groups ?? 0) > 0 && (
+              <> · {queueStats.deprioritized_groups} settled</>
+            )}
           </span>
         )}
         <span className="text-xs text-gray-400 ml-auto">

@@ -113,3 +113,42 @@ def test_queue_stats():
     assert stats["groups"] == 2
     assert stats["batchable_groups"] == 1  # body_site has 2 members
     assert stats["risky"] == 2  # the two below 0.90
+
+
+def test_accepted_lookalikes_deprioritize_remaining():
+    # The curator has accepted 3 of a body_site look-alike group; the remaining
+    # pending look-alike should sink below an untouched, genuinely-new risky
+    # group even at similar raw confidence (G7 feedback re-rank).
+    mappings = [
+        _m("site_1", "body_site", 0.55, status="accepted"),
+        _m("site_2", "body_site", 0.55, status="accepted"),
+        _m("site_3", "body_site", 0.55, status="accepted"),
+        _m("site_4", "body_site", 0.55),  # pending near-duplicate of accepted
+        _m("new_dx", "disease", 0.58),  # untouched, genuinely new
+    ]
+    queue = al.build_review_queue(mappings)
+    assert queue[0]["group_key"] == "disease"  # genuinely-new case leads
+    assert queue[-1]["group_key"] == "body_site"  # settled look-alike sinks
+    site = next(m for m in queue if m["group_key"] == "body_site")
+    assert site["group_accepted"] == 3
+
+
+def test_no_feedback_ordering_is_unchanged():
+    # With no acceptances, the penalty is zero — ordering is pure risky-first.
+    mappings = [
+        _m("dx", "disease", 0.58),
+        _m("site", "body_site", 0.55),
+    ]
+    queue = al.build_review_queue(mappings)
+    assert queue[0]["group_key"] == "body_site"  # 0.55 leads 0.58
+    assert all(m["group_accepted"] == 0 for m in queue)
+
+
+def test_deprioritized_groups_stat():
+    mappings = [
+        _m("s1", "body_site", 0.55, status="accepted"),
+        _m("s2", "body_site", 0.55),  # remaining look-alike (pending)
+        _m("new", "disease", 0.60),
+    ]
+    stats = al.queue_stats(al.build_review_queue(mappings))
+    assert stats["deprioritized_groups"] == 1  # body_site partly accepted
