@@ -1,4 +1,6 @@
 
+import { cn } from '../lib/cn';
+
 interface Props {
   score: number | null;
   size?: 'sm' | 'md';
@@ -11,27 +13,29 @@ interface Props {
  */
 export default function ConfidenceBadge({ score, size = 'md' }: Props) {
   if (score === null || score === undefined) {
-    return <span className="text-gray-400 text-xs">—</span>;
+    return <span className="text-xs text-slate-400">—</span>;
   }
 
-  let bg: string;
+  let cls: string;
   let text: string;
   if (score >= 0.9) {
-    bg = 'bg-green-100 text-green-800';
+    cls = 'bg-emerald-50 text-emerald-700 ring-emerald-600/20';
     text = 'High';
   } else if (score >= 0.5) {
-    bg = 'bg-amber-100 text-amber-800';
+    cls = 'bg-amber-50 text-amber-700 ring-amber-600/20';
     text = 'Med';
   } else {
-    bg = 'bg-red-100 text-red-800';
+    cls = 'bg-rose-50 text-rose-700 ring-rose-600/20';
     text = 'Low';
   }
 
-  const sizeClass = size === 'sm' ? 'text-xs px-1.5 py-0.5' : 'text-sm px-2 py-1';
-
   return (
     <span
-      className={`inline-flex items-center gap-1 font-medium rounded-full ${bg} ${sizeClass}`}
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full font-medium ring-1 ring-inset',
+        size === 'sm' ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-1 text-sm',
+        cls,
+      )}
       title={`Confidence: ${(score * 100).toFixed(1)}%`}
     >
       {(score * 100).toFixed(0)}%

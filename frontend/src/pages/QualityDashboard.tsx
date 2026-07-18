@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   BarChart,
   Bar,
+  CartesianGrid,
   XAxis,
   YAxis,
   Tooltip,
@@ -13,6 +14,7 @@ import {
   Cell,
   Cell as PieCell,
 } from 'recharts';
+import type { TooltipProps } from 'recharts';
 import { ArrowRight, Columns3, Gauge, ListChecks, Layers, Wrench, CheckCircle2, AlertTriangle, XCircle, Circle } from 'lucide-react';
 import { getQualityMetrics, getStudyMappings } from '../api/client';
 import { useStudies } from '../hooks/queries';
@@ -116,9 +118,10 @@ export default function QualityDashboard() {
         <Widget title="Confidence distribution" subtitle="How many columns at each score band">
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={metrics.confidence_distribution} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
+              <CartesianGrid vertical={false} stroke="#eef2f7" />
               <XAxis dataKey="bucket" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <Tooltip cursor={{ fill: 'rgba(41,134,226,0.06)' }} />
+              <Tooltip cursor={{ fill: 'rgba(41,134,226,0.06)' }} content={<ChartTooltip />} />
               <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                 {metrics.confidence_distribution.map((b, i) => (
                   <Cell key={i} fill={confColor(b.min_val)} />
@@ -134,10 +137,10 @@ export default function QualityDashboard() {
               <PieChart>
                 <Pie data={stagePie} cx="50%" cy="50%" innerRadius={48} outerRadius={80} paddingAngle={2} dataKey="value">
                   {stagePie.map((s, i) => (
-                    <PieCell key={i} fill={s.color} />
+                    <PieCell key={i} fill={s.color} stroke="#fff" strokeWidth={2} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip content={<ChartTooltip />} />
               </PieChart>
             </ResponsiveContainer>
             <ul className="flex-1 space-y-1.5">
@@ -277,6 +280,30 @@ function confColor(minVal: number): string {
   if (minVal >= 0.4) return '#eab308'; // amber-500
   if (minVal >= 0.2) return '#f97316'; // orange-500
   return '#ef4444'; // red-500
+}
+
+/** Shared, on-brand tooltip for the recharts widgets. */
+function ChartTooltip({ active, payload, label }: TooltipProps<number, string>) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white/95 px-2.5 py-1.5 text-xs shadow-card backdrop-blur">
+      {label !== undefined && label !== '' && (
+        <p className="mb-0.5 font-medium text-slate-500">{label}</p>
+      )}
+      {payload.map((p, i) => {
+        const color = (p.payload as { color?: string } | undefined)?.color ?? p.color;
+        const name = p.name === 'count' ? 'Columns' : p.name;
+        return (
+          <p key={i} className="flex items-center gap-1.5 font-semibold text-slate-800">
+            {color && <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />}
+            <span>
+              {name}: {p.value}
+            </span>
+          </p>
+        );
+      })}
+    </div>
+  );
 }
 
 /* ---------- small presentational pieces ---------- */

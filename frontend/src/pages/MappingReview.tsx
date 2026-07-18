@@ -21,6 +21,8 @@ import ConfidenceBadge from '../components/ConfidenceBadge';
 import StageBadge from '../components/StageBadge';
 import StatusBadge from '../components/StatusBadge';
 import PageHeader from '../components/ui/PageHeader';
+import SegmentedControl from '../components/ui/SegmentedControl';
+import { TableFrame } from '../components/ui/Table';
 import StudyPicker from '../components/StudyPicker';
 import StudyGate, { isStudyReady } from '../components/StudyGate';
 import CompleteStudyButton from '../components/CompleteStudyButton';
@@ -77,13 +79,13 @@ function ColumnContextPanel({ studyId, column }: { studyId: string; column: stri
     };
   }, [studyId, column]);
 
-  if (loading) return <p className="text-gray-400 italic">Loading sample values…</p>;
-  if (err) return <p className="text-gray-400 italic">{err}</p>;
+  if (loading) return <p className="text-slate-400 italic">Loading sample values…</p>;
+  if (err) return <p className="text-slate-400 italic">{err}</p>;
   if (!ctx) return null;
 
   return (
     <div>
-      <p className="text-gray-500">
+      <p className="text-slate-500">
         {ctx.total_rows.toLocaleString()} rows · {ctx.distinct_values.toLocaleString()} distinct
         {ctx.null_count > 0 && <> · {ctx.null_count.toLocaleString()} blank</>}
       </p>
@@ -92,16 +94,16 @@ function ColumnContextPanel({ studyId, column }: { studyId: string; column: stri
           {ctx.samples.map((s, i) => (
             <li
               key={`${s.value}-${i}`}
-              className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 ring-1 ring-gray-200"
+              className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 ring-1 ring-slate-200"
               title={`${s.count} row(s)`}
             >
-              <span className="font-mono text-gray-800">{s.value}</span>
-              <span className="text-gray-400">×{s.count}</span>
+              <span className="font-mono text-slate-800">{s.value}</span>
+              <span className="text-slate-400">×{s.count}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-gray-400 italic">No non-empty values</p>
+        <p className="text-slate-400 italic">No non-empty values</p>
       )}
     </div>
   );
@@ -470,49 +472,44 @@ export default function MappingReview() {
         }
       />
 
-      {/* Status Summary Tabs */}
-      <div className="flex gap-2">
-        {(['pending', 'accepted', 'rejected', 'all'] as FilterStatus[]).map((status) => {
-          const count =
-            status === 'all'
-              ? mappings.length
-              : mappings.filter((m) => m.status === status).length;
-          const icons: Record<string, React.ReactNode> = {
-            pending: <Clock className="w-3.5 h-3.5" />,
-            accepted: <CheckCircle2 className="w-3.5 h-3.5" />,
-            rejected: <XCircle className="w-3.5 h-3.5" />,
-            all: null,
-          };
-          const colors: Record<string, string> = {
-            pending: filterStatus === status ? 'bg-amber-100 text-amber-800 border-amber-300' : 'text-amber-700 hover:bg-amber-50',
-            accepted: filterStatus === status ? 'bg-green-100 text-green-800 border-green-300' : 'text-green-700 hover:bg-green-50',
-            rejected: filterStatus === status ? 'bg-red-100 text-red-800 border-red-300' : 'text-red-700 hover:bg-red-50',
-            all: filterStatus === status ? 'bg-gray-200 text-gray-800 border-gray-400' : 'text-gray-600 hover:bg-gray-100',
-          };
-          return (
-            <button
-              key={status}
-              onClick={() => {
-                setFilterStatus(status);
-                setSelected(new Set());
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${colors[status]}`}
-            >
-              {icons[status]}
-              {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
-              <span className="bg-white/60 text-xs px-1.5 py-0.5 rounded-full font-semibold ml-1">
-                {count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Status filter */}
+      <SegmentedControl<FilterStatus>
+        value={filterStatus}
+        onChange={(status) => {
+          setFilterStatus(status);
+          setSelected(new Set());
+        }}
+        segments={[
+          {
+            value: 'pending',
+            label: 'Pending',
+            icon: <Clock className="h-3.5 w-3.5" />,
+            tone: 'amber',
+            count: mappings.filter((m) => m.status === 'pending').length,
+          },
+          {
+            value: 'accepted',
+            label: 'Accepted',
+            icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+            tone: 'emerald',
+            count: mappings.filter((m) => m.status === 'accepted').length,
+          },
+          {
+            value: 'rejected',
+            label: 'Rejected',
+            icon: <XCircle className="h-3.5 w-3.5" />,
+            tone: 'rose',
+            count: mappings.filter((m) => m.status === 'rejected').length,
+          },
+          { value: 'all', label: 'All', tone: 'slate', count: mappings.length },
+        ]}
+      />
 
       {/* Stage distribution — at-a-glance breakdown, click a segment to filter */}
       {mappings.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-3">
+        <div className="card p-3">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-500">Stage breakdown</span>
+            <span className="text-xs font-medium text-slate-500">Stage breakdown</span>
             {filterStage !== 'all' && (
               <button
                 onClick={() => setFilterStage('all')}
@@ -522,7 +519,7 @@ export default function MappingReview() {
               </button>
             )}
           </div>
-          <div className="flex h-2.5 overflow-hidden rounded-full bg-gray-100">
+          <div className="flex h-2.5 overflow-hidden rounded-full bg-slate-100">
             {STAGE_ORDER.map((s) => {
               const count = stageCounts[s] ?? 0;
               if (!count) return null;
@@ -548,7 +545,7 @@ export default function MappingReview() {
                 <button
                   key={s}
                   onClick={() => setFilterStage(filterStage === s ? 'all' : (s as FilterStage))}
-                  className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900"
+                  className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900"
                 >
                   <span className={`h-2 w-2 rounded-full ${STAGE_META[s].bar}`} />
                   {STAGE_META[s].label}
@@ -561,15 +558,15 @@ export default function MappingReview() {
       )}
 
       {/* Filters */}
-      <div className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-3">
-        <Filter className="w-4 h-4 text-gray-400" />
+      <div className="flex items-center gap-4 card p-3">
+        <Filter className="w-4 h-4 text-slate-400" />
         <div className="flex items-center gap-2">
-          <label htmlFor="stage-filter" className="text-xs font-medium text-gray-500">Stage:</label>
+          <label htmlFor="stage-filter" className="text-xs font-medium text-slate-500">Stage:</label>
           <select
             id="stage-filter"
             value={filterStage}
             onChange={(e) => setFilterStage(e.target.value as FilterStage)}
-            className="text-sm border border-gray-200 rounded px-2 py-1"
+            className="text-sm border border-slate-200 rounded-lg px-2 py-1 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
           >
             <option value="all">All</option>
             <option value="stage1">S1 Dict/Fuzzy</option>
@@ -581,14 +578,14 @@ export default function MappingReview() {
           </select>
         </div>
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
           <input
             ref={searchRef}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search columns"
             placeholder="Search columns…  ( / )"
-            className="w-48 rounded border border-gray-200 py-1 pl-7 pr-2 text-sm focus:border-primary-400 focus:outline-none"
+            className="w-48 rounded-lg border border-slate-200 py-1 pl-7 pr-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
           />
         </div>
         <button
@@ -598,29 +595,29 @@ export default function MappingReview() {
           className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition ${
             smartOrder
               ? 'border-primary-300 bg-primary-50 text-primary-700'
-              : 'border-gray-200 text-gray-500 hover:text-gray-800'
+              : 'border-slate-200 text-slate-500 hover:text-slate-800'
           }`}
         >
           <Sparkles className="h-3.5 w-3.5" />
           Smart review
         </button>
         {smartOrder && queueStats && (
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-slate-500">
             {queueStats.risky} risky · {queueStats.batchable_groups} batchable group
             {queueStats.batchable_groups === 1 ? '' : 's'}
           </span>
         )}
-        <span className="text-xs text-gray-400 ml-auto">
+        <span className="text-xs text-slate-400 ml-auto">
           {filteredMappings.length} of {mappings.length} shown
         </span>
       </div>
 
       {/* Keyboard hint */}
-      <p className="-mt-2 px-1 text-[11px] text-gray-400">
-        Shortcuts: <kbd className="rounded bg-gray-100 px-1">j</kbd>/<kbd className="rounded bg-gray-100 px-1">k</kbd> move ·
-        <kbd className="rounded bg-gray-100 px-1">a</kbd> accept · <kbd className="rounded bg-gray-100 px-1">r</kbd> reject ·
-        <kbd className="rounded bg-gray-100 px-1">e</kbd> edit · <kbd className="rounded bg-gray-100 px-1">x</kbd> select ·
-        <kbd className="rounded bg-gray-100 px-1">Enter</kbd> details · <kbd className="rounded bg-gray-100 px-1">/</kbd> search
+      <p className="-mt-2 px-1 text-[11px] text-slate-400">
+        Shortcuts: <kbd className="rounded bg-slate-100 px-1">j</kbd>/<kbd className="rounded bg-slate-100 px-1">k</kbd> move ·
+        <kbd className="rounded bg-slate-100 px-1">a</kbd> accept · <kbd className="rounded bg-slate-100 px-1">r</kbd> reject ·
+        <kbd className="rounded bg-slate-100 px-1">e</kbd> edit · <kbd className="rounded bg-slate-100 px-1">x</kbd> select ·
+        <kbd className="rounded bg-slate-100 px-1">Enter</kbd> details · <kbd className="rounded bg-slate-100 px-1">/</kbd> search
       </p>
 
       {/* Table */}
@@ -629,9 +626,9 @@ export default function MappingReview() {
           <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
         </div>
       ) : (
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <TableFrame>
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
               <tr>
                 <th className="px-3 py-3 text-left">
                   <input
@@ -642,13 +639,13 @@ export default function MappingReview() {
                   />
                 </th>
                 <SortableHeader label="Raw Column" sortKey="raw_column" current={sortKey} asc={sortAsc} onSort={toggleSort} />
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">
                   Matched Field
                 </th>
                 <SortableHeader label="Confidence" sortKey="confidence_score" current={sortKey} asc={sortAsc} onSort={toggleSort} />
                 <SortableHeader label="Stage" sortKey="stage" current={sortKey} asc={sortAsc} onSort={toggleSort} />
                 <SortableHeader label="Status" sortKey="status" current={sortKey} asc={sortAsc} onSort={toggleSort} />
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">
                   Actions
                 </th>
               </tr>
@@ -659,7 +656,7 @@ export default function MappingReview() {
                   <tr
                     data-row-cursor={idx === cursor ? 'true' : undefined}
                     onClick={() => setCursor(idx)}
-                    className={`hover:bg-gray-50 transition-colors ${
+                    className={`hover:bg-slate-50 transition-colors ${
                       idx === cursor ? 'ring-2 ring-inset ring-primary-400' : ''
                     } ${selected.has(m.id) ? 'bg-primary-50' : ''}`}
                   >
@@ -671,12 +668,12 @@ export default function MappingReview() {
                         className="rounded"
                       />
                     </td>
-                    <td className="px-3 py-2.5 font-mono text-xs font-medium text-gray-900">
+                    <td className="px-3 py-2.5 font-mono text-xs font-medium text-slate-900">
                       {m.raw_column}
                     </td>
                     <td className="px-3 py-2.5 font-mono text-xs text-primary-700">
                       {m.curator_field || m.matched_field || (
-                        <span className="text-gray-400 italic">unmapped</span>
+                        <span className="text-slate-400 italic">unmapped</span>
                       )}
                       {smartOrder && m.status === 'pending' && (groupInfo[m.id]?.size ?? 0) > 1 && (
                         <button
@@ -726,7 +723,7 @@ export default function MappingReview() {
                         </button>
                         <button
                           onClick={() => setExpandedRow(expandedRow === m.id ? null : m.id)}
-                          className="p-1 rounded hover:bg-gray-200 text-gray-500"
+                          className="p-1 rounded hover:bg-slate-200 text-slate-500"
                           title="Details"
                         >
                           {expandedRow === m.id ? (
@@ -742,10 +739,10 @@ export default function MappingReview() {
                   {/* Expanded detail */}
                   {expandedRow === m.id && (
                     <tr>
-                      <td colSpan={7} className="bg-gray-50 px-6 py-4">
+                      <td colSpan={7} className="bg-slate-50 px-6 py-4">
                         <div className="grid grid-cols-2 gap-6 text-xs">
                           <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">
+                            <h4 className="font-semibold text-slate-700 mb-2">
                               Top-5 Alternative Matches
                             </h4>
                             {m.alternatives.length > 0 ? (
@@ -759,7 +756,7 @@ export default function MappingReview() {
                                       score={alt.score}
                                       size="sm"
                                     />
-                                    <span className="text-gray-400">
+                                    <span className="text-slate-400">
                                       {alt.method}
                                     </span>
                                     {m.status !== 'accepted' && (
@@ -774,13 +771,13 @@ export default function MappingReview() {
                                 ))}
                               </ul>
                             ) : (
-                              <p className="text-gray-400 italic">
+                              <p className="text-slate-400 italic">
                                 No alternative matches
                               </p>
                             )}
 
                             {/* On-demand Stage-4 LLM rematch */}
-                            <div className="mt-3 border-t border-gray-200 pt-3">
+                            <div className="mt-3 border-t border-slate-200 pt-3">
                               <button
                                 onClick={() => handleLlmRematch(m.id)}
                                 disabled={llmBusyId === m.id}
@@ -811,26 +808,26 @@ export default function MappingReview() {
                             </div>
                           </div>
                           <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">
+                            <h4 className="font-semibold text-slate-700 mb-2">
                               Mapping Details
                             </h4>
                             <dl className="space-y-1">
-                              <dt className="text-gray-500">Method</dt>
-                              <dd className="text-gray-900">
+                              <dt className="text-slate-500">Method</dt>
+                              <dd className="text-slate-900">
                                 {m.method || 'N/A'}
                               </dd>
-                              <dt className="text-gray-500 mt-2">
+                              <dt className="text-slate-500 mt-2">
                                 Curator Note
                               </dt>
-                              <dd className="text-gray-900">
+                              <dd className="text-slate-900">
                                 {m.curator_note || '—'}
                               </dd>
                               {m.reviewed_at && (
                                 <>
-                                  <dt className="text-gray-500 mt-2">
+                                  <dt className="text-slate-500 mt-2">
                                     Reviewed
                                   </dt>
-                                  <dd className="text-gray-900">
+                                  <dd className="text-slate-900">
                                     {new Date(m.reviewed_at).toLocaleString()}
                                   </dd>
                                 </>
@@ -839,8 +836,8 @@ export default function MappingReview() {
 
                             {/* Column context — sample values to disambiguate */}
                             {selectedId && (
-                              <div className="mt-3 border-t border-gray-200 pt-3">
-                                <h4 className="font-semibold text-gray-700 mb-2">
+                              <div className="mt-3 border-t border-slate-200 pt-3">
+                                <h4 className="font-semibold text-slate-700 mb-2">
                                   Column values
                                 </h4>
                                 <ColumnContextPanel studyId={selectedId} column={m.raw_column} />
@@ -857,37 +854,38 @@ export default function MappingReview() {
           </table>
 
           {filteredMappings.length === 0 && (
-            <div className="text-center py-12 text-gray-400">
+            <div className="text-center py-12 text-slate-400">
               No mappings match the current filters.
             </div>
           )}
-        </div>
+        </TableFrame>
       )}
 
       {/* Edit Modal */}
       {editingId !== null && createPortal(
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/30 p-4 pt-20">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Edit Mapping</h3>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 pt-20 backdrop-blur-sm">
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-pop">
+            <h3 className="text-lg font-semibold text-slate-900">Edit mapping</h3>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-slate-700">
                 New field name
               </label>
               <input
                 value={editField}
                 onChange={(e) => setEditField(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="field"
                 placeholder="e.g. sex, age_years, body_site"
+                autoFocus
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="mb-1 block text-sm font-medium text-slate-700">
                 Note (optional)
               </label>
               <textarea
                 value={editNote}
                 onChange={(e) => setEditNote(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                className="field"
                 rows={2}
               />
             </div>
@@ -898,14 +896,14 @@ export default function MappingReview() {
                   setEditField('');
                   setEditNote('');
                 }}
-                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="btn-secondary btn-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={handleEditSubmit}
                 disabled={!editField.trim()}
-                className="px-4 py-2 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                className="btn-primary btn-sm"
               >
                 Save
               </button>
@@ -934,7 +932,7 @@ function SortableHeader({
 }) {
   return (
     <th
-      className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none hover:text-gray-700"
+      className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase cursor-pointer select-none hover:text-slate-700"
       onClick={() => onSort(sortKey)}
     >
       <span className="flex items-center gap-1">
