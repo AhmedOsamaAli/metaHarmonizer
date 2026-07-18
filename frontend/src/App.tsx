@@ -1,6 +1,7 @@
 import { Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Upload, Table2, BarChart3, Download, Microscope, Shield, Activity } from 'lucide-react';
 import { lazy, Suspense, type ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import Brand from './components/Brand';
 import UserMenu from './components/UserMenu';
 import NotificationBell from './components/NotificationBell';
@@ -53,15 +54,26 @@ function TopNav() {
               to={to}
               end={end}
               className={({ isActive }) =>
-                `flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition ${
+                `relative flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition ${
                   isActive
-                    ? 'bg-primary-50 text-primary-700'
+                    ? 'text-primary-700'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`
               }
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              {label}
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-active-pill"
+                      className="absolute inset-0 rounded-xl bg-primary-50"
+                      transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                    />
+                  )}
+                  <Icon className="relative h-4 w-4 shrink-0" />
+                  <span className="relative">{label}</span>
+                </>
+              )}
             </NavLink>
           ))}
           {hasRole('admin') && (

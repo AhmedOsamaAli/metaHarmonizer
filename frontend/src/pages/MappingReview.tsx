@@ -21,6 +21,7 @@ import ConfidenceBadge from '../components/ConfidenceBadge';
 import StageBadge from '../components/StageBadge';
 import StatusBadge from '../components/StatusBadge';
 import PageHeader from '../components/ui/PageHeader';
+import RadialProgress from '../components/ui/RadialProgress';
 import SegmentedControl from '../components/ui/SegmentedControl';
 import { TableFrame } from '../components/ui/Table';
 import StudyPicker from '../components/StudyPicker';
@@ -241,6 +242,12 @@ export default function MappingReview() {
     }
     return counts;
   }, [mappings]);
+
+  // Per-study review momentum: how many columns have a decision.
+  const reviewedCount = useMemo(
+    () => mappings.filter((m) => m.status === 'accepted' || m.status === 'rejected').length,
+    [mappings],
+  );
 
   // Look-alike groups whose every pending member is currently selected — lets
   // the group chip show an active state and toggle the whole group off.
@@ -471,6 +478,20 @@ export default function MappingReview() {
         title="Schema mapping review"
         actions={
           <div className="flex items-center gap-2">
+            {mappings.length > 0 && (
+              <div className="mr-1 hidden items-center gap-2 sm:flex" title={`${reviewedCount} of ${mappings.length} columns reviewed`}>
+                <RadialProgress
+                  value={reviewedCount / mappings.length}
+                  size={38}
+                  stroke={5}
+                  tone="#2986e2"
+                  hideValue
+                />
+                <span className="text-xs font-medium text-slate-500">
+                  {reviewedCount}/{mappings.length} reviewed
+                </span>
+              </div>
+            )}
             <RememberToggle />
             {selected.size > 0 ? (
               <>
