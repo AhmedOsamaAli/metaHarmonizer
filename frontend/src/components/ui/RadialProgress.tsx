@@ -50,7 +50,7 @@ export default function RadialProgress({
       {!hideValue && (
         <div className="absolute inset-0 grid place-items-center text-center">
           <div>
-            <div className={`text-2xl font-bold ${dark ? 'text-white' : 'text-slate-900'}`}>
+            <div className={`text-2xl font-bold ${dark ? 'text-white' : 'text-slate-900 dark:text-slate-100'}`}>
               <AnimatedNumber value={clamped * 100} decimals={0} suffix="%" />
             </div>
             {label && (

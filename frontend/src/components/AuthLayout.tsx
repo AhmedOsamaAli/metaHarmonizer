@@ -61,12 +61,12 @@ export default function AuthLayout({
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-600 text-lg">
               🔬
             </span>
-            <span className="text-lg font-extrabold tracking-tight text-slate-900">
+            <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
               Meta<span className="text-primary-600">Harmonizer</span>
             </span>
           </div>
 
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{title}</h1>
           {subtitle && <p className="mt-1.5 text-sm text-slate-500">{subtitle}</p>}
 
           <div className="mt-7">{children}</div>

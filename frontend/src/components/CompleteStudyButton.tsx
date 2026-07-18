@@ -51,7 +51,7 @@ export default function CompleteStudyButton({
   const trigger =
     variant === 'solid'
       ? `inline-flex shrink-0 items-center gap-2 rounded-full bg-emerald-600 font-semibold text-white shadow-sm transition hover:bg-emerald-700 active:scale-95 disabled:opacity-60 ${sizeCls}`
-      : `group/btn inline-flex shrink-0 items-center gap-2 rounded-full border border-emerald-200 bg-white font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow active:scale-95 disabled:opacity-60 ${sizeCls}`;
+      : `group/btn inline-flex shrink-0 items-center gap-2 rounded-full border border-emerald-200 bg-white font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow active:scale-95 disabled:opacity-60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-emerald-500/10 ${sizeCls}`;
 
   return (
     <>
@@ -71,7 +71,7 @@ export default function CompleteStudyButton({
           onClick={() => !complete.isPending && setOpen(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl"
+            className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl dark:bg-slate-900"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -79,8 +79,8 @@ export default function CompleteStudyButton({
                 <AlertTriangle className="h-5 w-5" />
               </span>
               <div className="min-w-0">
-                <h3 className="text-base font-semibold text-slate-900">Complete this study?</h3>
-                <p className="mt-1 text-sm text-slate-600">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Complete this study?</h3>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                   Completing <span className="font-semibold">{studyName ?? 'this study'}</span> finalizes it and
                   removes it from your active work list. This <span className="font-semibold">cannot be undone</span> from here.
                 </p>

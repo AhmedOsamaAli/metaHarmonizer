@@ -95,11 +95,11 @@ function ColumnContextPanel({ studyId, column }: { studyId: string; column: stri
           {ctx.samples.map((s, i) => (
             <li
               key={`${s.value}-${i}`}
-              className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 ring-1 ring-slate-200"
+              className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700"
               title={`${s.count} row(s)`}
             >
-              <span className="font-mono text-slate-800">{s.value}</span>
-              <span className="text-slate-400">×{s.count}</span>
+              <span className="font-mono text-slate-800 dark:text-slate-200">{s.value}</span>
+              <span className="text-slate-400 dark:text-slate-500">×{s.count}</span>
             </li>
           ))}
         </ul>
@@ -495,7 +495,7 @@ export default function MappingReview() {
             <RememberToggle />
             {selected.size > 0 ? (
               <>
-                <span className="text-sm font-medium text-slate-600">{selected.size} selected</span>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{selected.size} selected</span>
                 <button onClick={() => handleBatch('accepted')} className="btn bg-emerald-600 text-white btn-sm hover:bg-emerald-700">
                   <Check className="h-3.5 w-3.5" />
                   Accept all
@@ -585,7 +585,7 @@ export default function MappingReview() {
                 <button
                   key={s}
                   onClick={() => setFilterStage(filterStage === s ? 'all' : (s as FilterStage))}
-                  className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900"
+                  className="flex items-center gap-1.5 text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
                 >
                   <span className={`h-2 w-2 rounded-full ${STAGE_META[s].bar}`} />
                   {STAGE_META[s].label}
@@ -606,7 +606,7 @@ export default function MappingReview() {
             id="stage-filter"
             value={filterStage}
             onChange={(e) => setFilterStage(e.target.value as FilterStage)}
-            className="text-sm border border-slate-200 rounded-lg px-2 py-1 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            className="text-sm border border-slate-200 rounded-lg px-2 py-1 focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           >
             <option value="all">All</option>
             <option value="stage1">S1 Dict/Fuzzy</option>
@@ -625,7 +625,7 @@ export default function MappingReview() {
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search columns"
             placeholder="Search columns…  ( / )"
-            className="w-48 rounded-lg border border-slate-200 py-1 pl-7 pr-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+            className="w-48 rounded-lg border border-slate-200 py-1 pl-7 pr-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           />
         </div>
         <button
@@ -635,7 +635,7 @@ export default function MappingReview() {
           className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition ${
             smartOrder
               ? 'border-primary-300 bg-primary-50 text-primary-700'
-              : 'border-slate-200 text-slate-500 hover:text-slate-800'
+              : 'border-slate-200 text-slate-500 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
           }`}
         >
           <Sparkles className="h-3.5 w-3.5" />
@@ -668,7 +668,7 @@ export default function MappingReview() {
       ) : (
         <TableFrame>
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+            <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 dark:bg-slate-800/50 dark:border-slate-800">
               <tr>
                 <th className="px-3 py-3 text-left">
                   <input
@@ -696,7 +696,7 @@ export default function MappingReview() {
                   <tr
                     data-row-cursor={idx === cursor ? 'true' : undefined}
                     onClick={() => setCursor(idx)}
-                    className={`hover:bg-slate-50 transition-colors ${
+                    className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
                       idx === cursor ? 'ring-2 ring-inset ring-primary-400' : ''
                     } ${selected.has(m.id) ? 'bg-primary-50' : ''}`}
                   >
@@ -708,7 +708,7 @@ export default function MappingReview() {
                         className="rounded"
                       />
                     </td>
-                    <td className="px-3 py-2.5 font-mono text-xs font-medium text-slate-900">
+                    <td className="px-3 py-2.5 font-mono text-xs font-medium text-slate-900 dark:text-slate-100">
                       {m.raw_column}
                     </td>
                     <td className="px-3 py-2.5 font-mono text-xs text-primary-700">
@@ -786,10 +786,10 @@ export default function MappingReview() {
                   {/* Expanded detail */}
                   {expandedRow === m.id && (
                     <tr>
-                      <td colSpan={7} className="bg-slate-50 px-6 py-4">
+                      <td colSpan={7} className="bg-slate-50 px-6 py-4 dark:bg-slate-800/40">
                         <div className="grid grid-cols-2 gap-6 text-xs">
                           <div>
-                            <h4 className="font-semibold text-slate-700 mb-2">
+                            <h4 className="font-semibold text-slate-700 mb-2 dark:text-slate-300">
                               Top-5 Alternative Matches
                             </h4>
                             {m.alternatives.length > 0 ? (
@@ -824,7 +824,7 @@ export default function MappingReview() {
                             )}
 
                             {/* On-demand Stage-4 LLM rematch */}
-                            <div className="mt-3 border-t border-slate-200 pt-3">
+                            <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
                               <button
                                 onClick={() => handleLlmRematch(m.id)}
                                 disabled={llmBusyId === m.id}
@@ -855,26 +855,26 @@ export default function MappingReview() {
                             </div>
                           </div>
                           <div>
-                            <h4 className="font-semibold text-slate-700 mb-2">
+                            <h4 className="font-semibold text-slate-700 mb-2 dark:text-slate-300">
                               Mapping Details
                             </h4>
                             <dl className="space-y-1">
-                              <dt className="text-slate-500">Method</dt>
-                              <dd className="text-slate-900">
+                              <dt className="text-slate-500 dark:text-slate-400">Method</dt>
+                              <dd className="text-slate-900 dark:text-slate-100">
                                 {m.method || 'N/A'}
                               </dd>
-                              <dt className="text-slate-500 mt-2">
+                              <dt className="text-slate-500 mt-2 dark:text-slate-400">
                                 Curator Note
                               </dt>
-                              <dd className="text-slate-900">
+                              <dd className="text-slate-900 dark:text-slate-100">
                                 {m.curator_note || '—'}
                               </dd>
                               {m.reviewed_at && (
                                 <>
-                                  <dt className="text-slate-500 mt-2">
+                                  <dt className="text-slate-500 mt-2 dark:text-slate-400">
                                     Reviewed
                                   </dt>
-                                  <dd className="text-slate-900">
+                                  <dd className="text-slate-900 dark:text-slate-100">
                                     {new Date(m.reviewed_at).toLocaleString()}
                                   </dd>
                                 </>
@@ -883,8 +883,8 @@ export default function MappingReview() {
 
                             {/* Column context — sample values to disambiguate */}
                             {selectedId && (
-                              <div className="mt-3 border-t border-slate-200 pt-3">
-                                <h4 className="font-semibold text-slate-700 mb-2">
+                              <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
+                                <h4 className="font-semibold text-slate-700 mb-2 dark:text-slate-300">
                                   Column values
                                 </h4>
                                 <ColumnContextPanel studyId={selectedId} column={m.raw_column} />
@@ -911,10 +911,10 @@ export default function MappingReview() {
       {/* Edit Modal */}
       {editingId !== null && createPortal(
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 pt-20 backdrop-blur-sm">
-          <div className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-pop">
-            <h3 className="text-lg font-semibold text-slate-900">Edit mapping</h3>
+          <div className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-pop dark:border-slate-800 dark:bg-slate-900">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Edit mapping</h3>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
                 New field name
               </label>
               <input
@@ -926,7 +926,7 @@ export default function MappingReview() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">
+              <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
                 Note (optional)
               </label>
               <textarea
@@ -979,7 +979,7 @@ function SortableHeader({
 }) {
   return (
     <th
-      className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase cursor-pointer select-none hover:text-slate-700"
+      className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase cursor-pointer select-none hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
       onClick={() => onSort(sortKey)}
     >
       <span className="flex items-center gap-1">

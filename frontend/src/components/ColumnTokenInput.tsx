@@ -71,7 +71,7 @@ export default function ColumnTokenInput({
   return (
     <div className="relative">
       <div
-        className="mt-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1.5 focus-within:border-primary-400 focus-within:ring-1 focus-within:ring-primary-200"
+        className="mt-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1.5 focus-within:border-primary-400 focus-within:ring-1 focus-within:ring-primary-200 dark:border-slate-700 dark:bg-slate-900"
         onClick={() => inputRef.current?.focus()}
       >
         {value.map((col) => (
@@ -112,7 +112,7 @@ export default function ColumnTokenInput({
       </div>
 
       {open && suggestions.length > 0 && (
-        <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+        <ul className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900">
           {suggestions.map((c, i) => (
             <li key={c}>
               <button
@@ -123,7 +123,7 @@ export default function ColumnTokenInput({
                 }}
                 onMouseEnter={() => setActive(i)}
                 className={`block w-full px-3 py-1.5 text-left text-sm ${
-                  i === active ? 'bg-primary-50 text-primary-700' : 'text-slate-700'
+                  i === active ? 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300' : 'text-slate-700 dark:text-slate-300'
                 }`}
               >
                 {c}

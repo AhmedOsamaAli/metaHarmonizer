@@ -119,7 +119,7 @@ export default function QualityDashboard() {
         <CardBody>
           <div className="mb-1 flex items-center gap-2">
             <Orbit className="h-4 w-4 text-slate-400" />
-            <h3 className="text-sm font-semibold text-slate-800">Harmonization constellation</h3>
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Harmonization constellation</h3>
           </div>
           <p className="mb-3 text-xs text-slate-500">
             Every column is a star — clustered by the stage that resolved it and brightened by confidence.
@@ -163,11 +163,11 @@ export default function QualityDashboard() {
             <ul className="flex-1 space-y-1.5">
               {stagePie.map((s) => (
                 <li key={s.name} className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-1.5 text-slate-600">
+                  <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
                     <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: s.color }} />
                     {s.name}
                   </span>
-                  <span className="font-semibold text-slate-800">{s.value}</span>
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">{s.value}</span>
                 </li>
               ))}
             </ul>
@@ -187,13 +187,13 @@ export default function QualityDashboard() {
             <div className="space-y-3 pt-1">
               {confByStage.map((c) => (
                 <div key={c.stage} className="flex items-center gap-3">
-                  <span className="w-24 shrink-0 truncate text-xs font-medium text-slate-600">
+                  <span className="w-24 shrink-0 truncate text-xs font-medium text-slate-600 dark:text-slate-300">
                     {STAGE_LABELS[c.stage] ?? c.stage}
                   </span>
                   <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
                     <div className="h-full rounded-full" style={{ width: `${c.avg * 100}%`, backgroundColor: STAGE_COLORS[c.stage] ?? '#94a3b8' }} />
                   </div>
-                  <span className="w-10 shrink-0 text-right text-xs font-semibold text-slate-700">
+                  <span className="w-10 shrink-0 text-right text-xs font-semibold text-slate-700 dark:text-slate-300">
                     {(c.avg * 100).toFixed(0)}%
                   </span>
                 </div>
@@ -209,7 +209,7 @@ export default function QualityDashboard() {
           <CardBody>
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold text-slate-800 dark:text-slate-200">
                   <ListChecks className="h-4 w-4 text-amber-500" />
                   Needs your review
                 </h3>
@@ -228,7 +228,7 @@ export default function QualityDashboard() {
                 {needsReview.map((m) => (
                   <li key={m.id} className="flex items-center justify-between gap-3 py-2">
                     <div className="min-w-0">
-                      <p className="truncate font-mono text-xs font-medium text-slate-800">{m.raw_column}</p>
+                      <p className="truncate font-mono text-xs font-medium text-slate-800 dark:text-slate-200">{m.raw_column}</p>
                       <p className="truncate text-[11px] text-slate-400">
                         → {m.curator_field || m.matched_field || 'unmapped'}
                       </p>
@@ -243,7 +243,7 @@ export default function QualityDashboard() {
             ) : (
               <div className="flex flex-col items-center gap-1 py-8 text-center">
                 <span className="text-2xl">🎉</span>
-                <p className="text-sm font-medium text-slate-700">All caught up</p>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300">All caught up</p>
                 <p className="text-xs text-slate-400">No columns are pending review.</p>
               </div>
             )}
@@ -311,7 +311,7 @@ function ChartTooltip({ active, payload, label }: TooltipProps<number, string>) 
         const color = (p.payload as { color?: string } | undefined)?.color ?? p.color;
         const name = p.name === 'count' ? 'Columns' : p.name;
         return (
-          <p key={i} className="flex items-center gap-1.5 font-semibold text-slate-800">
+          <p key={i} className="flex items-center gap-1.5 font-semibold text-slate-800 dark:text-slate-200">
             {color && <span className="h-2 w-2 rounded-full" style={{ backgroundColor: color }} />}
             <span>
               {name}: {p.value}
@@ -376,8 +376,8 @@ function ReadinessBanner({
         <div className="flex items-start gap-3">
           {meta.icon}
           <div>
-            <h2 className="text-sm font-semibold text-slate-800">{meta.title}</h2>
-            <p className="text-xs text-slate-600">{meta.sub}</p>
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{meta.title}</h2>
+            <p className="text-xs text-slate-600 dark:text-slate-300">{meta.sub}</p>
           </div>
         </div>
         {state === 'ready' ? (
@@ -401,7 +401,7 @@ function ReadinessBanner({
             ) : (
               <Circle className="h-4 w-4 shrink-0 text-slate-300" />
             )}
-            <span className={c.done ? 'text-slate-500 line-through' : 'font-medium text-slate-700'}>
+            <span className={c.done ? 'text-slate-500 line-through' : 'font-medium text-slate-700 dark:text-slate-300'}>
               {c.label}
             </span>
             {!c.done && (
@@ -447,7 +447,7 @@ function Kpi({
         {icon}
         <span className="text-xs font-medium text-slate-500">{label}</span>
       </div>
-      <div className={`mt-1.5 text-2xl font-bold ${tone ?? 'text-slate-900'}`}>
+      <div className={`mt-1.5 text-2xl font-bold ${tone ?? 'text-slate-900 dark:text-slate-100'}`}>
         <AnimatedNumber value={value} decimals={decimals} suffix={suffix} />
       </div>
       {hint && <div className="mt-0.5 text-xs text-slate-400">{hint}</div>}
@@ -472,7 +472,7 @@ function Widget({
         <div className="mb-3 flex items-center gap-2">
           {icon && <span className="text-slate-400">{icon}</span>}
           <div>
-            <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{title}</h3>
             {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
           </div>
         </div>
@@ -488,13 +488,13 @@ function BarList({ items }: { items: { label: string; count: number }[] }) {
     <div className="space-y-2.5 pt-1">
       {items.map((it) => (
         <div key={it.label} className="flex items-center gap-3">
-          <span className="w-28 shrink-0 truncate text-xs font-medium text-slate-600" title={it.label}>
+          <span className="w-28 shrink-0 truncate text-xs font-medium text-slate-600 dark:text-slate-300" title={it.label}>
             {it.label}
           </span>
           <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
             <div className="h-full rounded-full bg-primary-500" style={{ width: `${(it.count / max) * 100}%` }} />
           </div>
-          <span className="w-8 shrink-0 text-right text-xs font-semibold text-slate-700">{it.count}</span>
+          <span className="w-8 shrink-0 text-right text-xs font-semibold text-slate-700 dark:text-slate-300">{it.count}</span>
         </div>
       ))}
     </div>

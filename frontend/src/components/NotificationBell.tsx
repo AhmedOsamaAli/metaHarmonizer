@@ -76,7 +76,7 @@ export default function NotificationBell() {
                     className="z-50 w-80 origin-top-right animate-fade-in rounded-2xl border border-slate-200 bg-white p-1.5 shadow-pop"
                 >
                     <div className="flex items-center justify-between px-2.5 py-2">
-                        <p className="text-sm font-semibold text-slate-900">Notifications</p>
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Notifications</p>
                         {notifications.length > 0 && (
                             <button
                                 onClick={clear}
@@ -107,7 +107,7 @@ export default function NotificationBell() {
                                 >
                                     <span className="mt-0.5 shrink-0">{KIND_ICON[n.kind]}</span>
                                     <div className="min-w-0 flex-1">
-                                        <p className="truncate text-sm font-medium text-slate-800">
+                                        <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
                                             {n.title}
                                         </p>
                                         <p className="text-xs text-slate-500">{n.body}</p>

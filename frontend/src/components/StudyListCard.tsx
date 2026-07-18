@@ -107,7 +107,7 @@ export default function StudyListCard({ study, basePath }: { study: Study; baseP
               <FileSpreadsheet className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <p className="truncate font-semibold text-slate-900">{study.name}</p>
+              <p className="truncate font-semibold text-slate-900 dark:text-slate-100">{study.name}</p>
               <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                 <span>{study.row_count ?? '—'} rows</span>·
                 <span>{study.column_count ?? '—'} columns</span>
@@ -123,7 +123,7 @@ export default function StudyListCard({ study, basePath }: { study: Study; baseP
 
         {/* Action footer — completing files the study away (removed from the
             work list + job tray; the study itself is kept). */}
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-4 py-2.5">
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-800/40">
           <p className="text-[11px] leading-tight text-slate-400">
             Completing files this study away and clears it from your work list.
             <br className="hidden sm:block" />
@@ -134,7 +134,7 @@ export default function StudyListCard({ study, basePath }: { study: Study; baseP
             onClick={() => setConfirming(true)}
             disabled={celebrating}
             title="Mark complete and remove this study"
-            className="group/btn inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow active:scale-95 disabled:opacity-60"
+            className="group/btn inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50 hover:shadow active:scale-95 disabled:opacity-60 dark:border-emerald-500/30 dark:bg-slate-900 dark:text-emerald-300 dark:hover:bg-emerald-500/10"
           >
             <CircleCheck className="h-4 w-4 transition group-hover/btn:scale-110" />
             Complete
@@ -149,7 +149,7 @@ export default function StudyListCard({ study, basePath }: { study: Study; baseP
           onClick={() => setConfirming(false)}
         >
           <div
-            className="w-full max-w-md rounded-2xl bg-white p-5 text-left shadow-xl"
+            className="w-full max-w-md rounded-2xl bg-white p-5 text-left shadow-xl dark:bg-slate-900"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -157,8 +157,8 @@ export default function StudyListCard({ study, basePath }: { study: Study; baseP
                 <AlertTriangle className="h-5 w-5" />
               </span>
               <div className="min-w-0">
-                <h3 className="text-base font-semibold text-slate-900">Complete this study?</h3>
-                <p className="mt-1 text-sm text-slate-600">
+                <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">Complete this study?</h3>
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                   Completing <span className="font-semibold">{study.name}</span> finalizes it and
                   removes it from your active work list. This <span className="font-semibold">cannot be undone</span> from here.
                 </p>

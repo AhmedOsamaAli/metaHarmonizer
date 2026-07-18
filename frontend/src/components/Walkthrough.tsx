@@ -87,7 +87,7 @@ function PipelineMock() {
         <div key={s.label} className="flex items-center gap-1.5">
           <div className="flex flex-col items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
             <s.icon className="h-4 w-4 text-primary-600" />
-            <span className="text-[10px] font-medium text-slate-600">{s.label}</span>
+            <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">{s.label}</span>
           </div>
           {i < steps.length - 1 && <ArrowRight className="h-3 w-3 text-slate-300" />}
         </div>
@@ -104,7 +104,7 @@ function UploadMock() {
         <p className="mt-1 text-xs text-slate-500">Drop a study CSV / TSV</p>
       </div>
       <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700">
+        <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
           Target: GDC <ChevronDown className="h-3 w-3 text-slate-400" />
         </span>
         <span className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white">
@@ -132,7 +132,7 @@ function EngineMock() {
             {n}
           </span>
           <div className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5">
-            <span className="font-semibold text-slate-800">{label}</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{label}</span>
             <span className="truncate text-[10px] text-slate-400">{desc}</span>
           </div>
         </div>
@@ -174,7 +174,7 @@ function BatchMock() {
             <span className="grid h-4 w-4 place-items-center rounded bg-primary-600 text-white">
               <Check className="h-2.5 w-2.5" />
             </span>
-            <span className="flex items-center gap-1 truncate text-slate-700">
+            <span className="flex items-center gap-1 truncate text-slate-700 dark:text-slate-300">
               <code className="rounded bg-slate-100 px-1 text-[11px]">{col}</code>
               <ArrowRight className="h-3 w-3 shrink-0 text-slate-300" />primary_site
             </span>
@@ -185,7 +185,7 @@ function BatchMock() {
       {/* A single, ungrouped row still supports per-row edit */}
       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-t border-slate-100 px-3 py-1.5">
         <span className="h-4 w-4 rounded border border-slate-300" />
-        <span className="flex items-center gap-1 truncate text-slate-700">
+        <span className="flex items-center gap-1 truncate text-slate-700 dark:text-slate-300">
           <code className="rounded bg-slate-100 px-1 text-[11px]">MSI_status</code>
           <ArrowRight className="h-3 w-3 shrink-0 text-slate-300" />msi_status
         </span>
@@ -204,7 +204,7 @@ function LearnMock() {
   return (
     <div className="space-y-2.5 text-xs">
       <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
-        <span className="flex items-center gap-1.5 font-medium text-slate-700">
+        <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
           <Wand2 className="h-3.5 w-3.5 text-primary-600" />Remember my decisions
         </span>
         <span className="flex h-4 w-7 items-center rounded-full bg-primary-600 px-0.5">
@@ -214,9 +214,9 @@ function LearnMock() {
       <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 px-3 py-2">
         <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Your next study</p>
         <div className="flex items-center gap-1.5">
-          <code className="rounded bg-white px-1 text-[11px] text-slate-700">tumor_site</code>
+          <code className="rounded bg-white px-1 text-[11px] text-slate-700 dark:text-slate-300">tumor_site</code>
           <ArrowRight className="h-3 w-3 shrink-0 text-slate-300" />
-          <span className="font-semibold text-slate-800">primary_site</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">primary_site</span>
           <span className="ml-auto flex items-center gap-1 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
             <Check className="h-2.5 w-2.5" />auto-filled
           </span>
@@ -244,7 +244,7 @@ function OntologyMock() {
           <div className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-slate-500">{raw}</span>
             <ArrowRight className="h-3 w-3 shrink-0 text-slate-300" />
-            <span className="font-semibold text-slate-800">{term}</span>
+            <span className="font-semibold text-slate-800 dark:text-slate-200">{term}</span>
             <span className="shrink-0 rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">
               {code}
             </span>
@@ -271,17 +271,17 @@ function QualityMock() {
         style={{ background: 'conic-gradient(#2563eb 66%, #e2e8f0 0)' }}
       >
         <div className="grid h-14 w-14 place-items-center rounded-full bg-white">
-          <span className="text-sm font-bold text-slate-900">66%</span>
+          <span className="text-sm font-bold text-slate-900 dark:text-slate-100">66%</span>
         </div>
       </div>
       <div className="flex-1 space-y-1.5 text-xs">
         <div className="flex justify-between">
           <span className="text-slate-500">Columns mapped</span>
-          <span className="font-semibold text-slate-800">13 / 24</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">13 / 24</span>
         </div>
         <div className="flex justify-between">
           <span className="text-slate-500">Avg confidence</span>
-          <span className="font-semibold text-slate-800">0.82</span>
+          <span className="font-semibold text-slate-800 dark:text-slate-200">0.82</span>
         </div>
         <div className="flex gap-1 pt-1" title="Match stages">
           <span className="h-1.5 flex-[10] rounded-full bg-blue-500" />
@@ -311,7 +311,7 @@ function ExportMock() {
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary-600">
             <it.icon className="h-3.5 w-3.5" />
           </span>
-          <p className="flex-1 truncate text-xs font-semibold text-slate-800">{it.label}</p>
+          <p className="flex-1 truncate text-xs font-semibold text-slate-800 dark:text-slate-200">{it.label}</p>
           <span className="shrink-0 text-[10px] text-slate-400">{it.sub}</span>
         </div>
       ))}
@@ -579,7 +579,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
                   {slide.icon}
                 </span>
                 <div>
-                  <h2 className="text-base font-bold leading-tight text-slate-900">{slide.title}</h2>
+                  <h2 className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{slide.title}</h2>
                   <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{slide.action}</p>
                 </div>
               </div>

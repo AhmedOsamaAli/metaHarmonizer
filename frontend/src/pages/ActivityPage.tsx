@@ -253,7 +253,7 @@ export default function ActivityPage() {
                           {m.icon}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm text-slate-800">
+                          <p className="text-sm text-slate-800 dark:text-slate-200">
                             <span className="font-semibold">{who(e, usersById)}</span> · {m.verb.toLowerCase()}
                             {e.new_value && <span className="text-slate-500"> · {e.new_value}</span>}
                           </p>
@@ -295,7 +295,7 @@ function ActionFilter({ value, onChange }: { value: string; onChange: (v: string
   const current = value ? meta(value) : null;
   return (
     <div className="relative" ref={ref}>
-      <span className="mb-1 block text-xs font-medium text-slate-600">Action</span>
+      <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Action</span>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -371,7 +371,7 @@ function UserFilter({
 
   return (
     <div className="relative" ref={ref}>
-      <span className="mb-1 block text-xs font-medium text-slate-600">User</span>
+      <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">User</span>
       <button
         type="button"
         onClick={() => {
@@ -458,7 +458,7 @@ function WhenFilter({
 }) {
   const custom = rangeIdx === CUSTOM_RANGE;
   return (
-    <div className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+    <div className="flex flex-col gap-1 text-xs font-medium text-slate-600 dark:text-slate-300">
       <span className="flex items-center gap-1.5">
         <Calendar className="h-3.5 w-3.5 text-slate-400" />
         When
@@ -532,7 +532,7 @@ function StudyFilter({
 
   return (
     <div className="relative" ref={ref}>
-      <span className="mb-1 block text-xs font-medium text-slate-600">Study</span>
+      <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-300">Study</span>
       <button
         type="button"
         onClick={() => {

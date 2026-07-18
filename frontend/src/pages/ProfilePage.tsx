@@ -121,7 +121,7 @@ export default function ProfilePage() {
             <UserIcon className="h-7 w-7" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-lg font-semibold text-slate-900">{user.name || 'Account'}</p>
+            <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{user.name || 'Account'}</p>
             <p className="truncate text-sm text-slate-500">{user.email}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -212,7 +212,7 @@ export default function ProfilePage() {
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <p className="truncate text-sm font-medium text-slate-800">
+                    <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">
                       {s.user_agent ? shortenUA(s.user_agent) : 'Unknown device'}
                     </p>
                     {s.current && <Badge tone="green">This device</Badge>}
@@ -335,7 +335,7 @@ export default function ProfilePage() {
                     <KeyRound className="h-4 w-4" />
                   </span>
                   <div>
-                    <p className="text-sm font-medium text-slate-800">Token #{t.id}</p>
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Token #{t.id}</p>
                     <p className="text-xs text-slate-500">
                       Created {new Date(t.created_at).toLocaleDateString()}
                     </p>

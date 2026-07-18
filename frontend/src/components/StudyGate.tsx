@@ -51,7 +51,7 @@ export default function StudyGate({ study, title }: { study: Study; title: strin
                         <>
                             <Loader2 className="h-10 w-10 animate-spin text-primary-600" />
                             <div>
-                                <h3 className="text-lg font-semibold text-slate-900">
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                                     “{study.name}” is still being harmonized
                                 </h3>
                                 <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
@@ -65,7 +65,7 @@ export default function StudyGate({ study, title }: { study: Study; title: strin
                         <>
                             <AlertCircle className="h-10 w-10 text-rose-500" />
                             <div>
-                                <h3 className="text-lg font-semibold text-slate-900">
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                                     Harmonization failed for “{study.name}”
                                 </h3>
                                 <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
@@ -80,7 +80,7 @@ export default function StudyGate({ study, title }: { study: Study; title: strin
                         <>
                             <Ban className="h-10 w-10 text-slate-400" />
                             <div>
-                                <h3 className="text-lg font-semibold text-slate-900">
+                                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                                     Harmonization was cancelled for “{study.name}”
                                 </h3>
                                 <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">

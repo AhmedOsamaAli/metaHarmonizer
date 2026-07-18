@@ -16,7 +16,7 @@ export default function Brand({ className }: { className?: string }) {
         🔬
       </span>
       <span className="flex items-baseline gap-2">
-        <span className="text-[17px] font-extrabold tracking-tight text-slate-900">
+        <span className="text-[17px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
           Meta<span className="text-primary-600">Harmonizer</span>
         </span>
         <span className="hidden rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 sm:inline">

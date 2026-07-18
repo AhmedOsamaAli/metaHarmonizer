@@ -77,7 +77,7 @@ export default function ExportPage() {
                   <Icon className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h3>
                   <p className="mt-1 max-w-md text-xs text-slate-500">{desc}</p>
                 </div>
               </div>
@@ -97,7 +97,7 @@ export default function ExportPage() {
                 <Tags className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">Labeled Dataset</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">Labeled Dataset</h3>
                 <p className="mt-1 max-w-md text-xs text-slate-500">
                   Curator-confirmed mappings only — a labeled corpus for engine training/evaluation.
                 </p>
@@ -118,7 +118,7 @@ export default function ExportPage() {
       </div>
 
       {/* Study lifecycle action — completing files the study away */}
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/40">
         <p className="text-xs text-slate-500">
           Completing files this study away and clears it from your work list.
           Studies left incomplete are auto-removed after a week.

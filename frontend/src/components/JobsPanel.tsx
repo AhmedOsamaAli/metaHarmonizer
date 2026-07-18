@@ -44,13 +44,13 @@ export default function JobsPanel() {
 
     return (
         <Card className="overflow-hidden">
-            <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-3">
+            <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/40">
                 {activeCount > 0 ? (
                     <Loader2 className="h-4 w-4 animate-spin text-primary-600" />
                 ) : (
                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                 )}
-                <h3 className="text-sm font-semibold text-slate-900">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {activeCount > 0
                         ? `Processing ${activeCount} ${activeCount === 1 ? 'study' : 'studies'}`
                         : 'Harmonization jobs'}
@@ -88,7 +88,7 @@ function JobRow({
         <li className="px-4 py-3">
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900" title={job.studyName}>
+                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100" title={job.studyName}>
                         {job.studyName}
                     </p>
                     <p className="mt-0.5 flex items-center gap-1.5 text-xs">
@@ -113,7 +113,7 @@ function JobRow({
                         type="button"
                         onClick={onDismiss}
                         title="Dismiss"
-                        className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                        className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                     >
                         <X className="h-4 w-4" />
                     </button>

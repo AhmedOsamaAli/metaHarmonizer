@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
             <MailCheck className="h-7 w-7 text-emerald-600" />
           </div>
-          <p className="text-sm text-slate-600">{done}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{done}</p>
           <p className="text-xs text-slate-400">
             The link expires in 30 minutes. Check your spam folder if it doesn't arrive.
           </p>

@@ -54,7 +54,7 @@ export default function ResetPasswordPage() {
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
             <CheckCircle2 className="h-7 w-7 text-emerald-600" />
           </div>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
             Your password has been changed and all other sessions were signed out.
           </p>
           <Button className="w-full" onClick={() => navigate('/login')}>

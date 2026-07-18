@@ -93,7 +93,7 @@ export default function RegisterPage() {
               <UserPlus className="h-7 w-7 text-emerald-600" />
             )}
           </div>
-          <p className="text-sm text-slate-600">{done}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">{done}</p>
           {needsVerification && (
             <p className="text-xs text-slate-400">
               Didn’t get it? Check spam, or you can request a new link from the sign-in page.
@@ -179,7 +179,7 @@ export default function RegisterPage() {
             className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
           />
           <span className="text-sm">
-            <span className="font-medium text-slate-800">Request admin access</span>
+            <span className="font-medium text-slate-800 dark:text-slate-200">Request admin access</span>
             <span className="mt-0.5 block text-xs text-slate-500">
               You’ll join as a curator. Admin access is never granted automatically — an existing administrator must approve it. You can also request it later.
             </span>

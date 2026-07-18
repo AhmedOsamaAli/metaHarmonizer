@@ -369,11 +369,11 @@ export default function OntologyReview() {
       {/* Edit Modal (with embedded search) */}
       {editState && createPortal(
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-20" onClick={closeModal}>
-          <div className="w-full max-w-lg space-y-4 rounded-xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-slate-800">Set ontology term</h3>
+          <div className="w-full max-w-lg space-y-4 rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Set ontology term</h3>
             {editState.raw && (
               <p className="text-xs text-slate-500">
-                Assigning a term to <code className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-700">{editState.raw}</code>
+                Assigning a term to <code className="rounded bg-slate-100 dark:bg-slate-800/70 px-1.5 py-0.5 text-slate-700 dark:text-slate-300">{editState.raw}</code>
               </p>
             )}
             <div className="space-y-2">
@@ -384,7 +384,7 @@ export default function OntologyReview() {
                 onChange={(e) => setEditState({ ...editState, term: e.target.value })}
                 onKeyDown={(e) => e.key === 'Enter' && handleEditSave()}
                 placeholder="e.g. Male"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               />
             </div>
             <div className="space-y-2">
@@ -393,13 +393,13 @@ export default function OntologyReview() {
                 value={editState.ontId}
                 onChange={(e) => setEditState({ ...editState, ontId: e.target.value })}
                 placeholder="e.g. NCIT:C20197"
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
               />
             </div>
 
             {/* Search panel */}
-            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3">
-              <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-slate-600">
+            <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40">
+              <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
                 <Search className="h-3.5 w-3.5" />
                 Ontology suggestions
               </div>
@@ -409,7 +409,7 @@ export default function OntologyReview() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   placeholder="Search NCIT, UBERON…"
-                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
                 <button onClick={() => handleSearch()} disabled={searching} className="rounded-lg bg-primary-600 p-2 text-white hover:bg-primary-700">
                   {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
@@ -427,9 +427,9 @@ export default function OntologyReview() {
                     <li
                       key={`${r.ontology_id}-${i}`}
                       onClick={() => setEditState({ ...editState, term: r.term, ontId: r.ontology_id })}
-                      className="cursor-pointer rounded-lg border border-slate-100 bg-white p-2 text-xs hover:border-primary-300 hover:bg-primary-50"
+                      className="cursor-pointer rounded-lg border border-slate-100 bg-white p-2 text-xs hover:border-primary-300 hover:bg-primary-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-primary-500/50 dark:hover:bg-primary-500/10"
                     >
-                      <div className="font-medium text-slate-900">{r.term}</div>
+                      <div className="font-medium text-slate-900 dark:text-slate-100">{r.term}</div>
                       <div className="mt-0.5 flex items-center gap-2">
                         <span className="font-mono text-slate-500">{r.ontology_id}</span>
                         <span className="text-slate-400">{r.ontology}</span>
@@ -442,7 +442,7 @@ export default function OntologyReview() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <button onClick={closeModal} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50">
+              <button onClick={closeModal} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
                 Cancel
               </button>
               <button
@@ -503,7 +503,7 @@ export default function OntologyReview() {
                   >
                     <span className="flex items-center gap-2">
                       <Eye className="h-4 w-4 text-primary-500" />
-                      <span className="text-sm font-semibold text-slate-900">Resolved values preview</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">Resolved values preview</span>
                       <span className="text-xs text-slate-500">
                         {previewValueCount} value{previewValueCount !== 1 ? 's' : ''} across {previewFieldCount} field{previewFieldCount !== 1 ? 's' : ''} will be rewritten on export
                       </span>
@@ -519,14 +519,14 @@ export default function OntologyReview() {
                     ) : (
                       <div className="mt-3 space-y-3">
                         {Object.entries(rewritePreview).map(([field, rows]) => (
-                          <div key={field} className="rounded-lg border border-slate-200">
-                            <div className="border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700">
+                          <div key={field} className="rounded-lg border border-slate-200 dark:border-slate-800">
+                            <div className="border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 dark:border-slate-800 dark:bg-slate-800/50">
                               {field} <span className="font-normal text-slate-400">· {rows.length} value{rows.length !== 1 ? 's' : ''}</span>
                             </div>
                             <ul className="divide-y divide-slate-100">
                               {rows.map((r, i) => (
                                 <li key={`${r.raw}-${i}`} className="flex flex-wrap items-center gap-2 px-3 py-1.5 text-xs">
-                                  <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-slate-500 line-through">{r.raw}</span>
+                                  <span className="rounded bg-slate-100 dark:bg-slate-800/70 px-1.5 py-0.5 font-mono text-slate-500 line-through">{r.raw}</span>
                                   <ArrowRight className="h-3 w-3 text-slate-400" />
                                   <span className="rounded bg-green-50 px-1.5 py-0.5 font-mono font-semibold text-green-700">{r.term}</span>
                                   {r.ontId && <span className="text-[10px] text-slate-400">{r.ontId}</span>}
@@ -547,7 +547,7 @@ export default function OntologyReview() {
                   <button
                     key={f}
                     onClick={() => setStatusFilter(f)}
-                    className={`chip capitalize ${statusFilter === f ? 'bg-primary-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    className={`chip capitalize ${statusFilter === f ? 'bg-primary-600 text-white' : 'bg-slate-100 dark:bg-slate-800/70 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
                   >
                     {f}
                   </button>
@@ -564,9 +564,9 @@ export default function OntologyReview() {
               ) : (
                 <div className="space-y-4">
                   {matchedFields.map((field) => (
-                    <div key={field} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-2.5">
-                        <h3 className="text-sm font-semibold text-slate-800">{field}</h3>
+                    <div key={field} className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+                      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-800/50">
+                        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{field}</h3>
                         <span className="text-xs text-slate-400">
                           {groupedMatched[field].length} value{groupedMatched[field].length !== 1 ? 's' : ''}
                         </span>
@@ -577,12 +577,12 @@ export default function OntologyReview() {
                           const term = om.curator_term ?? om.ontology_term;
                           const oid = om.curator_id ?? om.ontology_id;
                           return (
-                            <li key={om.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 hover:bg-slate-50">
+                            <li key={om.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/50">
                               {/* raw → term */}
                               <div className="flex min-w-0 flex-1 items-center gap-2">
-                                <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">{om.raw_value}</code>
+                                <code className="rounded bg-slate-100 dark:bg-slate-800/70 px-1.5 py-0.5 text-xs text-slate-700 dark:text-slate-300">{om.raw_value}</code>
                                 <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300" />
-                                <span className="truncate text-sm font-medium text-slate-900">{term}</span>
+                                <span className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{term}</span>
                                 {om.curator_term && <span className="text-[10px] text-amber-600">(edited)</span>}
                                 {oid && <span className="truncate font-mono text-[11px] text-slate-400">{oid}</span>}
                               </div>
@@ -630,7 +630,7 @@ export default function OntologyReview() {
               <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
                 <button
                   onClick={() => setShowUnmatched((s) => !s)}
-                  className="flex items-center gap-2 text-left text-sm font-medium text-slate-700"
+                  className="flex items-center gap-2 text-left text-sm font-medium text-slate-700 dark:text-slate-300"
                 >
                   {showUnmatched ? <ChevronDown className="h-4 w-4 text-slate-400" /> : <ChevronRight className="h-4 w-4 text-slate-400" />}
                   {stats.unmatched.toLocaleString()} values had no ontology match
@@ -645,7 +645,7 @@ export default function OntologyReview() {
                 </button>
               </div>
               {showUnmatched && (
-                <CardBody className="space-y-4 border-t border-slate-100 pt-4">
+                <CardBody className="space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
                   {/* Suggested matches found by the ontology search */}
                   {suggestedRows.length > 0 && (
                     <div className="space-y-2 rounded-xl border border-primary-100 bg-primary-50/40 p-3">
@@ -658,14 +658,14 @@ export default function OntologyReview() {
                           const s = suggestions[m.id];
                           const isBusy = !!busy[m.id];
                           return (
-                            <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-white px-3 py-2">
+                            <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-white px-3 py-2 dark:bg-slate-800/60">
                               <div className="flex min-w-0 flex-1 items-center gap-2">
-                                <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-700">{m.raw_value}</code>
+                                <code className="rounded bg-slate-100 dark:bg-slate-800/70 px-1.5 py-0.5 text-xs text-slate-700 dark:text-slate-300">{m.raw_value}</code>
                                 {count > 1 && (
-                                  <span className="rounded bg-slate-100 px-1 text-[10px] text-slate-500">×{count}</span>
+                                  <span className="rounded bg-slate-100 dark:bg-slate-800/70 px-1 text-[10px] text-slate-500">×{count}</span>
                                 )}
                                 <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300" />
-                                <span className="truncate text-sm font-medium text-slate-900">{s.term}</span>
+                                <span className="truncate text-sm font-medium text-slate-900 dark:text-slate-100">{s.term}</span>
                                 <span className="truncate font-mono text-[11px] text-slate-400">{s.ontId}</span>
                                 <span className="text-[10px] text-slate-400">in {m.field_name}</span>
                               </div>
@@ -714,7 +714,7 @@ export default function OntologyReview() {
 
                   <p className="text-xs text-slate-500">
                     These values didn’t match a controlled-vocabulary term (often sample IDs, study
-                    names, or free text). Use <span className="font-medium text-slate-600">Find suggestions</span> to
+                    names, or free text). Use <span className="font-medium text-slate-600 dark:text-slate-300">Find suggestions</span> to
                     search the ontology automatically, or click any value to assign a term manually
                     (applies to every occurrence of that value).
                   </p>
@@ -723,7 +723,7 @@ export default function OntologyReview() {
                     const shown = expanded ? items : items.slice(0, 40);
                     return (
                       <div key={field}>
-                        <p className="mb-1 text-xs font-semibold text-slate-600">
+                        <p className="mb-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
                           {field}{' '}
                           <span className="font-normal text-slate-400">
                             · {items.length} distinct value{items.length !== 1 ? 's' : ''}
@@ -735,7 +735,7 @@ export default function OntologyReview() {
                               key={m.id}
                               title={count > 1 ? `Assign a term to all ${count} occurrences` : 'Assign an ontology term'}
                               onClick={() => setEditState({ id: m.id, term: '', ontId: '', raw: m.raw_value })}
-                              className="group inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500 hover:bg-primary-50 hover:text-primary-700"
+                              className="group inline-flex items-center gap-1 rounded bg-slate-100 dark:bg-slate-800/70 px-1.5 py-0.5 text-[11px] text-slate-500 hover:bg-primary-50 hover:text-primary-700"
                             >
                               {m.raw_value}
                               {count > 1 && <span className="text-slate-400">×{count}</span>}
@@ -779,14 +779,14 @@ function StatCard({
     primary: 'bg-primary-50 text-primary-700',
     amber: 'bg-amber-50 text-amber-700',
     emerald: 'bg-emerald-50 text-emerald-700',
-    slate: 'bg-slate-100 text-slate-600',
+    slate: 'bg-slate-100 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300',
   };
   return (
     <Card>
       <CardBody className="flex items-center gap-3 py-3">
         <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${tones[tone]}`}>{icon}</span>
         <div className="min-w-0">
-          <div className="text-lg font-bold text-slate-900">{value.toLocaleString()}</div>
+          <div className="text-lg font-bold text-slate-900 dark:text-slate-100">{value.toLocaleString()}</div>
           <div className="truncate text-xs text-slate-500">{label}</div>
         </div>
       </CardBody>

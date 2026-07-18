@@ -63,7 +63,7 @@ export default function VerifyEmailPage() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50">
               <Spinner className="h-7 w-7 text-primary-600" />
             </div>
-            <p className="text-sm text-slate-600">Verifying your email…</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">Verifying your email…</p>
           </>
         )}
         {state === 'ok' && (
@@ -71,7 +71,7 @@ export default function VerifyEmailPage() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
               <CheckCircle2 className="h-7 w-7 text-emerald-600" />
             </div>
-            <p className="text-sm text-slate-600">{message}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">{message}</p>
             <Button className="w-full" onClick={() => navigate('/login')}>
               Continue to sign in
             </Button>
@@ -82,7 +82,7 @@ export default function VerifyEmailPage() {
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50">
               <XCircle className="h-7 w-7 text-rose-600" />
             </div>
-            <p className="text-sm text-slate-600">{message}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">{message}</p>
             <Button variant="secondary" className="w-full" onClick={() => navigate('/login')}>
               Back to sign in
             </Button>

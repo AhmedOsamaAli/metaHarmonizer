@@ -144,7 +144,7 @@ export default function AdminPage() {
             {pendingRequests.map((u) => (
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-800">{u.name || u.email}</p>
+                  <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">{u.name || u.email}</p>
                   <p className="truncate text-xs text-slate-500">{u.email}</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -187,7 +187,7 @@ export default function AdminPage() {
             {pendingApprovals.map((u) => (
               <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-slate-800">{u.name || u.email}</p>
+                  <p className="truncate text-sm font-medium text-slate-800 dark:text-slate-200">{u.name || u.email}</p>
                   <p className="flex items-center gap-1.5 truncate text-xs text-slate-500">
                     {u.email}
                     {u.admin_requested && (
@@ -246,11 +246,11 @@ export default function AdminPage() {
                     <tr key={u.id} className="hover:bg-slate-50/60">
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
-                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-xs font-bold text-slate-600">
+                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-xs font-bold text-slate-600 dark:text-slate-300">
                             {(u.name || u.email).slice(0, 2).toUpperCase()}
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate font-medium text-slate-800">
+                            <p className="truncate font-medium text-slate-800 dark:text-slate-200">
                               {u.name || '—'}
                               {isSelf && <span className="ml-1.5 text-xs text-slate-400">(you)</span>}
                             </p>
@@ -334,7 +334,7 @@ function Stat({ label, value, tone }: { label: string; value: number; tone?: str
   return (
     <Card className="p-4">
       <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${tone ?? 'text-slate-900'}`}>{value}</p>
+      <p className={`mt-1 text-2xl font-bold ${tone ?? 'text-slate-900 dark:text-slate-100'}`}>{value}</p>
     </Card>
   );
 }
@@ -478,7 +478,7 @@ function SchemaVersionsCard() {
             {versions.data.map((v) => (
               <li key={v.id} className="flex items-center justify-between gap-3 py-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-medium text-slate-800">{v.label}</span>
+                  <span className="font-mono text-sm font-medium text-slate-800 dark:text-slate-200">{v.label}</span>
                   {v.is_current ? (
                     <Badge tone="green">
                       <CheckCheck className="h-3.5 w-3.5" />
@@ -507,7 +507,7 @@ function SchemaVersionsCard() {
         {/* Schema diff (G6 layer A) */}
         {(versions.data?.length ?? 0) >= 2 && (
           <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-3">
-            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700">
+            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
               <GitCompare className="h-4 w-4" />
               Compare versions
             </div>
@@ -583,7 +583,7 @@ function SchemaVersionsCard() {
                     <ul className="mt-1 space-y-1">
                       {diff.changed_fields.map((c) => (
                         <li key={c.field} className="text-xs">
-                          <span className="font-mono font-medium text-slate-700">{c.field}</span>
+                          <span className="font-mono font-medium text-slate-700 dark:text-slate-300">{c.field}</span>
                           {c.added_values.length > 0 && (
                             <span className="text-emerald-700"> +{c.added_values.join(', ')}</span>
                           )}
@@ -683,16 +683,16 @@ function LearnedDecisionsCard() {
                     <td className="px-2 py-2">
                       <Badge tone={c.kind === 'schema' ? 'primary' : 'slate'}>{c.kind}</Badge>
                     </td>
-                    <td className="px-2 py-2 font-mono text-xs text-slate-600">{c.source_key}</td>
-                    <td className="px-2 py-2 text-slate-700">
+                    <td className="px-2 py-2 font-mono text-xs text-slate-600 dark:text-slate-300">{c.source_key}</td>
+                    <td className="px-2 py-2 text-slate-700 dark:text-slate-300">
                       {c.decision === 'reject'
                         ? 'reject'
                         : `accept → ${c.target_field ?? c.target_term ?? ''}${
                             c.target_id ? ` (${c.target_id})` : ''
                           }`}
                     </td>
-                    <td className="px-2 py-2 text-center font-semibold text-slate-700">{c.curators}</td>
-                    <td className="px-2 py-2 text-center text-slate-600">{c.support}</td>
+                    <td className="px-2 py-2 text-center font-semibold text-slate-700 dark:text-slate-300">{c.curators}</td>
+                    <td className="px-2 py-2 text-center text-slate-600 dark:text-slate-300">{c.support}</td>
                     <td className="px-2 py-2 text-right">
                       <Button
                         size="sm"
@@ -780,7 +780,7 @@ function AliasDictCard() {
         description="Nicknames that teach the schema mapper to recognise messy headers. Uploads and manual edits are merged with the engine's built-in dictionary and applied on the next harmonize."
       />
       <CardBody className="space-y-4">
-        <div className="text-sm text-slate-600">
+        <div className="text-sm text-slate-600 dark:text-slate-300">
           {status.data?.present ? (
             <span>
               Custom dictionary: <strong>{status.data.alias_count}</strong> admin aliases across{' '}
@@ -927,8 +927,8 @@ function AliasDictCard() {
                 <tbody>
                   {rows.map((r) => (
                     <tr key={`${r.source}::${r.field_name}`} className="border-t border-slate-50">
-                      <td className="px-3 py-1.5 font-mono text-xs text-slate-700">{r.source}</td>
-                      <td className="px-3 py-1.5 text-slate-700">{r.field_name}</td>
+                      <td className="px-3 py-1.5 font-mono text-xs text-slate-700 dark:text-slate-300">{r.source}</td>
+                      <td className="px-3 py-1.5 text-slate-700 dark:text-slate-300">{r.field_name}</td>
                       <td className="px-3 py-1.5">
                         <Badge tone={r.builtin ? 'slate' : 'primary'}>{r.builtin ? 'built-in' : 'custom'}</Badge>
                       </td>
