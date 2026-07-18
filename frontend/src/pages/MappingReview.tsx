@@ -242,6 +242,25 @@ export default function MappingReview() {
     return counts;
   }, [mappings]);
 
+  // Look-alike groups whose every pending member is currently selected — lets
+  // the group chip show an active state and toggle the whole group off.
+  const selectedGroups = useMemo(() => {
+    const byKey = new Map<string, number[]>();
+    for (const m of filteredMappings) {
+      if (m.status !== 'pending') continue;
+      const k = groupInfo[m.id]?.key;
+      if (!k) continue;
+      const arr = byKey.get(k) ?? [];
+      arr.push(m.id);
+      byKey.set(k, arr);
+    }
+    const full = new Set<string>();
+    byKey.forEach((ids, k) => {
+      if (ids.length > 1 && ids.every((id) => selected.has(id))) full.add(k);
+    });
+    return full;
+  }, [filteredMappings, groupInfo, selected]);
+
   // Actions
   const updateMapping = useCallback(
     (updated: Mapping) => {
@@ -341,11 +360,18 @@ export default function MappingReview() {
 
   // Select every pending mapping in the same active-learning group (so the
   // batch Accept/Reject toolbar can clear the whole look-alike set at once).
+  // Re-clicking a fully-selected group toggles it back off.
   const selectGroup = (groupKey: string) => {
     const ids = filteredMappings
       .filter((m) => m.status === 'pending' && groupInfo[m.id]?.key === groupKey)
       .map((m) => m.id);
-    setSelected(new Set(ids));
+    if (ids.length === 0) return;
+    setSelected((prev) => {
+      const allSelected = ids.every((id) => prev.has(id));
+      const next = new Set(prev);
+      ids.forEach((id) => (allSelected ? next.delete(id) : next.add(id)));
+      return next;
+    });
   };
 
   const toggleSort = (key: SortKey) => {
@@ -668,15 +694,22 @@ export default function MappingReview() {
                       {m.curator_field || m.matched_field || (
                         <span className="text-slate-400 italic">unmapped</span>
                       )}
-                      {smartOrder && m.status === 'pending' && (groupInfo[m.id]?.size ?? 0) > 1 && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); selectGroup(groupInfo[m.id].key); }}
-                          title="Select all pending look-alikes in this group for a batch decision"
-                          className="ml-2 rounded-full bg-primary-50 px-1.5 py-0.5 text-[10px] font-semibold text-primary-600 hover:bg-primary-100"
-                        >
-                          ⌄ {groupInfo[m.id].size} in group
-                        </button>
-                      )}
+                      {smartOrder && m.status === 'pending' && (groupInfo[m.id]?.size ?? 0) > 1 && (() => {
+                        const gsel = selectedGroups.has(groupInfo[m.id].key);
+                        return (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); selectGroup(groupInfo[m.id].key); }}
+                            title={gsel ? 'Deselect this look-alike group' : 'Select all pending look-alikes in this group for a batch decision'}
+                            className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition ${
+                              gsel
+                                ? 'bg-primary-600 text-white hover:bg-primary-700'
+                                : 'bg-primary-50 text-primary-600 hover:bg-primary-100'
+                            }`}
+                          >
+                            {gsel ? '✓' : '⌄'} {groupInfo[m.id].size} in group
+                          </button>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-2.5">
                       <ConfidenceBadge score={m.confidence_score} size="sm" />
