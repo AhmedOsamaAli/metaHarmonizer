@@ -121,11 +121,11 @@ export default function StudyListCard({ study, basePath }: { study: Study; baseP
           <ArrowRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-primary-500" />
         </button>
 
-        {/* Action footer — completing files the study away (kept for the
-            dashboard, removed from the work list + job tray). */}
+        {/* Action footer — completing files the study away (removed from the
+            work list + job tray; the study itself is kept). */}
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-4 py-2.5">
           <p className="text-[11px] leading-tight text-slate-400">
-            Completing files this away (still counts on the dashboard).
+            Completing files this study away and clears it from your work list.
             <br className="hidden sm:block" />
             Left incomplete, it auto-deletes in a week.
           </p>

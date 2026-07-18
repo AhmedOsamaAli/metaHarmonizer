@@ -289,7 +289,6 @@ export function JobsProvider({ children }: { children: ReactNode }) {
                         `/review/${job.studyId}`,
                     );
                     qc.invalidateQueries({ queryKey: ['studies'] });
-                    qc.invalidateQueries({ queryKey: ['overview'] });
                 } else if (job.phase === 'failed') {
                     toast.error(`Harmonization failed — ${job.studyName}`);
                     notify({

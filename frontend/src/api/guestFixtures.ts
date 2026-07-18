@@ -12,7 +12,6 @@
 import type {
     Mapping,
     OntologyMapping,
-    Overview,
     QualityMetrics,
     Study,
 } from './types';
@@ -128,37 +127,6 @@ const demoOntology: OntologyMapping[] = [
     o(6, 'disease', 'Clear Cell Carcinoma', null, null, 0.42, 'pending'),
 ];
 
-const demoStudySummary = {
-    id: DEMO_STUDY_ID,
-    name: demoStudy.name,
-    status: 'completed',
-    row_count: demoStudy.row_count ?? 153,
-    column_count: demoStudy.column_count ?? 24,
-    mapped_columns: 13,
-    pending_review: 5,
-    avg_confidence: 0.82,
-    review_progress: 66,
-};
-
-const demoOverview: Overview = {
-    total_studies: 1,
-    total_columns: 24,
-    total_rows: 153,
-    mapped_columns: 13,
-    pending_review: 5,
-    accepted: 10,
-    rejected: 0,
-    avg_confidence: 0.82,
-    review_progress: 66,
-    stage_breakdown: [
-        { stage: 'stage1', count: 10, percentage: 41.7 },
-        { stage: 'stage2', count: 3, percentage: 12.5 },
-        { stage: 'stage3', count: 2, percentage: 8.3 },
-        { stage: 'unmapped', count: 9, percentage: 37.5 },
-    ],
-    studies: [demoStudySummary],
-};
-
 const demoQuality: QualityMetrics = {
     study_id: DEMO_STUDY_ID,
     total_columns: 24,
@@ -169,7 +137,12 @@ const demoQuality: QualityMetrics = {
     pending_review: 5,
     rejected: 0,
     new_field_suggestions: 2,
-    stage_breakdown: demoOverview.stage_breakdown,
+    stage_breakdown: [
+        { stage: 'stage1', count: 10, percentage: 41.7 },
+        { stage: 'stage2', count: 3, percentage: 12.5 },
+        { stage: 'stage3', count: 2, percentage: 8.3 },
+        { stage: 'unmapped', count: 9, percentage: 37.5 },
+    ],
     confidence_distribution: [
         { bucket: '0.9–1.0', min_val: 0.9, max_val: 1.0, count: 10 },
         { bucket: '0.7–0.9', min_val: 0.7, max_val: 0.9, count: 3 },
@@ -184,8 +157,6 @@ export function guestFixture(path: string, method: string): { data: unknown } | 
     if (method.toUpperCase() !== 'GET') return null;
     const p = path.split('?')[0];
     switch (p) {
-        case '/overview':
-            return { data: demoOverview };
         case '/studies':
             return { data: [demoStudy] };
         case `/studies/${DEMO_STUDY_ID}`:

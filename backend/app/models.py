@@ -134,36 +134,6 @@ class QualityMetrics(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Overview (portfolio-wide aggregate for the home dashboard)
-# ---------------------------------------------------------------------------
-
-class StudySummary(BaseModel):
-    id: str
-    name: str
-    status: str
-    row_count: int | None = None
-    column_count: int | None = None
-    mapped_columns: int
-    pending_review: int
-    avg_confidence: float
-    review_progress: float  # 0..1 share of columns already accepted/rejected
-
-
-class OverviewResponse(BaseModel):
-    total_studies: int
-    total_columns: int
-    total_rows: int
-    mapped_columns: int
-    pending_review: int
-    accepted: int
-    rejected: int
-    avg_confidence: float
-    review_progress: float  # 0..1 across all columns
-    stage_breakdown: list[StageBreakdown]
-    studies: list[StudySummary]
-
-
-# ---------------------------------------------------------------------------
 # Harmonization Job
 # ---------------------------------------------------------------------------
 

@@ -85,12 +85,12 @@ async def list_studies(
 
     ``include_completed`` controls whether finished studies appear: the
     review/ontology/quality/export pickers pass ``False`` (a completed study is
-    filed away and shouldn't clutter the work lists), while the dashboard
-    overview passes ``True`` so its statistics still count completed work.
+    filed away and shouldn't clutter the work lists); the default keeps them for
+    callers that need full history.
 
     Lazily enforces the idle-expiry policy first: a user's *non-completed*
     studies older than ``IDLE_STUDY_DAYS`` are deleted (completed studies are
-    kept). Cleanup runs on the owner's own list/overview load, so no scheduler
+    kept). Cleanup runs on the owner's own list load, so no scheduler
     is required for it to take effect."""
     if owner_id is not None:
         await purge_idle_studies(db, owner_id)

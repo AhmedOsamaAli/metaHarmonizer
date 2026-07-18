@@ -231,7 +231,7 @@ export default function App() {
       <Route path="/forgot" element={<PublicOnly><ForgotPasswordPage /></PublicOnly>} />
       <Route path="/reset" element={<ResetPasswordPage />} />
 
-      <Route path="/" element={<Navigate to="/review" replace />} />
+      <Route path="/" element={<Navigate to="/upload" replace />} />
       <Route path="/upload" element={<Shell role="curator"><UploadPage /></Shell>} />
       <Route path="/review" element={<Shell><MappingReview /></Shell>} />
       <Route path="/review/:studyId" element={<Shell><MappingReview /></Shell>} />

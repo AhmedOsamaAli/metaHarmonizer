@@ -120,8 +120,8 @@ export default function ExportPage() {
       {/* Study lifecycle action — completing files the study away */}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
         <p className="text-xs text-slate-500">
-          Completing files this study away — it still counts on the dashboard but leaves
-          your work list. Studies left incomplete are auto-removed after a week.
+          Completing files this study away and clears it from your work list.
+          Studies left incomplete are auto-removed after a week.
         </p>
         <CompleteStudyButton studyId={studyId} studyName={study?.name} redirectTo="/export" />
       </div>

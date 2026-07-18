@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { completeStudy, deleteStudy, getOverview, listStudies } from '../api/client';
-import type { Overview, Study } from '../api/types';
+import { completeStudy, deleteStudy, listStudies } from '../api/client';
+import type { Study } from '../api/types';
 
 /** Shared, cached studies list — used by every review/quality/export page. */
 export function useStudies() {
@@ -10,35 +10,25 @@ export function useStudies() {
   });
 }
 
-/** Portfolio-wide overview for the home dashboard. */
-export function useOverview() {
-  return useQuery<Overview>({
-    queryKey: ['overview'],
-    queryFn: getOverview,
-  });
-}
-
-/** Permanently delete a study; refreshes the studies list + overview. */
+/** Permanently delete a study; refreshes the studies list. */
 export function useDeleteStudy() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteStudy(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['studies'] });
-      qc.invalidateQueries({ queryKey: ['overview'] });
     },
   });
 }
 
-/** Mark a study completed: kept for dashboard stats but filed away (drops out
- *  of the work-list pickers). Refreshes the studies list + overview. */
+/** Mark a study completed: filed away (drops out of the work-list pickers).
+ *  Refreshes the studies list. */
 export function useCompleteStudy() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => completeStudy(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['studies'] });
-      qc.invalidateQueries({ queryKey: ['overview'] });
     },
   });
 }

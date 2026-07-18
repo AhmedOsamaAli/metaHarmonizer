@@ -20,12 +20,11 @@ from app.core.storage import get_storage
 from app.core.uploads import check_upload_size
 from app.db.models import User
 from app.db.session import get_db
-from app.models import HarmonizeAccepted, OverviewResponse, StudyOut
+from app.models import HarmonizeAccepted, StudyOut
 from app.repositories import audit as audit_repo
 from app.repositories import jobs as jobs_repo
 from app.repositories import mappings as mappings_repo
 from app.repositories import studies as studies_repo
-from app.services.analytics import compute_overview
 from app.services.harmonizer import generate_study_id
 
 router = APIRouter(prefix="/api/v1", tags=["harmonize"])
@@ -258,12 +257,6 @@ async def list_studies(user: User = Depends(current_user), db: AsyncSession = De
     return await studies_repo.list_studies(
         db, owner_id=getattr(user, "id", None), include_completed=False
     )
-
-
-@router.get("/overview", response_model=OverviewResponse)
-async def get_overview(user: User = Depends(current_user), db: AsyncSession = Depends(get_db)):
-    """Portfolio-wide harmonization summary for the home dashboard (caller's studies)."""
-    return await compute_overview(db, owner_id=getattr(user, "id", None))
 
 
 @router.get("/studies/{study_id}", response_model=StudyOut)

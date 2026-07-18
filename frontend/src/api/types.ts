@@ -116,34 +116,6 @@ export interface OntologySearchResult {
     score: number;
 }
 
-/* Overview (home dashboard) */
-
-export interface StudySummary {
-    id: string;
-    name: string;
-    status: string;
-    row_count: number | null;
-    column_count: number | null;
-    mapped_columns: number;
-    pending_review: number;
-    avg_confidence: number;
-    review_progress: number;
-}
-
-export interface Overview {
-    total_studies: number;
-    total_columns: number;
-    total_rows: number;
-    mapped_columns: number;
-    pending_review: number;
-    accepted: number;
-    rejected: number;
-    avg_confidence: number;
-    review_progress: number;
-    stage_breakdown: StageBreakdown[];
-    studies: StudySummary[];
-}
-
 /* Auth */
 
 export type Role = 'curator' | 'admin';
