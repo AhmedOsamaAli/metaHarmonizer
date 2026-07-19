@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, AlertCircle, FileSpreadsheet, ArrowRight, Sparkles, Table2, Upload } from 'lucide-react';
+import { CheckCircle2, AlertCircle, FileSpreadsheet, ArrowRight, Sparkles, Table2, Upload, Maximize2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import FileUploader from '../components/FileUploader';
 import JobsPanel from '../components/JobsPanel';
@@ -47,7 +48,7 @@ export default function UploadPage() {
   // curator can sanity-check the upload and so column names can power the
   // ontology-column autocomplete.
   const [preview, setPreview] = useState<ParsedPreview | null>(null);
-  const [showAllRows, setShowAllRows] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const { data: engineSchemas } = useQuery({ queryKey: ['engine-target-schemas'], queryFn: listEngineTargetSchemas });
   // The study this upload session is following. Falls back (after a reload) to
   // the most recently-started job so the in-page view is restored too.
@@ -68,7 +69,7 @@ export default function UploadPage() {
     setError(null);
     setState('idle');
     setPreview(null);
-    setShowAllRows(false);
+    setPreviewOpen(false);
     setOntologyColumns([]);
     // Parse a preview client-side (no upload yet) so the curator can review
     // the file and the column names can drive the ontology-column picker.
@@ -114,11 +115,25 @@ export default function UploadPage() {
 
   const done = followed && followed.phase === 'done';
 
+  useEffect(() => {
+    if (!previewOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPreviewOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [previewOpen]);
+
   return (
-    <div className="mx-auto max-w-3xl space-y-7">
+    <div className={`mx-auto space-y-7 ${file ? 'max-w-5xl' : 'max-w-3xl'}`}>
       <PageHeader
         title="Upload study metadata"
-        description="Upload a CSV/TSV file with clinical metadata. The pipeline maps columns to the curated reference schema automatically."
+        description="Upload a CSV/TSV of clinical metadata to map columns to the curated reference schema."
         icon={<Upload className="h-6 w-6" />}
       />
 
@@ -138,163 +153,8 @@ export default function UploadPage() {
       {/* Live + failed harmonization runs (replaces the old floating tray). */}
       <JobsPanel />
 
-      {/* File preview — header + first rows, parsed client-side before upload */}
-      {file && preview && (
-        <Card>
-          <CardBody className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Table2 className="h-4 w-4 text-slate-400 dark:text-slate-500" />
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Preview</p>
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  {preview.columns.length} columns · showing {showAllRows ? preview.rows.length : Math.min(5, preview.rows.length)} of {preview.rows.length}
-                  {preview.truncated ? '+ rows' : ' rows'}
-                </span>
-              </div>
-              {preview.rows.length > 5 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllRows((v) => !v)}
-                  className="text-xs font-semibold text-primary-600 hover:text-primary-700"
-                >
-                  {showAllRows ? 'Show less' : `Show ${preview.rows.length} rows`}
-                </button>
-              )}
-            </div>
-            <div className="max-h-80 overflow-auto rounded-lg border border-slate-200 dark:border-slate-800">
-              <table className="min-w-full border-collapse text-xs">
-                <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800">
-                  <tr>
-                    <th className="border-b border-r border-slate-200 px-2 py-1.5 text-left font-semibold text-slate-400 dark:border-slate-700 dark:text-slate-500">#</th>
-                    {preview.columns.map((c, i) => (
-                      <th
-                        key={`${c}-${i}`}
-                        className="whitespace-nowrap border-b border-slate-200 px-3 py-1.5 text-left font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-300"
-                      >
-                        {c || <span className="italic text-slate-400 dark:text-slate-500">(unnamed)</span>}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(showAllRows ? preview.rows : preview.rows.slice(0, 5)).map((row, ri) => (
-                    <tr key={ri} className="even:bg-slate-50/50 dark:even:bg-slate-800/40">
-                      <td className="border-r border-slate-200 px-2 py-1 text-slate-400 dark:border-slate-700 dark:text-slate-500">{ri + 1}</td>
-                      {preview.columns.map((_, ci) => (
-                        <td key={ci} className="whitespace-nowrap px-3 py-1 text-slate-700 dark:text-slate-300">
-                          {row[ci] ?? ''}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {preview.truncated && (
-              <p className="text-xs text-slate-400 dark:text-slate-500">
-                Large file — preview limited to the first rows. The full file is sent on run.
-              </p>
-            )}
-          </CardBody>
-        </Card>
-      )}
-
-      {/* Selected file → options + run */}
-      {file && (
-        <>
-          <Card>
-            <CardBody className="space-y-5">
-              <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Run mode</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Choose which mappers run on this upload.</p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {MODES.map((m) => (
-                    <button
-                      key={m.value}
-                      type="button"
-                      onClick={() => setMode(m.value)}
-                      className={`rounded-xl border p-3 text-left transition ${
-                        mode === m.value
-                          ? 'border-primary-400 bg-primary-50 ring-1 ring-primary-200 dark:border-primary-500/60 dark:bg-primary-500/15 dark:ring-primary-500/30'
-                          : 'border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600'
-                      }`}
-                    >
-                      <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{m.label}</span>
-                      <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{m.desc}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {mode !== 'ontology' && (
-                <div>
-                  <label htmlFor="target-standard" className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    Target standard
-                  </label>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Which standard schema to map the columns into.</p>
-                  <select
-                    id="target-standard"
-                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                    value={targetSchema ?? ''}
-                    onChange={(e) => setTargetSchema(e.target.value || undefined)}
-                  >
-                    <option value="">Default{engineSchemas?.length ? ` (${engineSchemas[0].label})` : ''}</option>
-                    {engineSchemas?.map((s) => (
-                      <option key={s.key} value={s.key}>
-                        {s.label} — {s.fields} fields
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {mode !== 'schema' && (
-                <div>
-                  <label htmlFor="onto-cols" className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    Ontology columns (optional)
-                  </label>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Type to pick columns from your file to resolve against ontologies.
-                    Leave blank to resolve all columns.
-                  </p>
-                  <ColumnTokenInput
-                    id="onto-cols"
-                    value={ontologyColumns}
-                    onChange={setOntologyColumns}
-                    options={preview?.columns ?? []}
-                    placeholder={preview ? 'Start typing a column name…' : 'PRIMARY_SITE, SAMPLE_TYPE'}
-                  />
-                </div>
-              )}
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardBody className="flex items-center justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-300">
-                  <FileSpreadsheet className="h-5 w-5" />
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{file.name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
-                </div>
-              </div>
-              <Button
-                onClick={handleUpload}
-                loading={state === 'uploading'}
-                icon={state === 'uploading' ? undefined : <Sparkles className="h-4 w-4" />}
-              >
-                {state === 'uploading' ? 'Uploading…' : 'Run harmonization'}
-              </Button>
-            </CardBody>
-          </Card>
-        </>
-      )}
-
-      {/* Success — the most-recently-started run, once it finishes. Every run
-          also shows in the docked tray, so this is a convenience, not the only
-          place progress/results appear. Hidden as soon as a new file is picked. */}
+      {/* Success — the most-recently-started run, once it finishes. Shown here,
+          in place of the run controls (which clear on submit). */}
       {done && followed && !file && (
         <Card className="border-emerald-200 bg-emerald-50/40 dark:border-emerald-500/30 dark:bg-emerald-500/10">
           <CardBody className="space-y-5">
@@ -340,24 +200,191 @@ export default function UploadPage() {
         </Card>
       )}
 
-      {/* Pipeline explainer */}
-      <Card>
-        <CardBody>
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">How the pipeline works</h3>
-          <p className="mb-5 mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Powered by the MetaHarmonizer SchemaMapEngine — a 4-stage cascade.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {STAGES.map((s) => (
-              <div key={s.stage} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40">
-                <span className={`chip ${s.tone}`}>{s.stage}</span>
-                <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{s.title}</p>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{s.desc}</p>
+      {/* Selected file → run action on top, options + preview side by side */}
+      {file && (
+        <>
+          <Card>
+            <CardBody className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-300">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{file.name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
+                </div>
               </div>
-            ))}
+              <Button
+                onClick={handleUpload}
+                loading={state === 'uploading'}
+                icon={state === 'uploading' ? undefined : <Sparkles className="h-4 w-4" />}
+              >
+                {state === 'uploading' ? 'Uploading…' : 'Run harmonization'}
+              </Button>
+            </CardBody>
+          </Card>
+
+          <div className={preview ? 'grid gap-5 lg:grid-cols-2 lg:items-start' : ''}>
+            <Card>
+              <CardBody className="space-y-5">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Run mode</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Choose which mappers run on this upload.</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                    {MODES.map((m) => (
+                      <button
+                        key={m.value}
+                        type="button"
+                        onClick={() => setMode(m.value)}
+                        className={`rounded-xl border p-3 text-left transition ${
+                          mode === m.value
+                            ? 'border-primary-400 bg-primary-50 ring-1 ring-primary-200 dark:border-primary-500/60 dark:bg-primary-500/15 dark:ring-primary-500/30'
+                            : 'border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600'
+                        }`}
+                      >
+                        <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{m.label}</span>
+                        <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">{m.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {mode !== 'ontology' && (
+                  <div>
+                    <label htmlFor="target-standard" className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      Target standard
+                    </label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Which standard schema to map the columns into.</p>
+                    <select
+                      id="target-standard"
+                      className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      value={targetSchema ?? ''}
+                      onChange={(e) => setTargetSchema(e.target.value || undefined)}
+                    >
+                      <option value="">Default{engineSchemas?.length ? ` (${engineSchemas[0].label})` : ''}</option>
+                      {engineSchemas?.map((s) => (
+                        <option key={s.key} value={s.key}>
+                          {s.label} — {s.fields} fields
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {mode !== 'schema' && (
+                  <div>
+                    <label htmlFor="onto-cols" className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      Ontology columns (optional)
+                    </label>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Type to pick columns from your file to resolve against ontologies.
+                      Leave blank to resolve all columns.
+                    </p>
+                    <ColumnTokenInput
+                      id="onto-cols"
+                      value={ontologyColumns}
+                      onChange={setOntologyColumns}
+                      options={preview?.columns ?? []}
+                      placeholder={preview ? 'Start typing a column name…' : 'PRIMARY_SITE, SAMPLE_TYPE'}
+                    />
+                  </div>
+                )}
+              </CardBody>
+            </Card>
+
+            {preview && (
+              <Card>
+                <CardBody className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Table2 className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
+                      <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Preview</p>
+                      <span className="truncate text-xs text-slate-500 dark:text-slate-400">
+                        {preview.columns.length} cols · {preview.rows.length}{preview.truncated ? '+' : ''} rows
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewOpen(true)}
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      Expand
+                    </button>
+                  </div>
+                  <PreviewTable columns={preview.columns} rows={preview.rows.slice(0, 5)} heightClass="max-h-64" />
+                  <button
+                    type="button"
+                    onClick={() => setPreviewOpen(true)}
+                    className="w-full rounded-lg py-1 text-center text-xs font-semibold text-primary-600 transition hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-500/10"
+                  >
+                    {preview.rows.length > 5
+                      ? `View all ${preview.rows.length}${preview.truncated ? '+' : ''} rows`
+                      : 'Open full preview'}
+                  </button>
+                </CardBody>
+              </Card>
+            )}
           </div>
-        </CardBody>
-      </Card>
+        </>
+      )}
+
+      {previewOpen && preview && file &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm animate-fade-in"
+            onClick={() => setPreviewOpen(false)}
+          >
+            <div
+              className="w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-pop dark:border-slate-700 dark:bg-slate-900"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-3.5 dark:border-slate-800">
+                <div className="flex min-w-0 items-center gap-2">
+                  <Table2 className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
+                  <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{file.name}</p>
+                  <span className="shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                    {preview.columns.length} columns · {preview.rows.length}{preview.truncated ? '+' : ''} rows
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close preview"
+                  onClick={() => setPreviewOpen(false)}
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-4">
+                <PreviewTable columns={preview.columns} rows={preview.rows} heightClass="max-h-[calc(100vh-9rem)]" />
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
+      {/* Pipeline explainer — only before a file is picked and while no run is
+          being tracked, so the run status stays in view. */}
+      {!file && !followed && (
+        <Card>
+          <CardBody>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">How the pipeline works</h3>
+            <p className="mb-5 mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Powered by the MetaHarmonizer SchemaMapEngine — a 4-stage cascade.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {STAGES.map((s) => (
+                <div key={s.stage} className="rounded-xl border border-slate-100 bg-slate-50/60 p-3 dark:border-slate-800 dark:bg-slate-800/40">
+                  <span className={`chip ${s.tone}`}>{s.stage}</span>
+                  <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">{s.title}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )}
     </div>
   );
 }
@@ -369,6 +396,48 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="mt-0.5 truncate text-lg font-bold text-slate-900 dark:text-slate-100" title={value}>
         {value}
       </div>
+    </div>
+  );
+}
+
+function PreviewTable({
+  columns,
+  rows,
+  heightClass = 'max-h-80',
+}: {
+  columns: string[];
+  rows: string[][];
+  heightClass?: string;
+}) {
+  return (
+    <div className={`${heightClass} overflow-auto overscroll-contain rounded-lg border border-slate-200 dark:border-slate-800`}>
+      <table className="min-w-full border-collapse text-xs">
+        <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800">
+          <tr>
+            <th className="border-b border-r border-slate-200 px-2 py-1.5 text-left font-semibold text-slate-400 dark:border-slate-700 dark:text-slate-500">#</th>
+            {columns.map((c, i) => (
+              <th
+                key={`${c}-${i}`}
+                className="whitespace-nowrap border-b border-slate-200 px-3 py-1.5 text-left font-semibold text-slate-700 dark:border-slate-700 dark:text-slate-300"
+              >
+                {c || <span className="italic text-slate-400 dark:text-slate-500">(unnamed)</span>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, ri) => (
+            <tr key={ri} className="even:bg-slate-50/50 dark:even:bg-slate-800/40">
+              <td className="border-r border-slate-200 px-2 py-1 text-slate-400 dark:border-slate-700 dark:text-slate-500">{ri + 1}</td>
+              {columns.map((_, ci) => (
+                <td key={ci} className="whitespace-nowrap px-3 py-1 text-slate-700 dark:text-slate-300">
+                  {row[ci] ?? ''}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
