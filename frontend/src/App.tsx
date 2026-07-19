@@ -7,6 +7,7 @@ import NotificationBell from './components/NotificationBell';
 import ThemeToggle from './components/ThemeToggle';
 import ProtectedRoute from './components/ProtectedRoute';
 import OntologyIcon from './components/icons/OntologyIcon';
+import SquaresBackdrop from './components/SquaresBackdrop';
 import { LoadingBlock } from './components/ui/Feedback';
 import { useAuth } from './context/AuthContext';
 import type { Role } from './api/types';
@@ -169,7 +170,7 @@ function AppLayout({ children }: { children: ReactNode }) {
       {/* Layered ambient background */}
       <div className="pointer-events-none fixed inset-0 -z-10 bg-slate-50 dark:bg-slate-950" />
       <div className="pointer-events-none fixed inset-0 -z-10 bg-mesh-primary" />
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-grid-slate bg-grid [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" />
+      <SquaresBackdrop className="fixed inset-0 -z-10" />
 
       <TopNav />
       {isGuest && (
@@ -204,9 +205,6 @@ function AppLayout({ children }: { children: ReactNode }) {
           <div className="animate-fade-in">{children}</div>
         </Suspense>
       </main>
-      <footer className="border-t border-slate-200 bg-white/60 py-4 text-center text-xs text-slate-400 backdrop-blur dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-500">
-        MetaHarmonizer Dashboard · Biomedical Metadata Harmonization · cBioPortal Compatible
-      </footer>
     </div>
   );
 }

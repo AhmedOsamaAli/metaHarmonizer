@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
-import LogoMark from './LogoMark';
+import LogoMark, { ScatterMark } from './LogoMark';
+import SquaresBackdrop from './SquaresBackdrop';
+import ThemeToggle from './ThemeToggle';
 
 /** Two-pane auth screen: brand/marketing on the left, form card on the right. */
 export default function AuthLayout({
@@ -14,11 +16,15 @@ export default function AuthLayout({
   footer?: ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="relative grid min-h-screen lg:grid-cols-2">
+      <div className="absolute right-4 top-4 z-20">
+        <ThemeToggle />
+      </div>
       {/* Brand panel */}
       <div className="relative hidden overflow-hidden bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 lg:flex lg:flex-col lg:justify-between lg:p-12">
-        <div className="flex items-center gap-3 text-white">
-          <LogoMark size={44} className="shadow-lg" />
+        <SquaresBackdrop sparse className="absolute inset-0 text-white dark:text-white" />
+        <div className="relative flex items-center gap-3 text-white">
+          <LogoMark size={40} mono className="text-white" />
           <span className="text-xl font-extrabold tracking-tight">MetaHarmonizer</span>
         </div>
 
@@ -44,9 +50,7 @@ export default function AuthLayout({
           </ul>
         </div>
 
-        <p className="text-xs text-primary-200">
-          cBioPortal compatible · Built for the curation team
-        </p>
+        <div aria-hidden />
 
         {/* Decorative grid */}
         <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
@@ -54,13 +58,15 @@ export default function AuthLayout({
       </div>
 
       {/* Form panel */}
-      <div className="flex items-center justify-center bg-slate-50 px-4 py-12 dark:bg-slate-950 sm:px-8">
-        <div className="w-full max-w-sm animate-fade-in">
-          <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <LogoMark size={36} className="shadow-sm" />
+      <div className="relative flex items-center justify-center overflow-hidden bg-slate-50 px-4 py-12 dark:bg-slate-950 sm:px-8">
+        <SquaresBackdrop sparse className="absolute inset-0" />
+        <div className="relative w-full max-w-sm animate-fade-in">
+          <div className="mb-8 flex items-center justify-center gap-3">
+            <ScatterMark size={38} />
             <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-              Meta<span className="text-primary-600 dark:text-primary-400">Harmonizer</span>
+              Meta<span className="brand-word">Harmonizer</span>
             </span>
+            <LogoMark size={24} />
           </div>
 
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{title}</h1>

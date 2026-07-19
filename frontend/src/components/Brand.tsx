@@ -1,25 +1,30 @@
 import { Link } from 'react-router-dom';
 import { cn } from '../lib/cn';
-import LogoMark from './LogoMark';
+import LogoMark, { ScatterMark } from './LogoMark';
 
-/** Clickable wordmark that always returns the user to the dashboard home. */
+/** Clickable identity lockup that returns the user home:
+ *  scattered (raw metadata) → wordmark → ordered grid (harmonized). */
 export default function Brand({ className }: { className?: string }) {
   return (
     <Link
       to="/"
       aria-label="MetaHarmonizer — go to home"
       className={cn(
-        'group flex items-center gap-2.5 rounded-xl px-1 py-1 transition hover:opacity-90',
+        'group flex items-center gap-2 rounded-xl px-1 py-1 transition hover:opacity-90',
         className,
       )}
     >
-      <LogoMark
-        size={36}
-        className="shadow-sm transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3"
+      <ScatterMark
+        size={28}
+        className="transition-transform duration-300 group-hover:-translate-x-0.5"
       />
       <span className="text-[17px] font-extrabold tracking-tight text-slate-900 transition-transform duration-300 group-hover:scale-[1.02] dark:text-slate-100">
         Meta<span className="brand-word">Harmonizer</span>
       </span>
+      <LogoMark
+        size={22}
+        className="transition-transform duration-300 group-hover:scale-105"
+      />
     </Link>
   );
 }
