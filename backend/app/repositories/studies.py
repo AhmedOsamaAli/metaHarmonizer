@@ -51,6 +51,7 @@ async def create_study(
     owner_id: int | None = None,
     schema_version_id: int | None = None,
     ontology_snapshot_id: int | None = None,
+    content_sha256: str | None = None,
 ) -> dict:
     study = Study(
         id=study_id,
@@ -62,11 +63,42 @@ async def create_study(
         owner_id=owner_id,
         schema_version_id=schema_version_id,
         ontology_snapshot_id=ontology_snapshot_id,
+        content_sha256=content_sha256,
     )
     db.add(study)
     await db.flush()
     await db.refresh(study)
     return _to_dict(study)
+
+
+# A study is "active" (work in flight) until it reaches review; only then is a
+# fresh upload of the same file treated as a deliberate new run.
+_ACTIVE_STATUSES = ("pending", "queued", "processing")
+
+
+async def find_active_by_content(
+    db: AsyncSession, *, owner_id: int | None, content_sha256: str | None
+) -> dict | None:
+    """Return this owner's in-flight study for the same upload content, if any.
+
+    Used to short-circuit accidental double-submits before doing duplicate work.
+    Anonymous (NULL owner) uploads are never deduped — SQL treats NULLs as
+    distinct, matching the partial unique index.
+    """
+    if owner_id is None or not content_sha256:
+        return None
+    stmt = (
+        select(Study)
+        .where(
+            Study.owner_id == owner_id,
+            Study.content_sha256 == content_sha256,
+            Study.status.in_(_ACTIVE_STATUSES),
+        )
+        .order_by(Study.created_at.desc())
+        .limit(1)
+    )
+    s = await db.scalar(stmt)
+    return _to_dict(s) if s else None
 
 
 async def get_study(db: AsyncSession, study_id: str) -> dict | None:

@@ -106,11 +106,26 @@ class OntologySnapshot(Base, TimestampMixin):
 # Studies
 class Study(Base, TimestampMixin, OptimisticVersionMixin):
     __tablename__ = "studies"
+    __table_args__ = (
+        # Idempotency: at most one ACTIVE (pre-review) study per (owner, upload
+        # content-hash) — blocks accidental duplicates from a double-click or a
+        # network retry, while still allowing the same file to be re-harmonized
+        # once the prior run leaves these states.
+        Index(
+            "uq_studies_active_content",
+            "owner_id",
+            "content_sha256",
+            unique=True,
+            postgresql_where=text("status in ('pending','queued','processing')"),
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
     file_path: Mapped[str | None] = mapped_column(Text)
+    # sha256 of the uploaded file bytes — backs the active-dedup index above.
+    content_sha256: Mapped[str | None] = mapped_column(String(64))
     row_count: Mapped[int | None] = mapped_column(Integer)
     column_count: Mapped[int | None] = mapped_column(Integer)
     owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
