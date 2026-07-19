@@ -1,7 +1,6 @@
 import { Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Upload, Table2, BarChart3, Download, Shield, Activity } from 'lucide-react';
 import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
-import { motion } from 'framer-motion';
 import Brand from './components/Brand';
 import UserMenu from './components/UserMenu';
 import NotificationBell from './components/NotificationBell';
@@ -66,11 +65,7 @@ function TopNav() {
               {({ isActive }) => (
                 <>
                   {isActive && (
-                    <motion.span
-                      layoutId="nav-active-pill"
-                      className="absolute inset-0 rounded-xl bg-primary-50 dark:bg-primary-500/15"
-                      transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                    />
+                    <span className="absolute inset-0 rounded-xl bg-primary-50 dark:bg-primary-500/15" />
                   )}
                   <Icon className="relative h-4 w-4 shrink-0" />
                   <span className="relative">{label}</span>

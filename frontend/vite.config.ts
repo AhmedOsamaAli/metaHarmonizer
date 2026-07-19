@@ -21,11 +21,23 @@ export default defineConfig({
     build: {
         rollupOptions: {
             output: {
-                manualChunks: {
-                    'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-                    charts: ['recharts'],
-                    query: ['@tanstack/react-query'],
-                    motion: ['framer-motion'],
+                // Only group the React core (shared by eager + every lazy route).
+                // Everything else (recharts, framer-motion, radix, react-query…) is
+                // left to Rollup's automatic splitting so libs used only inside a
+                // lazy route stay in that route's async chunk instead of being
+                // pulled into the initial modulepreload graph.
+                manualChunks(id) {
+                    if (id.includes('node_modules')) {
+                        if (
+                            id.includes('/react/') ||
+                            id.includes('/react-dom/') ||
+                            id.includes('/react-router') ||
+                            id.includes('/react-router-dom/') ||
+                            id.includes('/scheduler/')
+                        ) {
+                            return 'react-vendor';
+                        }
+                    }
                 },
             },
         },

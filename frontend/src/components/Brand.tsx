@@ -17,8 +17,8 @@ export default function Brand({ className }: { className?: string }) {
         size={36}
         className="shadow-sm transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3"
       />
-      <span className="text-[17px] font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-        Meta<span className="text-primary-600 dark:text-primary-400">Harmonizer</span>
+      <span className="text-[17px] font-extrabold tracking-tight text-slate-900 transition-transform duration-300 group-hover:scale-[1.02] dark:text-slate-100">
+        Meta<span className="brand-word">Harmonizer</span>
       </span>
     </Link>
   );

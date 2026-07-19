@@ -2,10 +2,9 @@ import { useId } from 'react';
 import { cn } from '../lib/cn';
 
 /**
- * MetaHarmonizer logo mark — a rounded, softly-3D gradient tile carrying a
- * "many → one" harmonization glyph: three raw source fields converging into a
- * single curated field. Renders identically in light and dark mode (it carries
- * its own gradient), so it can sit on any surface.
+ * MetaHarmonizer logo mark — a softly-3D gradient tile carrying a microscope
+ * (the lab / science identity) with a small harmonized specimen on the stage.
+ * It carries its own gradient, so it renders identically in light and dark mode.
  */
 export default function LogoMark({
   className,
@@ -59,24 +58,31 @@ export default function LogoMark({
         strokeWidth="1.2"
       />
 
-      {/* Converging links: three sources harmonize into one target */}
-      <g stroke="#ffffff" strokeOpacity="0.9" strokeWidth="1.7" strokeLinecap="round" fill="none">
-        <path d="M13 11.5 C 21 11.5, 20.5 20, 26.5 20" />
-        <path d="M13 20 H 26.5" />
-        <path d="M13 28.5 C 21 28.5, 20.5 20, 26.5 20" />
+      <g
+        transform="translate(8,7.2)"
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M3 22h18" />
+        <path d="M6 18h8" />
+        <path d="M14 22a7 7 0 1 0 0-14h-1" />
+        <path d="M9 14h2" />
+        <path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3" />
       </g>
-
-      {/* Source nodes (raw fields) */}
-      <g fill={`url(#${node})`}>
-        <circle cx="12" cy="11.5" r="3" />
-        <circle cx="12" cy="20" r="3" />
-        <circle cx="12" cy="28.5" r="3" />
-      </g>
-
-      {/* Target node (harmonized field) with an accent ring */}
-      <circle cx="28" cy="20" r="4.8" fill={`url(#${node})`} />
-      <circle cx="28" cy="20" r="4.8" stroke="#17ad84" strokeOpacity="0.7" strokeWidth="1.4" />
-      <circle cx="28" cy="20" r="1.9" fill="#1f6fc4" />
+      <path
+        transform="translate(8,7.2)"
+        d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z"
+        fill={`url(#${node})`}
+        stroke="#ffffff"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <circle cx="18.6" cy="24.4" r="2" fill="#26d6a3" />
+      <circle cx="14.4" cy="24.4" r="1.1" fill="#ffffff" fillOpacity="0.85" />
+      <circle cx="22.8" cy="24.4" r="1.1" fill="#ffffff" fillOpacity="0.85" />
     </svg>
   );
 }

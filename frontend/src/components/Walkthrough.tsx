@@ -9,7 +9,6 @@
  * It auto-opens once for a new curator (first login) and always for the
  * no-account guest preview. There is intentionally no persistent trigger in the top nav.
  */
-import { motion } from 'framer-motion';
 import {
   createContext,
   useCallback,
@@ -564,12 +563,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
           so finishing as a guest — which clears both — closes it cleanly. */}
       {open && slide && (isGuest || !!user) && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.97, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            className="w-[min(34rem,100%)] rounded-3xl border border-slate-200 bg-white p-6 shadow-pop"
-          >
+          <div className="w-[min(34rem,100%)] animate-pop-in rounded-3xl border border-slate-200 bg-white p-6 shadow-pop motion-reduce:animate-none">
             {/* Header: icon + title + the one-line curator action. */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
@@ -594,15 +588,9 @@ export function TourProvider({ children }: { children: ReactNode }) {
             </div>
 
             {/* Screenshot-style preview (re-animates as slides change). */}
-            <motion.div
-              key={safeIdx}
-              initial={{ opacity: 0, x: 12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.18 }}
-              className="mt-4"
-            >
+            <div key={safeIdx} className="mt-4 animate-slide-in-x motion-reduce:animate-none">
               {slide.visual}
-            </motion.div>
+            </div>
 
             {/* Footer: progress dots + navigation. */}
             <div className="mt-5 flex items-center justify-between">
@@ -650,7 +638,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
                 )}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       )}
     </TourContext.Provider>
