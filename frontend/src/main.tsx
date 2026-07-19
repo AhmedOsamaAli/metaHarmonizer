@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from 'sonner';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { JobsProvider } from './context/JobsContext';
@@ -15,7 +14,7 @@ import './index.css';
 // so it satisfies the CSP that blocks inline <script> in index.html.
 try {
   const saved = localStorage.getItem('theme');
-  const dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const dark = saved ? saved === 'dark' : true; // dark by default
   document.documentElement.classList.toggle('dark', dark);
 } catch {
   /* ignore */
@@ -45,12 +44,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 </TourProvider>
               </JobsProvider>
             </NotificationsProvider>
-            <Toaster
-              position="top-right"
-              richColors
-              closeButton
-              toastOptions={{ duration: 3000 }}
-            />
           </AuthProvider>
         </ThemeProvider>
       </BrowserRouter>

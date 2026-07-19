@@ -60,12 +60,12 @@ const SEEN_KEY = 'mh_tour_seen_v4';
 /** A little "app window" frame so each preview reads like a screenshot. */
 function Frame({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center gap-1.5 border-b border-slate-100 bg-slate-50 px-3 py-2">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <div className="flex items-center gap-1.5 border-b border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/60">
         <span className="h-2 w-2 rounded-full bg-rose-300" />
         <span className="h-2 w-2 rounded-full bg-amber-300" />
         <span className="h-2 w-2 rounded-full bg-emerald-300" />
-        <span className="ml-2 truncate text-[10px] font-medium text-slate-400">{label}</span>
+        <span className="ml-2 truncate text-[10px] font-medium text-slate-400 dark:text-slate-500">{label}</span>
       </div>
       <div className="p-4">{children}</div>
     </div>
@@ -563,32 +563,32 @@ export function TourProvider({ children }: { children: ReactNode }) {
           so finishing as a guest — which clears both — closes it cleanly. */}
       {open && slide && (isGuest || !!user) && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className="w-[min(34rem,100%)] animate-pop-in rounded-3xl border border-slate-200 bg-white p-6 shadow-pop motion-reduce:animate-none">
+          <div className="w-[min(34rem,100%)] animate-pop-in rounded-3xl border border-slate-200 bg-white p-6 shadow-pop motion-reduce:animate-none dark:border-slate-800 dark:bg-slate-900">
             {/* Header: icon + title + the one-line curator action. */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">
                 <span
-                  className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${slide.tone}`}
+                  className={`tour-icon grid h-10 w-10 shrink-0 place-items-center rounded-xl ${slide.tone}`}
                 >
                   {slide.icon}
                 </span>
                 <div>
                   <h2 className="text-base font-bold leading-tight text-slate-900 dark:text-slate-100">{slide.title}</h2>
-                  <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{slide.action}</p>
+                  <p className="mt-0.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{slide.action}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={finish}
                 aria-label="Close showcase"
-                className="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                className="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Screenshot-style preview (re-animates as slides change). */}
-            <div key={safeIdx} className="mt-4 animate-slide-in-x motion-reduce:animate-none">
+            <div key={safeIdx} className="tour-visual mt-4 animate-slide-in-x motion-reduce:animate-none">
               {slide.visual}
             </div>
 
@@ -602,7 +602,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
                     aria-label={`Go to slide ${i + 1}`}
                     onClick={() => setIdx(i)}
                     className={`h-1.5 rounded-full transition-all ${
-                      i === safeIdx ? 'w-6 bg-primary-600' : 'w-2 bg-slate-200 hover:bg-slate-300'
+                      i === safeIdx ? 'w-6 bg-primary-600' : 'w-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600'
                     }`}
                   />
                 ))}
@@ -612,7 +612,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
                   type="button"
                   onClick={back}
                   disabled={safeIdx === 0}
-                  className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-400 dark:hover:bg-slate-800"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
                   Back

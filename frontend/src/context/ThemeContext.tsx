@@ -17,7 +17,8 @@ function getInitialTheme(): Theme {
   } catch {
     /* ignore */
   }
-  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  // Dark by default when the user hasn't explicitly chosen a theme.
+  return 'dark';
 }
 
 /** App-wide light/dark theme. Persists to localStorage and toggles the `dark`

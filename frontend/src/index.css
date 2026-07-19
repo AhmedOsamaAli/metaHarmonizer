@@ -177,3 +177,69 @@
     }
   }
 }
+
+/* Dark-mode retint for the walkthrough's screenshot-style mock previews. The
+   mocks use many nested light utilities; retinting them here (unlayered, so it
+   beats Tailwind's utility layer) keeps the mock markup theme-agnostic. */
+html.dark .tour-visual .bg-white {
+  background-color: theme('colors.slate.900');
+}
+html.dark .tour-visual .bg-slate-50,
+html.dark .tour-visual .bg-slate-100 {
+  background-color: theme('colors.slate.800');
+}
+html.dark .tour-visual .bg-primary-50 {
+  background-color: rgb(41 134 226 / 0.16);
+}
+html.dark .tour-visual .border-slate-200 {
+  border-color: theme('colors.slate.700');
+}
+html.dark .tour-visual .border-slate-100 {
+  border-color: theme('colors.slate.800');
+}
+html.dark .tour-visual .border-slate-300 {
+  border-color: theme('colors.slate.600');
+}
+html.dark .tour-visual .text-slate-700 {
+  color: theme('colors.slate.200');
+}
+html.dark .tour-visual .text-slate-800 {
+  color: theme('colors.slate.100');
+}
+/* Accent tints in the review / learned-decisions / ontology mocks (slides 4-6):
+   retint the light -50/-100 backgrounds + borders to dark translucent, and
+   lighten their -600/-700 text, so nothing reads as a washed-out gray/bright box. */
+html.dark .tour-visual .bg-emerald-50,
+html.dark .tour-visual .bg-emerald-50\/50,
+html.dark .tour-visual .bg-emerald-100 {
+  background-color: rgb(16 185 129 / 0.14);
+}
+html.dark .tour-visual .bg-violet-50 {
+  background-color: rgb(139 92 246 / 0.18);
+}
+html.dark .tour-visual .bg-primary-50\/30 {
+  background-color: rgb(41 134 226 / 0.1);
+}
+html.dark .tour-visual .border-emerald-200 {
+  border-color: rgb(16 185 129 / 0.35);
+}
+html.dark .tour-visual .border-primary-400 {
+  border-color: rgb(41 134 226 / 0.5);
+}
+html.dark .tour-visual .text-emerald-700,
+html.dark .tour-visual .text-emerald-600 {
+  color: theme('colors.emerald.300');
+}
+html.dark .tour-visual .text-violet-700 {
+  color: theme('colors.violet.300');
+}
+html.dark .tour-visual .text-primary-700 {
+  color: theme('colors.primary.300');
+}
+
+/* Walkthrough header icon tile — neutral translucent in dark (its light bg-*-50
+   accent tints are too bright there). */
+html.dark .tour-icon {
+  background-color: rgb(255 255 255 / 0.08);
+  color: theme('colors.slate.100');
+}

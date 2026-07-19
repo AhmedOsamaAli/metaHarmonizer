@@ -136,9 +136,9 @@ export default function LoginPage() {
 
       <div className="mt-5">
         <div className="relative flex items-center">
-          <span className="h-px flex-1 bg-slate-200" />
-          <span className="px-3 text-xs font-medium text-slate-400">or</span>
-          <span className="h-px flex-1 bg-slate-200" />
+          <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+          <span className="px-3 text-xs font-medium text-slate-400 dark:text-slate-500">or</span>
+          <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
         </div>
         <button
           type="button"
@@ -146,12 +146,12 @@ export default function LoginPage() {
             startGuestPreview();
             navigate('/', { replace: true });
           }}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
         >
           <Compass className="h-4 w-4" />
           Explore a live demo — no account needed
         </button>
-        <p className="mt-2 text-center text-xs text-slate-400">
+        <p className="mt-2 text-center text-xs text-slate-400 dark:text-slate-500">
           A guided, read-only walkthrough of what curators and admins do.
         </p>
       </div>

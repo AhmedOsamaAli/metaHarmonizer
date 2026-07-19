@@ -171,16 +171,16 @@ export default function RegisterPage() {
         </div>
 
         {/* Admin access request — never grants it directly. */}
-        <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-3">
+        <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-3 dark:border-slate-700 dark:bg-slate-800/40">
           <input
             type="checkbox"
             checked={requestAdmin}
             onChange={(e) => setRequestAdmin(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+            className="checkbox mt-0.5"
           />
           <span className="text-sm">
             <span className="font-medium text-slate-800 dark:text-slate-200">Request admin access</span>
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
               You’ll join as a curator. Admin access is never granted automatically — an existing administrator must approve it. You can also request it later.
             </span>
           </span>
