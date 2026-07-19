@@ -7,7 +7,7 @@
  * page flips to the real content the moment the backend reports completion.
  */
 
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, AlertCircle, Ban, Upload } from 'lucide-react';
@@ -26,7 +26,7 @@ export function isStudyReady(status: string | undefined | null): boolean {
     return !NOT_READY.has(status.toLowerCase());
 }
 
-export default function StudyGate({ study, title }: { study: Study; title: string }) {
+export default function StudyGate({ study, title, icon }: { study: Study; title: string; icon?: ReactNode }) {
     const qc = useQueryClient();
     const navigate = useNavigate();
     const status = (study.status ?? '').toLowerCase();
@@ -44,7 +44,7 @@ export default function StudyGate({ study, title }: { study: Study; title: strin
 
     return (
         <div className="space-y-6">
-            <PageHeader title={title} />
+            <PageHeader title={title} icon={icon} />
             <Card>
                 <CardBody className="flex flex-col items-center gap-4 py-12 text-center">
                     {inFlight ? (

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Upload } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { Study } from '../api/types';
 import Button from './ui/Button';
 import { EmptyState, LoadingBlock } from './ui/Feedback';
@@ -14,6 +15,7 @@ export default function StudyPicker({
   studies,
   loading,
   basePath,
+  icon,
 }: {
   title: string;
   description?: string;
@@ -21,6 +23,7 @@ export default function StudyPicker({
   loading: boolean;
   /** e.g. '/review' — navigates to `${basePath}/${study.id}`. */
   basePath: string;
+  icon?: ReactNode;
 }) {
   const navigate = useNavigate();
 
@@ -30,7 +33,7 @@ export default function StudyPicker({
 
   return (
     <div>
-      <PageHeader title={title} description={description} />
+      <PageHeader title={title} description={description} icon={icon} />
       {loading ? (
         <LoadingBlock label="Loading studies…" />
       ) : !visible.length ? (

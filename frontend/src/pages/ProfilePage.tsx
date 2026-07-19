@@ -112,6 +112,7 @@ export default function ProfilePage() {
       <PageHeader
         title="Profile & security"
         description="Manage your account, active sessions, and API tokens."
+        icon={<UserIcon className="h-6 w-6" />}
       />
 
       {/* Account summary */}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, AlertCircle, FileSpreadsheet, ArrowRight, Sparkles, Table2 } from 'lucide-react';
+import { CheckCircle2, AlertCircle, FileSpreadsheet, ArrowRight, Sparkles, Table2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import FileUploader from '../components/FileUploader';
 import JobsPanel from '../components/JobsPanel';
@@ -119,6 +119,7 @@ export default function UploadPage() {
       <PageHeader
         title="Upload study metadata"
         description="Upload a CSV/TSV file with clinical metadata. The pipeline maps columns to the curated reference schema automatically."
+        icon={<Upload className="h-6 w-6" />}
       />
 
       <div>

@@ -15,6 +15,7 @@ import {
   Clock,
   Sparkles,
   Search,
+  Table2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ConfidenceBadge from '../components/ConfidenceBadge';
@@ -457,6 +458,7 @@ export default function MappingReview() {
       <StudyPicker
         title="Mapping review"
         description="Pick a study to review and curate column mappings."
+        icon={<Table2 className="h-6 w-6" />}
         studies={studies}
         loading={studiesLoading}
         basePath="/review"
@@ -468,7 +470,7 @@ export default function MappingReview() {
   // empty table (auto-resolves to the real page once processing completes).
   const selectedStudy = studies?.find((s) => s.id === selectedId);
   if (selectedStudy && !isStudyReady(selectedStudy.status)) {
-    return <StudyGate study={selectedStudy} title="Mapping review" />;
+    return <StudyGate study={selectedStudy} title="Mapping review" icon={<Table2 className="h-6 w-6" />} />;
   }
 
   return (
@@ -476,6 +478,7 @@ export default function MappingReview() {
       {/* Header */}
       <PageHeader
         title="Schema mapping review"
+        icon={<Table2 className="h-6 w-6" />}
         actions={
           <div className="flex items-center gap-2">
             {mappings.length > 0 && (

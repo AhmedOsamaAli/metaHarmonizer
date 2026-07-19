@@ -15,7 +15,7 @@ import {
   Cell as PieCell,
 } from 'recharts';
 import type { TooltipProps } from 'recharts';
-import { ArrowRight, Columns3, Gauge, ListChecks, Layers, Wrench, CheckCircle2, AlertTriangle, XCircle, Circle, Orbit } from 'lucide-react';
+import { ArrowRight, BarChart3, Columns3, Gauge, ListChecks, Layers, Wrench, CheckCircle2, AlertTriangle, XCircle, Circle, Orbit } from 'lucide-react';
 import { getQualityMetrics, getStudyMappings } from '../api/client';
 import { useStudies } from '../hooks/queries';
 import PageHeader from '../components/ui/PageHeader';
@@ -73,6 +73,7 @@ export default function QualityDashboard() {
       <StudyPicker
         title="Quality dashboard"
         description="Pick a study to view harmonization quality metrics."
+        icon={<BarChart3 className="h-6 w-6" />}
         studies={studies}
         loading={studiesLoading}
         basePath="/quality"
@@ -96,6 +97,7 @@ export default function QualityDashboard() {
       <PageHeader
         title="Quality dashboard"
         description="How this study mapped — coverage, confidence, methods, and what still needs review."
+        icon={<BarChart3 className="h-6 w-6" />}
         actions={studyId ? <CompleteStudyButton studyId={studyId} studyName={studies?.find((s) => s.id === studyId)?.name} size="sm" redirectTo="/quality" /> : undefined}
       />
 

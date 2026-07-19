@@ -187,6 +187,7 @@ export default function ActivityPage() {
       <PageHeader
         title="Activity log"
         description="Every curation and admin decision across the system — who did what, when, and to which study."
+        icon={<Activity className="h-6 w-6" />}
       />
 
       {/* Filters */}

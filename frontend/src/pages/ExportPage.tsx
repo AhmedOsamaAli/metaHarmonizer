@@ -16,6 +16,7 @@ export default function ExportPage() {
       <StudyPicker
         title="Export harmonized data"
         description="Pick a study to download its harmonized outputs."
+        icon={<Download className="h-6 w-6" />}
         studies={studies}
         loading={isLoading}
         basePath="/export"
@@ -60,6 +61,7 @@ export default function ExportPage() {
     <div className="mx-auto max-w-3xl">
       <PageHeader
         title="Export harmonized data"
+        icon={<Download className="h-6 w-6" />}
       >
         {study && (
           <p className="mt-1 text-sm text-slate-500">

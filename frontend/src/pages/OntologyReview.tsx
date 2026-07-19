@@ -32,6 +32,7 @@ import { useRememberDecisions } from '../hooks/useRememberDecisions';
 import ConfidenceBadge from '../components/ConfidenceBadge';
 import StatusBadge from '../components/StatusBadge';
 import PageHeader from '../components/ui/PageHeader';
+import OntologyIcon from '../components/icons/OntologyIcon';
 import StudyPicker from '../components/StudyPicker';
 import StudyGate, { isStudyReady } from '../components/StudyGate';
 import CompleteStudyButton from '../components/CompleteStudyButton';
@@ -350,6 +351,7 @@ export default function OntologyReview() {
       <StudyPicker
         title="Ontology review"
         description="Pick a study to review and curate ontology value mappings."
+        icon={<OntologyIcon className="h-6 w-6" />}
         studies={studies}
         loading={studiesLoading}
         basePath="/ontology"
@@ -359,7 +361,7 @@ export default function OntologyReview() {
 
   const selectedStudy = studies?.find((s) => s.id === selectedId);
   if (selectedStudy && !isStudyReady(selectedStudy.status)) {
-    return <StudyGate study={selectedStudy} title="Ontology review" />;
+    return <StudyGate study={selectedStudy} title="Ontology review" icon={<OntologyIcon className="h-6 w-6" />} />;
   }
 
   const matchedFields = Object.keys(groupedMatched);
@@ -461,6 +463,7 @@ export default function OntologyReview() {
       <PageHeader
         title="Ontology review"
         description="Curate the controlled-vocabulary terms the engine assigned to each categorical value."
+        icon={<OntologyIcon className="h-6 w-6" />}
         actions={
           <div className="flex items-center gap-2">
             <RememberToggle />

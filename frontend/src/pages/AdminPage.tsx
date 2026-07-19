@@ -114,6 +114,7 @@ export default function AdminPage() {
       <PageHeader
         title="Admin console"
         description="Manage team members, roles, and access."
+        icon={<Shield className="h-6 w-6" />}
         actions={
           <Badge tone="primary">
             <Shield className="h-3.5 w-3.5" />

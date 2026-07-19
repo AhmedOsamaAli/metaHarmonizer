@@ -1,12 +1,13 @@
 import { Routes, Route, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { Upload, Table2, BarChart3, Download, Microscope, Shield, Activity } from 'lucide-react';
-import { lazy, Suspense, type ReactNode } from 'react';
+import { Upload, Table2, BarChart3, Download, Shield, Activity } from 'lucide-react';
+import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import Brand from './components/Brand';
 import UserMenu from './components/UserMenu';
 import NotificationBell from './components/NotificationBell';
 import ThemeToggle from './components/ThemeToggle';
 import ProtectedRoute from './components/ProtectedRoute';
+import OntologyIcon from './components/icons/OntologyIcon';
 import { LoadingBlock } from './components/ui/Feedback';
 import { useAuth } from './context/AuthContext';
 import type { Role } from './api/types';
@@ -28,14 +29,14 @@ const ActivityPage = lazy(() => import('./pages/ActivityPage'));
 
 const NAV_ITEMS: {
   to: string;
-  icon: typeof Upload;
+  icon: ComponentType<{ className?: string }>;
   label: string;
   end: boolean;
   minRole?: Role;
 }[] = [
   { to: '/upload', icon: Upload, label: 'Upload', end: false, minRole: 'curator' },
   { to: '/review', icon: Table2, label: 'Mappings', end: false },
-  { to: '/ontology', icon: Microscope, label: 'Ontology', end: false },
+  { to: '/ontology', icon: OntologyIcon, label: 'Ontology', end: false },
   { to: '/quality', icon: BarChart3, label: 'Quality', end: false },
   { to: '/export', icon: Download, label: 'Export', end: false },
 ];
