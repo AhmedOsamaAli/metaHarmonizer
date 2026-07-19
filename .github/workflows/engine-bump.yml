@@ -1,0 +1,142 @@
+name: engine-bump
+
+# Fetch a new upstream engine version, build + vendor its wheel, verify it works
+# against our adapter contract AND the real engine, then open a PR. This is the
+# "upgrade the engine on purpose, with a safety net" workflow referenced in
+# docs/engine-team-collaboration.md — we pin a bundle and bump it deliberately.
+#
+# Manual trigger: pass the upstream ref (commit SHA — preferred — tag, or branch).
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "shbrief/MetaHarmonizer ref to pin (commit SHA, tag, or branch)"
+        required: true
+        default: "main"
+
+permissions:
+  contents: write # push the bump branch
+  pull-requests: write # open the PR
+
+concurrency:
+  group: engine-bump
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: mh
+          POSTGRES_PASSWORD: mh_dev_password
+          POSTGRES_DB: metaharmonizer
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U mh -d metaharmonizer"
+          --health-interval 5s --health-timeout 3s --health-retries 15
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 15
+    env:
+      DATABASE_URL: postgresql+asyncpg://mh:mh_dev_password@localhost:5432/metaharmonizer
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET: test-secret-key-at-least-32-bytes-long!!
+      UPSTREAM: https://github.com/shbrief/MetaHarmonizer.git
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the engine wheel from upstream @ ref
+        run: |
+          set -euo pipefail
+          REF="${{ github.event.inputs.ref }}"
+          BD="$RUNNER_TEMP/mh_build"
+          # Sparse checkout of only what the build needs (matches backend/vendor/README.md).
+          git clone --no-checkout --filter=blob:none "$UPSTREAM" "$BD"
+          git -C "$BD" checkout "$REF" -- src pyproject.toml README.md
+          python -m pip install --upgrade pip build wheel
+          python -m pip wheel "$BD" --no-deps -w "$RUNNER_TEMP/mh_wheel"
+          ls -l "$RUNNER_TEMP/mh_wheel"
+
+      - name: Verify the wheel carries the KB CLI (knowledge_db.py)
+        run: |
+          set -euo pipefail
+          WHEEL=$(ls "$RUNNER_TEMP"/mh_wheel/metaharmonizer-*-py3-none-any.whl)
+          python - "$WHEEL" <<'PY'
+          import sys, zipfile
+          names = set(zipfile.ZipFile(sys.argv[1]).namelist())
+          need = "metaharmonizer/scripts/knowledge_db.py"
+          if need not in names:
+              sys.exit(f"::error::built wheel is missing {need} — re-pin from a ref that includes the KB export/import CLI (see backend/vendor/README.md)")
+          print("ok: wheel contains", need)
+          PY
+
+      - name: Vendor the new wheel + update the requirements pin
+        id: vendor
+        run: |
+          set -euo pipefail
+          WHEEL=$(ls "$RUNNER_TEMP"/mh_wheel/metaharmonizer-*-py3-none-any.whl)
+          BASE=$(basename "$WHEEL")
+          rm -f backend/vendor/metaharmonizer-*-py3-none-any.whl
+          cp "$WHEEL" "backend/vendor/$BASE"
+          sed -i -E "s|^\./vendor/metaharmonizer-.*\.whl|./vendor/$BASE|" backend/requirements.txt
+          echo "wheel=$BASE" >> "$GITHUB_OUTPUT"
+
+      - name: Install backend (with the new engine wheel)
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Enforce the engine import boundary
+        run: python scripts/check_engine_boundary.py
+
+      - name: Migrations + mock contract suite still green
+        working-directory: backend
+        env:
+          ENGINE_IMPL: mock
+        run: |
+          alembic upgrade head
+          pytest -q
+
+      - name: Real-engine schema-mapping smoke (downloads MiniLM; no KB needed)
+        working-directory: backend
+        env:
+          ENGINE_IMPL: metaharmonizer
+          RUN_REAL_ENGINE: "1"
+          METAHARMONIZER_DATA_DIR: ${{ github.workspace }}/backend/data
+        run: pytest tests/integration/test_engine_real.py -q
+
+      - name: Open a PR with the bumped engine wheel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REF="${{ github.event.inputs.ref }}"
+          BASE="${{ steps.vendor.outputs.wheel }}"
+          if git diff --quiet -- backend/vendor backend/requirements.txt; then
+            echo "engine wheel unchanged for ref $REF — nothing to bump"; exit 0
+          fi
+          BR="engine-bump/${REF:0:12}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BR"
+          git add backend/vendor backend/requirements.txt
+          git commit -m "chore(engine): bump vendored metaharmonizer wheel to ${REF}"
+          git push -u origin "$BR"
+          printf '%s\n\n%s\n' \
+            "Automated engine upgrade to upstream ref \`${REF}\` (wheel \`${BASE}\`)." \
+            "Green: engine import boundary, mock contract suite, and the real-engine schema-mapping smoke. If the ontology corpora changed upstream, run the \`Refresh KB bundle\` workflow too. Review + merge to adopt." > "$RUNNER_TEMP/pr_body.md"
+          gh pr create --base main --head "$BR" \
+            --title "Bump engine wheel (${BASE})" \
+            --body-file "$RUNNER_TEMP/pr_body.md"

@@ -1,0 +1,78 @@
+name: real-engine
+
+# Exercises the ACTUAL upstream metaharmonizer engine (not the mock) on a tiny
+# input, so drift between our adapter and the real engine's output contract is
+# caught automatically — the fast CI suite runs against the mock only.
+#
+# Scope: the SCHEMA path (SchemaMapEngine), which downloads the MiniLM encoder
+# but needs no KB bundle. The ontology path (OntoMapEngine) additionally needs
+# the ~1.4 GB FAISS/model bundle from the `kb-latest` release; see the commented
+# job below to extend to it once you're ready to pay that cost on a schedule.
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "0 4 * * 1" # weekly — Monday 04:00 UTC
+
+concurrency:
+  group: real-engine
+  cancel-in-progress: true
+
+jobs:
+  schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend + vendored engine wheel
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Real-engine schema mapping (MiniLM download; no KB)
+        working-directory: backend
+        env:
+          ENGINE_IMPL: metaharmonizer
+          RUN_REAL_ENGINE: "1"
+          METAHARMONIZER_DATA_DIR: ${{ github.workspace }}/backend/data
+        run: pytest tests/integration/test_engine_real.py -q
+
+  # ---------------------------------------------------------------------------
+  # Ontology (KB-backed) real-engine coverage. Heavier: it downloads the offline
+  # KB bundle (~1.4 GB) from the kb-latest release and runs the FAISS path.
+  # Enable once validated (mirrors the cautious rollout of kb-refresh.yml).
+  #
+  # ontology:
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 90
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-python@v5
+  #       with: { python-version: "3.12" }
+  #     - name: Install backend
+  #       working-directory: backend
+  #       run: pip install -r requirements.txt
+  #     - name: Fetch + unpack the KB bundle
+  #       env: { GH_TOKEN: ${{ github.token }} }
+  #       run: |
+  #         gh release download kb-latest -p kb_offline_bundle.tar.gz -D "$RUNNER_TEMP"
+  #         python -m scripts.seed_kb --bundle "$RUNNER_TEMP/kb_offline_bundle.tar.gz"
+  #     - name: Real-engine ontology mapping
+  #       working-directory: backend
+  #       env:
+  #         ENGINE_IMPL: metaharmonizer
+  #         ONTOLOGY_ENGINE: "1"
+  #         RUN_REAL_ENGINE: "1"
+  #         HF_HUB_OFFLINE: "1"
+  #         TRANSFORMERS_OFFLINE: "1"
+  #         METAHARMONIZER_DATA_DIR: ${{ github.workspace }}/backend/data
+  #         KNOWLEDGE_DB_DIR: ${{ github.workspace }}/backend/kb_build
+  #       run: pytest tests/integration -q -k ontology
