@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Shield, ShieldCheck, User as UserIcon, ChevronDown } from 'lucide-react';
+import { LogOut, ShieldCheck, User as UserIcon, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import type { Role } from '../api/types';
@@ -11,7 +11,7 @@ const ROLE_TONE: Record<Role, string> = {
 };
 
 export default function UserMenu() {
-  const { user, logout, hasRole, requestAdmin } = useAuth();
+  const { user, logout, requestAdmin } = useAuth();
   const navigate = useNavigate();
   if (!user) return null;
 
@@ -75,11 +75,6 @@ export default function UserMenu() {
               className={user.admin_requested ? 'text-slate-400' : 'text-accent-700 focus:bg-accent-50 dark:text-accent-300 dark:focus:bg-accent-500/10'}
             >
               {user.admin_requested ? 'Admin access requested' : 'Request admin access'}
-            </Item>
-          )}
-          {hasRole('admin') && (
-            <Item icon={<Shield className="h-4 w-4" />} onSelect={() => navigate('/admin')}>
-              Admin console
             </Item>
           )}
 
