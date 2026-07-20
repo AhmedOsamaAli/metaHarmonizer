@@ -19,7 +19,6 @@ import { ArrowRight, BarChart3, Columns3, Gauge, ListChecks, Layers, Wrench, Che
 import { getQualityMetrics, getStudyMappings } from '../api/client';
 import { useStudies } from '../hooks/queries';
 import PageHeader from '../components/ui/PageHeader';
-import CompleteStudyButton from '../components/CompleteStudyButton';
 import { Card, CardBody } from '../components/ui/Card';
 import { LoadingBlock } from '../components/ui/Feedback';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
@@ -98,7 +97,6 @@ export default function QualityDashboard() {
         title="Quality dashboard"
         description="How this study mapped — coverage, confidence, methods, and what still needs review."
         icon={<BarChart3 className="h-6 w-6" />}
-        actions={studyId ? <CompleteStudyButton studyId={studyId} studyName={studies?.find((s) => s.id === studyId)?.name} size="sm" redirectTo="/quality" /> : undefined}
       />
 
       {/* Readiness banner + export-blocking checklist — the "is it ready?" answer */}
