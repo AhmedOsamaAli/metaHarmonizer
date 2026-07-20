@@ -27,7 +27,6 @@ import SegmentedControl from '../components/ui/SegmentedControl';
 import { TableFrame } from '../components/ui/Table';
 import StudyPicker from '../components/StudyPicker';
 import StudyGate, { isStudyReady } from '../components/StudyGate';
-import CompleteStudyButton from '../components/CompleteStudyButton';
 import RememberToggle from '../components/RememberToggle';
 import { useStudies } from '../hooks/queries';
 import { useRememberDecisions } from '../hooks/useRememberDecisions';
@@ -87,20 +86,27 @@ function ColumnContextPanel({ studyId, column }: { studyId: string; column: stri
 
   return (
     <div>
-      <p className="text-slate-500">
-        {ctx.total_rows.toLocaleString()} rows · {ctx.distinct_values.toLocaleString()} distinct
-        {ctx.null_count > 0 && <> · {ctx.null_count.toLocaleString()} blank</>}
+      <p className="text-slate-500 dark:text-slate-400">
+        <span title="Total number of rows (values) in this column">{ctx.total_rows.toLocaleString()} rows</span>
+        {' · '}
+        <span title="How many different (unique) values the column has">{ctx.distinct_values.toLocaleString()} distinct</span>
+        {ctx.null_count > 0 && (
+          <> · <span title="Rows with no value (empty cells)">{ctx.null_count.toLocaleString()} blank</span></>
+        )}
+      </p>
+      <p className="mt-0.5 text-[11px] leading-snug text-slate-400 dark:text-slate-500">
+        The values found in this column and how many rows have each (×N). Use it to sanity-check what the column actually holds.
       </p>
       {ctx.samples.length > 0 ? (
-        <ul className="mt-1 flex flex-wrap gap-1.5">
+        <ul className="mt-1.5 flex flex-wrap gap-1.5">
           {ctx.samples.map((s, i) => (
             <li
               key={`${s.value}-${i}`}
               className="inline-flex items-center gap-1 rounded-md bg-white px-2 py-0.5 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700"
-              title={`${s.count} row(s)`}
+              title={`"${s.value}" appears in ${s.count.toLocaleString()} of ${ctx.total_rows.toLocaleString()} rows`}
             >
               <span className="font-mono text-slate-800 dark:text-slate-200">{s.value}</span>
-              <span className="text-slate-400 dark:text-slate-500">×{s.count}</span>
+              <span className="text-slate-400 dark:text-slate-500" title={`Appears in ${s.count.toLocaleString()} ${s.count === 1 ? 'row' : 'rows'}`}>×{s.count}</span>
             </li>
           ))}
         </ul>
@@ -508,8 +514,6 @@ export default function MappingReview() {
                   Reject all
                 </button>
               </>
-            ) : selectedId ? (
-              <CompleteStudyButton studyId={selectedId} studyName={selectedStudy?.name} size="sm" redirectTo="/review" />
             ) : null}
           </div>
         }
@@ -831,7 +835,7 @@ export default function MappingReview() {
                               <button
                                 onClick={() => handleLlmRematch(m.id)}
                                 disabled={llmBusyId === m.id}
-                                className="flex items-center gap-1.5 rounded-md bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-orange-700 hover:bg-orange-100 disabled:opacity-60"
+                                className="flex items-center gap-1.5 rounded-md bg-orange-50 px-2.5 py-1 text-[11px] font-semibold text-orange-700 hover:bg-orange-100 disabled:opacity-60 dark:bg-orange-500/15 dark:text-orange-300 dark:hover:bg-orange-500/25"
                               >
                                 <Sparkles className="h-3.5 w-3.5" />
                                 {llmBusyId === m.id ? 'Asking the LLM…' : 'Try LLM rematch'}
@@ -841,12 +845,12 @@ export default function MappingReview() {
                                   {llmResults[m.id].map((s, i) => (
                                     <li key={`llm-${s.field}-${i}`} className="flex items-center gap-2">
                                       <Sparkles className="h-3 w-3 text-orange-400" />
-                                      <span className="font-mono text-orange-700">{s.field}</span>
+                                      <span className="font-mono text-orange-700 dark:text-orange-300">{s.field}</span>
                                       <ConfidenceBadge score={s.confidence} size="sm" />
                                       {m.status !== 'accepted' && (
                                         <button
                                           onClick={() => handleApplyAlternative(m.id, s.field)}
-                                          className="ml-auto rounded-md px-2 py-0.5 text-[11px] font-semibold text-orange-600 hover:bg-orange-50"
+                                          className="ml-auto rounded-md px-2 py-0.5 text-[11px] font-semibold text-orange-600 hover:bg-orange-50 dark:text-orange-300 dark:hover:bg-orange-500/15"
                                         >
                                           Apply
                                         </button>
