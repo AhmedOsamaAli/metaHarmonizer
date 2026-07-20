@@ -8,7 +8,7 @@ export default function RadialProgress({
   label,
   sublabel,
   tone = '#2547e8',
-  track = '#e2e8f0',
+  track,
   dark = false,
   hideValue = false,
 }: {
@@ -33,7 +33,15 @@ export default function RadialProgress({
   return (
     <div className="relative inline-grid place-items-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={track} strokeWidth={stroke} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          strokeWidth={stroke}
+          className={track ? undefined : 'stroke-slate-200 dark:stroke-slate-700'}
+          style={track ? { stroke: track } : undefined}
+        />
         <circle
           cx={size / 2}
           cy={size / 2}
