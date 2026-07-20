@@ -35,7 +35,6 @@ import PageHeader from '../components/ui/PageHeader';
 import OntologyIcon from '../components/icons/OntologyIcon';
 import StudyPicker from '../components/StudyPicker';
 import StudyGate, { isStudyReady } from '../components/StudyGate';
-import CompleteStudyButton from '../components/CompleteStudyButton';
 import RememberToggle from '../components/RememberToggle';
 import { Card, CardBody } from '../components/ui/Card';
 import type { OntologyMapping, OntologySearchResult } from '../api/types';
@@ -168,11 +167,22 @@ export default function OntologyReview() {
   useEffect(() => {
     if (editState && !editState.term && editState.raw) {
       setSearchQuery(editState.raw);
-      void handleSearch(editState.raw);
     }
     // Only re-run when a different mapping is opened.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editState?.id]);
+
+  useEffect(() => {
+    if (!editState) return;
+    const q = searchQuery.trim();
+    if (!q) {
+      setSearchResults([]);
+      return;
+    }
+    const t = setTimeout(() => void handleSearch(q), 250);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, editState?.id]);
 
   const closeModal = () => {
     setEditState(null);
@@ -433,9 +443,14 @@ export default function OntologyReview() {
                     >
                       <div className="font-medium text-slate-900 dark:text-slate-100">{r.term}</div>
                       <div className="mt-0.5 flex items-center gap-2">
-                        <span className="font-mono text-slate-500">{r.ontology_id}</span>
-                        <span className="text-slate-400">{r.ontology}</span>
-                        <ConfidenceBadge score={r.score} size="sm" />
+                        {r.ontology_id === 'NCIT:unknown' ? (
+                          <span className="italic text-slate-400 dark:text-slate-500">dictionary term · no ontology code</span>
+                        ) : (
+                          <>
+                            <span className="font-mono text-slate-500 dark:text-slate-400">{r.ontology_id}</span>
+                            <span className="text-slate-400 dark:text-slate-500">{r.ontology}</span>
+                          </>
+                        )}
                       </div>
                     </li>
                   ))}
@@ -467,9 +482,6 @@ export default function OntologyReview() {
         actions={
           <div className="flex items-center gap-2">
             <RememberToggle />
-            {selectedId ? (
-              <CompleteStudyButton studyId={selectedId} studyName={selectedStudy?.name} size="sm" redirectTo="/ontology" />
-            ) : null}
           </div>
         }
       />
@@ -526,12 +538,12 @@ export default function OntologyReview() {
                             <div className="border-b border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 dark:border-slate-800 dark:bg-slate-800/50">
                               {field} <span className="font-normal text-slate-400">· {rows.length} value{rows.length !== 1 ? 's' : ''}</span>
                             </div>
-                            <ul className="divide-y divide-slate-100">
+                            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                               {rows.map((r, i) => (
                                 <li key={`${r.raw}-${i}`} className="flex flex-wrap items-center gap-2 px-3 py-1.5 text-xs">
                                   <span className="rounded bg-slate-100 dark:bg-slate-800/70 px-1.5 py-0.5 font-mono text-slate-500 line-through">{r.raw}</span>
                                   <ArrowRight className="h-3 w-3 text-slate-400" />
-                                  <span className="rounded bg-green-50 px-1.5 py-0.5 font-mono font-semibold text-green-700">{r.term}</span>
+                                  <span className="rounded bg-green-50 px-1.5 py-0.5 font-mono font-semibold text-green-700 dark:bg-green-500/15 dark:text-green-300">{r.term}</span>
                                   {r.ontId && <span className="text-[10px] text-slate-400">{r.ontId}</span>}
                                 </li>
                               ))}
@@ -779,9 +791,9 @@ function StatCard({
   tone: 'primary' | 'amber' | 'emerald' | 'slate';
 }) {
   const tones: Record<string, string> = {
-    primary: 'bg-primary-50 text-primary-700',
-    amber: 'bg-amber-50 text-amber-700',
-    emerald: 'bg-emerald-50 text-emerald-700',
+    primary: 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300',
+    amber: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+    emerald: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
     slate: 'bg-slate-100 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300',
   };
   return (
