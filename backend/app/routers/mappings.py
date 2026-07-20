@@ -266,11 +266,14 @@ async def get_column_context(
     if not study or not study.get("file_path"):
         raise HTTPException(status_code=404, detail="Study CSV not found")
 
-    path = study["file_path"]
-    sep = "\t" if str(path).lower().endswith((".tsv", ".txt")) else ","
+    from app.core.storage import get_storage
+
+    key = study["file_path"]
+    sep = "\t" if str(key).lower().endswith((".tsv", ".txt")) else ","
     try:
-        # Only the requested column is read into memory.
-        series = pd.read_csv(path, sep=sep, usecols=[column], dtype=str)[column]
+        with get_storage().local(key) as local_csv:
+            # Only the requested column is read into memory.
+            series = pd.read_csv(local_csv, sep=sep, usecols=[column], dtype=str)[column]
     except ValueError:
         raise HTTPException(status_code=404, detail=f"Column '{column}' not found")
     except Exception as exc:  # noqa: BLE001
