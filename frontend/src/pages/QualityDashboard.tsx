@@ -15,14 +15,13 @@ import {
   Cell as PieCell,
 } from 'recharts';
 import type { TooltipProps } from 'recharts';
-import { ArrowRight, BarChart3, Columns3, Gauge, ListChecks, Layers, Wrench, CheckCircle2, AlertTriangle, XCircle, Circle, Orbit } from 'lucide-react';
+import { ArrowRight, BarChart3, Columns3, Gauge, ListChecks, Layers, Wrench, CheckCircle2, AlertTriangle, XCircle, Circle } from 'lucide-react';
 import { getQualityMetrics, getStudyMappings } from '../api/client';
 import { useStudies } from '../hooks/queries';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardBody } from '../components/ui/Card';
 import { LoadingBlock } from '../components/ui/Feedback';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
-import Constellation from '../components/ui/Constellation';
 import ConfidenceBadge from '../components/ConfidenceBadge';
 import StageBadge from '../components/StageBadge';
 import StudyPicker from '../components/StudyPicker';
@@ -113,22 +112,6 @@ export default function QualityDashboard() {
         <Kpi icon={<Gauge className="h-4 w-4" />} label="Avg confidence" value={metrics.avg_confidence * 100} decimals={1} suffix="%" tone="text-accent-600" onClick={() => navigate(`/review/${studyId}?status=all`)} />
         <Kpi icon={<ListChecks className="h-4 w-4" />} label="Needs review" value={metrics.pending_review} hint={`${metrics.auto_accepted} accepted`} tone={metrics.pending_review ? 'text-amber-600' : 'text-emerald-600'} onClick={() => navigate(`/review/${studyId}?status=pending`)} />
       </div>
-
-      {/* Harmonization constellation — the study's mappings as a living star map */}
-      <Card>
-        <CardBody>
-          <div className="mb-1 flex items-center gap-2">
-            <Orbit className="h-4 w-4 text-slate-400" />
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Harmonization constellation</h3>
-          </div>
-          <p className="mb-3 text-xs text-slate-500">
-            Every column is a star — clustered by the stage that resolved it and brightened by confidence.
-          </p>
-          <Constellation
-            items={(mappings ?? []).map((m) => ({ stage: m.stage ?? 'unmapped', confidence: m.confidence_score }))}
-          />
-        </CardBody>
-      </Card>
 
       {/* cBioPortal-style widget grid — every chart shows a different thing */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -491,7 +474,7 @@ function BarList({ items }: { items: { label: string; count: number }[] }) {
           <span className="w-28 shrink-0 truncate text-xs font-medium text-slate-600 dark:text-slate-300" title={it.label}>
             {it.label}
           </span>
-          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
             <div className="h-full rounded-full bg-primary-500" style={{ width: `${(it.count / max) * 100}%` }} />
           </div>
           <span className="w-8 shrink-0 text-right text-xs font-semibold text-slate-700 dark:text-slate-300">{it.count}</span>
