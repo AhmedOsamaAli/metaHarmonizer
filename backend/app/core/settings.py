@@ -141,8 +141,14 @@ class Settings(BaseSettings):
     federation_instance_id: str = "local-instance"
     federation_private_key: str | None = None  # hex Ed25519 seed (64 hex chars)
     # Trusted peers: comma-separated ``instance_id:hex_public_key`` pairs whose
-    # signed exports this instance will accept on import.
+    # signed exports this instance will accept on import. Repeat an instance_id
+    # with a second key to trust both during a key rotation overlap.
     federation_trusted_keys: str = ""
+    # Replay defense: reject a signed bundle whose (signed) created_at is older
+    # than this many days; 0 disables the age bound. Small future-dating is
+    # tolerated to absorb clock skew between instances.
+    federation_max_bundle_age_days: int = 30
+    federation_clock_skew_min: int = 5
 
     # ── Validators (fail-fast) ──────────────────────────────────────────────
     @field_validator("jwt_secret")

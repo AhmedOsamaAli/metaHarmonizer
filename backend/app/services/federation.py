@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from cryptography.exceptions import InvalidSignature
@@ -79,14 +80,16 @@ def public_key_hex() -> str:
     return raw.hex()
 
 
-def _trusted_keys() -> dict[str, Ed25519PublicKey]:
-    """Parse ``FEDERATION_TRUSTED_KEYS`` into ``{instance_id: public_key}``.
+def _trusted_keys() -> dict[str, list[Ed25519PublicKey]]:
+    """Parse ``FEDERATION_TRUSTED_KEYS`` into ``{instance_id: [public_key, ...]}``.
 
-    This instance always trusts itself (so a local export/import round-trip and
-    tests work out of the box).
+    Multiple entries for the same instance are all kept, so a peer can publish a
+    new key alongside its old one during rotation and both verify. This instance
+    always trusts itself (so a local export/import round-trip and tests work out
+    of the box).
     """
-    out: dict[str, Ed25519PublicKey] = {
-        settings.federation_instance_id: _private_key().public_key()
+    out: dict[str, list[Ed25519PublicKey]] = {
+        settings.federation_instance_id: [_private_key().public_key()]
     }
     raw = settings.federation_trusted_keys or ""
     for item in raw.split(","):
@@ -95,11 +98,10 @@ def _trusted_keys() -> dict[str, Ed25519PublicKey]:
             continue
         instance_id, hex_key = item.split(":", 1)
         try:
-            out[instance_id.strip()] = Ed25519PublicKey.from_public_bytes(
-                bytes.fromhex(hex_key.strip())
-            )
+            key = Ed25519PublicKey.from_public_bytes(bytes.fromhex(hex_key.strip()))
         except (ValueError, Exception):  # noqa: BLE001 — skip malformed entries
             continue
+        out.setdefault(instance_id.strip(), []).append(key)
     return out
 
 
@@ -112,16 +114,56 @@ def sign_payload(payload: dict[str, Any]) -> str:
 
 
 def verify_payload(payload: dict[str, Any], signature_hex: str, source_instance: str) -> bool:
-    """Verify ``signature_hex`` over ``payload`` against the source's trusted key.
+    """Verify ``signature_hex`` over ``payload`` against the source's trusted keys.
 
-    Returns False on an unknown source, a malformed signature, or a mismatch —
-    never raises, so the import path can record the result and reject cleanly.
+    Accepts the signature if it matches ANY key registered for the source, so a
+    key rotation with an overlap window works. Returns False on an unknown
+    source, a malformed signature, or no match — never raises, so the import
+    path can record the result and reject cleanly.
     """
-    key = _trusted_keys().get(source_instance)
-    if key is None:
+    keys = _trusted_keys().get(source_instance)
+    if not keys:
         return False
     try:
-        key.verify(bytes.fromhex(signature_hex), canonical_bytes(payload))
-        return True
-    except (InvalidSignature, ValueError):
+        signature = bytes.fromhex(signature_hex)
+    except ValueError:
         return False
+    data = canonical_bytes(payload)
+    for key in keys:
+        try:
+            key.verify(signature, data)
+            return True
+        except InvalidSignature:
+            continue
+    return False
+
+
+def bundle_created_at(payload: dict[str, Any]) -> datetime | None:
+    """Parse the bundle's signed ``created_at`` (ISO-8601) as an aware UTC datetime."""
+    raw = payload.get("created_at")
+    if not isinstance(raw, str):
+        return None
+    try:
+        dt = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def check_freshness(payload: dict[str, Any]) -> None:
+    """Reject a stale or future-dated bundle (replay defense).
+
+    ``created_at`` is part of the signed payload, so an attacker can't backdate a
+    replayed bundle without breaking the signature. Raises ``ValueError`` when
+    the timestamp is missing/unparseable, too far in the future, or older than
+    ``federation_max_bundle_age_days`` (0 disables the age bound).
+    """
+    dt = bundle_created_at(payload)
+    if dt is None:
+        raise ValueError("Bundle 'created_at' is missing or unparseable.")
+    now = datetime.now(timezone.utc)
+    if dt > now + timedelta(minutes=settings.federation_clock_skew_min):
+        raise ValueError("Bundle is future-dated.")
+    max_age = settings.federation_max_bundle_age_days
+    if max_age and now - dt > timedelta(days=max_age):
+        raise ValueError(f"Bundle is older than {max_age} days (possible replay).")

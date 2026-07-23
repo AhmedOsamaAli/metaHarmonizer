@@ -77,6 +77,11 @@ async def federation_import(
         )
 
     try:
+        fed_sig.check_freshness(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    try:
         summary = await fed_repo.record_import(
             db,
             payload=payload,
