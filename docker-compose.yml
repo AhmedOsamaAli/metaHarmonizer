@@ -104,6 +104,14 @@ services:
     # arq worker (Sprint 4). Set JOB_MODE=queue so the API enqueues here.
     # Scale concurrency with `docker compose up --scale worker=N`.
     command: ["arq", "app.workers.arq_worker.WorkerSettings"]
+    healthcheck:
+      # arq --check exits non-zero if the worker's Redis health key is stale,
+      # so an orchestrator can detect a hung/crashed worker.
+      test: ["CMD", "arq", "--check", "app.workers.arq_worker.WorkerSettings"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
     depends_on:
       redis:
         condition: service_healthy

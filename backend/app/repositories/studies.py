@@ -12,12 +12,15 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.settings import settings
+from app.core.storage import get_storage
 from app.db.models import Study
 
 # A study the user never completed is treated as abandoned in-progress work and
-# is deleted once it's older than this, lazily on the owner's next list/overview.
-# Completed studies are exempt (kept for the dashboard).
-IDLE_STUDY_DAYS = 7
+# is deleted once it's older than this — lazily on the owner's next list load,
+# and globally by the nightly retention cron (so abandoned accounts' studies
+# don't accumulate). Completed studies are exempt. 0 disables the sweep.
+IDLE_STUDY_DAYS = settings.retention_idle_study_days
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -163,16 +166,53 @@ async def delete_study(db: AsyncSession, study_id: str) -> bool:
     return (res.rowcount or 0) > 0
 
 
+async def _delete_studies(db: AsyncSession, conditions, *, dry_run: bool = False) -> int:
+    """Delete studies matching ``conditions`` AND their uploaded source files
+    (best-effort). Mapping/ontology rows follow via ON DELETE CASCADE. Returns
+    the count; ``dry_run`` counts without deleting."""
+    studies = list(await db.scalars(select(Study).where(*conditions)))
+    if dry_run or not studies:
+        return len(studies)
+    storage = get_storage()
+    for s in studies:
+        if s.file_path:
+            try:
+                storage.delete(s.file_path)
+            except Exception:  # noqa: BLE001 — stray blob is caught by the dir sweep
+                pass
+    await db.execute(delete(Study).where(Study.id.in_([s.id for s in studies])))
+    return len(studies)
+
+
 async def purge_idle_studies(db: AsyncSession, owner_id: int) -> int:
-    """Delete a user's non-completed studies older than ``IDLE_STUDY_DAYS``.
-    Returns the number removed. Completed studies are kept (they're done, not
+    """Delete a user's non-completed studies (and their files) older than
+    ``IDLE_STUDY_DAYS``. Completed studies are kept (they're done, not
     abandoned)."""
+    if IDLE_STUDY_DAYS <= 0:
+        return 0
     cutoff = datetime.now(timezone.utc) - timedelta(days=IDLE_STUDY_DAYS)
-    res = await db.execute(
-        delete(Study).where(
+    return await _delete_studies(
+        db,
+        [
             Study.owner_id == owner_id,
             Study.status != "completed",
             Study.created_at < cutoff,
-        )
+        ],
     )
-    return res.rowcount or 0
+
+
+async def purge_idle_studies_global(db: AsyncSession, *, dry_run: bool = False) -> int:
+    """Delete ALL owners' non-completed studies (and their files) older than
+    ``IDLE_STUDY_DAYS`` — the nightly sweep so abandoned accounts' studies don't
+    accumulate. Completed studies are kept."""
+    if IDLE_STUDY_DAYS <= 0:
+        return 0
+    cutoff = datetime.now(timezone.utc) - timedelta(days=IDLE_STUDY_DAYS)
+    return await _delete_studies(
+        db,
+        [
+            Study.status != "completed",
+            Study.created_at < cutoff,
+        ],
+        dry_run=dry_run,
+    )

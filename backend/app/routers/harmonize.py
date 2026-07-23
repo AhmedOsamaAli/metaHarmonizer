@@ -238,17 +238,24 @@ async def harmonize_study(
     if storage.scheme != "file":
         save_path.unlink(missing_ok=True)
 
-    await enqueue_harmonize(
-        job_id=job_id,
-        study_id=study_id,
-        file_path=file_key,
-        suffix=suffix,
-        curated_path=str(curated_path),
-        owner_id=owner_id,
-        mode=mode,
-        ontology_columns=onto_cols or None,
-        target_schema=target_schema,
-    )
+    try:
+        await enqueue_harmonize(
+            job_id=job_id,
+            study_id=study_id,
+            file_path=file_key,
+            suffix=suffix,
+            curated_path=str(curated_path),
+            owner_id=owner_id,
+            mode=mode,
+            ontology_columns=onto_cols or None,
+            target_schema=target_schema,
+        )
+    except Exception as exc:  # noqa: BLE001 — queue unreachable: shed load, don't run in-process
+        raise HTTPException(
+            status_code=503,
+            detail="The job queue is temporarily unavailable. Please retry shortly.",
+            headers={"Retry-After": "10"},
+        ) from exc
 
     return HarmonizeAccepted(
         job_id=job_id,

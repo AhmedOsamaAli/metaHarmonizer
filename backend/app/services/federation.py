@@ -57,6 +57,11 @@ def _private_key() -> Ed25519PrivateKey:
     if hex_seed:
         seed = bytes.fromhex(hex_seed.strip())
     else:
+        if settings.is_production_like:
+            raise RuntimeError(
+                "FEDERATION_PRIVATE_KEY is not set. Federation requires a real "
+                "Ed25519 key in production — the derived dev key is guessable."
+            )
         seed = hashlib.sha256(
             f"mh-fed-dev::{settings.federation_instance_id}".encode()
         ).digest()

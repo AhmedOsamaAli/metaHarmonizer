@@ -47,6 +47,12 @@ class Settings(BaseSettings):
         description="Async SQLAlchemy Postgres DSN.",
     )
     redis_url: str = Field(default="redis://localhost:6379/0")
+    # Connection pool per API/worker process. SQLAlchemy's default (5 + 10
+    # overflow) serializes ~15 concurrent DB ops/process; size these together
+    # with Postgres max_connections for the target concurrency.
+    db_pool_size: int = 10
+    db_max_overflow: int = 20
+    db_pool_timeout_sec: int = 30
 
     # ── Job pipeline (Sprint 4) ─────────────────────────────────────────────
     # inline: run harmonize in a thread off the request path (dev — just uvicorn).
@@ -117,6 +123,12 @@ class Settings(BaseSettings):
     retention_uploads_days: int = 90
     retention_exports_days: int = 30
     retention_revoked_sessions_days: int = 90
+    # Never-completed ("idle") studies are deleted this many days after upload —
+    # DB rows + cascade children + the uploaded source file. 0 disables the sweep.
+    retention_idle_study_days: int = 7
+    # Append-only audit / activity log retention. Kept ~1 year for forensics;
+    # rows are tiny (~a few hundred bytes) so it's cheap. 0 = keep forever.
+    retention_audit_days: int = 365
 
     # ── Observability ───────────────────────────────────────────────────────
     log_level: Literal["debug", "info", "warning", "error"] = "info"
@@ -156,6 +168,27 @@ class Settings(BaseSettings):
         if self.app_base_url.lower().startswith("https://") and not self.cookie_secure:
             object.__setattr__(self, "cookie_secure", True)
         return self
+
+    @model_validator(mode="after")
+    def _guard_auth_mode(self):
+        # AUTH_MODE=none disables ALL authentication. Fine for a local / self-host
+        # install on a trusted network (http://localhost), but never for an
+        # internet-facing HTTPS deployment. Fail fast so a prod misconfiguration
+        # can't silently ship a wide-open instance.
+        if self.auth_mode == "none" and (
+            self.cookie_secure or self.app_base_url.lower().startswith("https://")
+        ):
+            raise ValueError(
+                "AUTH_MODE=none is not allowed for an internet-facing deployment "
+                "(https APP_BASE_URL / COOKIE_SECURE set). Use AUTH_MODE=jwt in "
+                "production; AUTH_MODE=none is only for local/self-host use."
+            )
+        return self
+
+    @property
+    def is_production_like(self) -> bool:
+        """Heuristic: internet-facing deployment (HTTPS base URL or Secure cookie)."""
+        return self.cookie_secure or self.app_base_url.lower().startswith("https://")
 
     @field_validator("llm_threshold")
     @classmethod

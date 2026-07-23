@@ -76,12 +76,13 @@ async def enqueue_harmonize(
     )
 
     if settings.job_mode == "queue":
-        try:
-            pool = await _get_arq_pool()
-            await pool.enqueue_job("harmonize_job", **kwargs)
-            return
-        except Exception:
-            logger.exception("arq enqueue failed; falling back to inline execution")
+        # Never fall back to inline execution in queue mode: running the engine
+        # in the API process would defeat backpressure and can OOM the API tier.
+        # If the queue is unreachable, let the error propagate so the caller
+        # sheds load with a 503 instead.
+        pool = await _get_arq_pool()
+        await pool.enqueue_job("harmonize_job", **kwargs)
+        return
 
     # Inline: background task in this process (engine work is threaded inside).
     task = asyncio.create_task(run_harmonize(**kwargs))

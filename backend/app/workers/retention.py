@@ -1,16 +1,19 @@
 """
-Data-retention cron job (spec §6.8) — scaffolding.
+Data-retention cron job (spec §6.8).
 
-Purges aged data on a nightly schedule:
+Runs nightly (arq cron in ``arq_worker.py``) and via CLI. Purges aged data so a
+long-lived instance's storage/DB stay bounded:
   - uploaded source files older than RETENTION_UPLOADS_DAYS (default 90)
   - generated exports older than RETENTION_EXPORTS_DAYS (default 30)
   - revoked sessions older than RETENTION_REVOKED_SESSIONS_DAYS (default 90)
+  - idle (never-completed) studies older than RETENTION_IDLE_STUDY_DAYS
+    (default 7) — rows, cascade children, AND their uploaded files
+  - audit/activity events older than RETENTION_AUDIT_DAYS (default 365;
+    0 = keep forever)
 
-Safe to run now: it no-ops when the upload/export directories don't exist yet
-and when there are no revoked sessions, returning a per-category count. The
-append-only audit log and live mappings are never touched.
+Idempotent and safe: no-ops on empty dirs / no matching rows. Completed studies
+and (by default) recent audit history are never touched.
 
-Wire to a scheduler (arq cron / system cron) in the deployment sprint:
     python -m app.workers.retention            # run once
     python -m app.workers.retention --dry-run
 """
@@ -26,8 +29,10 @@ from pathlib import Path
 from sqlalchemy import delete
 
 from app.core.settings import settings
+from app.db.models import AuditEvent
 from app.db.models import Session as SessionModel
 from app.db.session import SessionLocal
+from app.repositories import studies as studies_repo
 
 DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data"
 UPLOADS_DIR = DATA_DIR / "uploads"
@@ -65,6 +70,29 @@ async def _purge_revoked_sessions(older_than_days: int, *, dry_run: bool) -> int
         return result.rowcount or 0
 
 
+async def _purge_idle_studies(*, dry_run: bool) -> int:
+    async with SessionLocal() as db:
+        n = await studies_repo.purge_idle_studies_global(db, dry_run=dry_run)
+        if dry_run:
+            await db.rollback()
+        else:
+            await db.commit()
+        return n
+
+
+async def _purge_audit(older_than_days: int, *, dry_run: bool) -> int:
+    if older_than_days <= 0:
+        return 0  # 0 = keep the audit/activity log forever
+    cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+    async with SessionLocal() as db:
+        result = await db.execute(delete(AuditEvent).where(AuditEvent.created_at < cutoff))
+        if dry_run:
+            await db.rollback()
+        else:
+            await db.commit()
+        return result.rowcount or 0
+
+
 async def run_retention(*, dry_run: bool = False) -> dict[str, int]:
     """Run all retention purges; returns a per-category count."""
     uploads = _purge_dir(UPLOADS_DIR, settings.retention_uploads_days, dry_run=dry_run)
@@ -72,7 +100,15 @@ async def run_retention(*, dry_run: bool = False) -> dict[str, int]:
     sessions = await _purge_revoked_sessions(
         settings.retention_revoked_sessions_days, dry_run=dry_run
     )
-    return {"uploads": uploads, "exports": exports, "revoked_sessions": sessions}
+    idle_studies = await _purge_idle_studies(dry_run=dry_run)
+    audit = await _purge_audit(settings.retention_audit_days, dry_run=dry_run)
+    return {
+        "uploads": uploads,
+        "exports": exports,
+        "revoked_sessions": sessions,
+        "idle_studies": idle_studies,
+        "audit": audit,
+    }
 
 
 def main() -> None:
