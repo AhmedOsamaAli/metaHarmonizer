@@ -8,7 +8,7 @@
 # The SPA talks to the API via the same origin (relative `/api/v1`, see
 # src/api/http.ts), so no build-time API URL is needed — Caddy fronts both.
 
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 
 # Install deps first for better layer caching.
