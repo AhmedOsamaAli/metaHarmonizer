@@ -26,6 +26,12 @@ async def list_users(db: AsyncSession) -> list[User]:
     return list(await db.scalars(stmt))
 
 
+async def list_admin_emails(db: AsyncSession) -> list[str]:
+    """Active admins' emails \u2014 used to notify them of pending approvals."""
+    stmt = select(User.email).where(User.role == "admin", User.is_active.is_(True))
+    return list(await db.scalars(stmt))
+
+
 async def create_user(
     db: AsyncSession,
     *,

@@ -22,7 +22,11 @@ from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import AuthError, current_user
-from app.core.email import send_password_reset_email, send_verification_email
+from app.core.email import (
+    send_admin_new_signup_email,
+    send_password_reset_email,
+    send_verification_email,
+)
 from app.core.errors import AppError
 from app.core.hibp import password_breach_count
 from app.core.metrics import AUTH_FAILURES
@@ -107,11 +111,13 @@ def _client_ip(request: Request) -> str | None:
     return request.client.host if request.client else None
 
 
-def _set_refresh_cookie(response: Response, token: str) -> None:
+def _set_refresh_cookie(response: Response, token: str, *, remember: bool = True) -> None:
+    # remember=False -> session cookie (no max_age): the browser drops it on
+    # close, so an unchecked "remember me" doesn't keep the user signed in.
     response.set_cookie(
         key=REFRESH_COOKIE,
         value=token,
-        max_age=settings.refresh_ttl_days * 24 * 3600,
+        max_age=settings.refresh_ttl_days * 24 * 3600 if remember else None,
         httponly=True,
         secure=settings.cookie_secure,
         samesite="lax",
@@ -124,7 +130,8 @@ def _clear_refresh_cookie(response: Response) -> None:
 
 
 async def _issue_tokens(
-    db: AsyncSession, response: Response, request: Request, user: User
+    db: AsyncSession, response: Response, request: Request, user: User,
+    *, remember: bool = True,
 ) -> tuple[TokenResponse, str]:
     """Create a session, set the refresh cookie, return (token, jti)."""
     jti = new_jti()
@@ -135,7 +142,11 @@ async def _issue_tokens(
         ip=_client_ip(request),
         user_agent=request.headers.get("User-Agent"),
     )
-    _set_refresh_cookie(response, create_refresh_token(user_id=user.id, jti=jti))
+    _set_refresh_cookie(
+        response,
+        create_refresh_token(user_id=user.id, jti=jti, remember=remember),
+        remember=remember,
+    )
     access = create_access_token(user_id=user.id, role=user.role, email=user.email)
     return TokenResponse(access_token=access, user=UserOut.model_validate(user)), jti
 
@@ -219,6 +230,10 @@ async def register(
     if approved:
         message = "Account created. Check your email to verify your address before signing in."
     else:
+        for admin_email in await users_repo.list_admin_emails(db):
+            await send_admin_new_signup_email(
+                to=admin_email, applicant_email=user.email, applicant_name=user.name
+            )
         message = (
             "Account created. Verify your email — then an administrator will approve "
             "your account before you can sign in."
@@ -258,7 +273,7 @@ async def login(
             "Your account is awaiting administrator approval."
         )
     await _clear_failures(body.email)
-    tokens, _ = await _issue_tokens(db, response, request, user)
+    tokens, _ = await _issue_tokens(db, response, request, user, remember=body.remember)
     await db.commit()
     return tokens
 
@@ -397,7 +412,8 @@ async def refresh(
         raise AuthError("Account not found or disabled.")
 
     await sessions_repo.revoke_by_jti(db, session.refresh_jti)
-    tokens, _ = await _issue_tokens(db, response, request, user)
+    remember = bool(payload.get("remember", True))
+    tokens, _ = await _issue_tokens(db, response, request, user, remember=remember)
     await db.commit()
     return tokens
 

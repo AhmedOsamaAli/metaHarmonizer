@@ -93,3 +93,68 @@ async def send_password_reset_email(*, to: str, name: str | None, token: str) ->
         html,
         text_fallback=f"Reset your password: {link}",
     )
+
+
+async def send_admin_new_signup_email(
+    *, to: str, applicant_email: str, applicant_name: str | None
+) -> None:
+    """Tell an admin a new untrusted-domain account is waiting for approval."""
+    link = f"{settings.app_base_url}/admin"
+    who = f"{applicant_name} ({applicant_email})" if applicant_name else applicant_email
+    html = (
+        f"<div style='font-family:system-ui,sans-serif;max-width:480px'>"
+        f"<h2>New account awaiting approval</h2>"
+        f"<p><strong>{who}</strong> registered with an email outside your trusted "
+        f"domains and needs an administrator to approve access.</p>"
+        f"<p>{_button(link, 'Review in the admin dashboard')}</p>"
+        f"<p style='color:#64748b;font-size:13px'>Approve or reject the account from "
+        f"the Admin page.</p>"
+        f"</div>"
+    )
+    await _send(
+        to,
+        "MetaHarmonizer \u2014 a new account needs approval",
+        html,
+        text_fallback=f"{who} needs approval: {link}",
+    )
+
+
+async def send_account_approved_email(*, to: str, name: str | None) -> None:
+    """Tell a user an admin approved their account so they can now sign in."""
+    link = f"{settings.app_base_url}/login"
+    greeting = f"Hi {name}," if name else "Hi,"
+    html = (
+        f"<div style='font-family:system-ui,sans-serif;max-width:480px'>"
+        f"<h2>Your account is approved</h2>"
+        f"<p>{greeting}</p>"
+        f"<p>An administrator has approved your MetaHarmonizer account. You can now "
+        f"sign in and start harmonizing.</p>"
+        f"<p>{_button(link, 'Sign in')}</p>"
+        f"</div>"
+    )
+    await _send(
+        to,
+        "Your MetaHarmonizer account is approved",
+        html,
+        text_fallback=f"Your account is approved. Sign in: {link}",
+    )
+
+
+async def send_account_rejected_email(*, to: str, name: str | None) -> None:
+    """Tell a user an admin declined their access request."""
+    greeting = f"Hi {name}," if name else "Hi,"
+    html = (
+        f"<div style='font-family:system-ui,sans-serif;max-width:480px'>"
+        f"<h2>Account request declined</h2>"
+        f"<p>{greeting}</p>"
+        f"<p>Thanks for your interest in MetaHarmonizer. An administrator was unable "
+        f"to approve your account at this time. If you believe this is a mistake, "
+        f"please reach out to your MetaHarmonizer administrator.</p>"
+        f"</div>"
+    )
+    await _send(
+        to,
+        "About your MetaHarmonizer account",
+        html,
+        text_fallback="Your MetaHarmonizer account request was declined.",
+    )

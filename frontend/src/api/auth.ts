@@ -29,7 +29,7 @@ export async function register(input: {
     });
 }
 
-export async function login(input: { email: string; password: string }): Promise<TokenResponse> {
+export async function login(input: { email: string; password: string; remember?: boolean }): Promise<TokenResponse> {
     const res = await apiFetch<TokenResponse>('/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

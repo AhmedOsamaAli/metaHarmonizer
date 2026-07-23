@@ -17,6 +17,7 @@ export default function LoginPage() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsVerify, setNeedsVerify] = useState(false);
   const [resending, setResending] = useState(false);
@@ -28,7 +29,7 @@ export default function LoginPage() {
     setNeedsVerify(false);
     setSubmitting(true);
     try {
-      const user = await login(email, password);
+      const user = await login(email, password, remember);
       toast.success(`Welcome back, ${user.name || user.email}`);
       navigate(from, { replace: true });
     } catch (err) {
@@ -99,7 +100,16 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <div className="flex justify-end -mt-1">
+        <div className="flex items-center justify-between -mt-1">
+          <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300">
+            <input
+              type="checkbox"
+              className="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
+            Remember me
+          </label>
           <Link
             to="/forgot"
             className="text-xs font-medium text-primary-600 hover:text-primary-700"

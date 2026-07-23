@@ -20,6 +20,9 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+    # "Remember me": when False the refresh cookie is session-scoped (cleared on
+    # browser close) instead of persistent up to the refresh TTL.
+    remember: bool = True
 
 
 class VerifyEmailRequest(BaseModel):

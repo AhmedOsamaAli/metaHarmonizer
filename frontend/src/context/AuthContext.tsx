@@ -23,7 +23,7 @@ interface AuthContextValue {
     isAuthenticated: boolean;
     /** True when browsing the no-account preview (read-only, no real data). */
     isGuest: boolean;
-    login: (email: string, password: string) => Promise<User>;
+    login: (email: string, password: string, remember?: boolean) => Promise<User>;
     /**
      * Create an account. Does NOT sign in — non-bootstrap users must verify
      * their email first. Resolves to the server's next-step message.
@@ -99,8 +99,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(null);
             },
             hasRole: (minimum) => !!user && ROLE_RANK[user.role] >= ROLE_RANK[minimum],
-            login: async (email, password) => {
-                const res = await apiLogin({ email, password });
+            login: async (email, password, remember) => {
+                const res = await apiLogin({ email, password, remember });
                 setUser(res.user);
                 return res.user;
             },

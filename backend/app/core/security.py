@@ -106,17 +106,19 @@ def new_jti() -> str:
     return secrets.token_urlsafe(32)
 
 
-def create_refresh_token(*, user_id: int, jti: str) -> str:
+def create_refresh_token(*, user_id: int, jti: str, remember: bool = True) -> str:
     """Long-lived signed JWT bound to a server-side session via ``jti``.
 
     The session row (sessions table) is the source of truth for revocation:
     a refresh token is only honoured while its ``jti`` maps to a live session.
+    ``remember`` is carried so the cookie stays session-scoped across refreshes.
     """
     now = datetime.now(timezone.utc)
     payload: dict[str, Any] = {
         "sub": str(user_id),
         "jti": jti,
         "type": "refresh",
+        "remember": remember,
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(days=settings.refresh_ttl_days)).timestamp()),
     }

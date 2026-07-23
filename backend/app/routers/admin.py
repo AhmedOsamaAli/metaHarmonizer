@@ -19,6 +19,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import ForbiddenError, actor_label, require_role
+from app.core.email import send_account_approved_email, send_account_rejected_email
 from app.core.errors import NotFoundError
 from app.db.models import SchemaVersion, User
 from app.db.session import get_db
@@ -150,6 +151,7 @@ async def approve_account(
     )
     await db.commit()
     await db.refresh(user)
+    await send_account_approved_email(to=user.email, name=user.name)
     return UserOut.model_validate(user)
 
 
@@ -177,6 +179,7 @@ async def reject_account(
     )
     await db.commit()
     await db.refresh(user)
+    await send_account_rejected_email(to=user.email, name=user.name)
     return UserOut.model_validate(user)
 
 
