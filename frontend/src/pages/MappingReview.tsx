@@ -80,9 +80,17 @@ function ColumnContextPanel({ studyId, column }: { studyId: string; column: stri
     };
   }, [studyId, column]);
 
-  if (loading) return <p className="text-slate-400 italic">Loading sample values…</p>;
-  if (err) return <p className="text-slate-400 italic">{err}</p>;
+  if (loading) return <p className="italic text-slate-400 dark:text-slate-500">Loading sample values…</p>;
+  if (err) return <p className="italic text-slate-400 dark:text-slate-500">{err}</p>;
   if (!ctx) return null;
+
+  if (ctx.distinct_values === 0) {
+    return (
+      <p className="italic text-slate-400 dark:text-slate-500">
+        This column is empty — no values in any of the {ctx.total_rows.toLocaleString()} rows.
+      </p>
+    );
+  }
 
   return (
     <div>
@@ -731,7 +739,7 @@ export default function MappingReview() {
                             className={`ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition ${
                               gsel
                                 ? 'bg-primary-600 text-white hover:bg-primary-700'
-                                : 'bg-primary-50 text-primary-600 hover:bg-primary-100'
+                                : 'bg-primary-50 text-primary-600 hover:bg-primary-100 dark:bg-primary-500/15 dark:text-primary-300 dark:hover:bg-primary-500/25'
                             }`}
                           >
                             {gsel ? '✓' : '⌄'} {groupInfo[m.id].size} in group

@@ -132,12 +132,12 @@ export default function QualityDashboard() {
         </Widget>
 
         <Widget title="Which stage solved it" subtitle="Pipeline stage that produced each match">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 text-white dark:text-slate-900">
             <ResponsiveContainer width="55%" height={200}>
               <PieChart>
                 <Pie data={stagePie} cx="50%" cy="50%" innerRadius={48} outerRadius={80} paddingAngle={2} dataKey="value">
                   {stagePie.map((s, i) => (
-                    <PieCell key={i} fill={s.color} stroke="#fff" strokeWidth={2} />
+                    <PieCell key={i} fill={s.color} stroke="currentColor" strokeWidth={2} />
                   ))}
                 </Pie>
                 <Tooltip content={<ChartTooltip />} />

@@ -18,6 +18,22 @@ const COUNT_TONE: Record<NonNullable<Segment<string>['tone']>, string> = {
   slate: 'bg-slate-200/70 text-slate-600 dark:bg-slate-600/50 dark:text-slate-300',
 };
 
+const ACTIVE_TONE: Record<NonNullable<Segment<string>['tone']>, string> = {
+  primary: 'bg-primary-600 text-white shadow-soft',
+  emerald: 'bg-emerald-600 text-white shadow-soft',
+  amber: 'bg-amber-600 text-white shadow-soft',
+  rose: 'bg-rose-600 text-white shadow-soft',
+  slate: 'bg-slate-600 text-white shadow-soft',
+};
+
+const INACTIVE_TONE: Record<NonNullable<Segment<string>['tone']>, string> = {
+  primary: 'text-primary-600 hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-500/10',
+  emerald: 'text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/10',
+  amber: 'text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-500/10',
+  rose: 'text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10',
+  slate: 'text-slate-500 hover:bg-slate-200/60 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-700/50 dark:hover:text-slate-100',
+};
+
 /**
  * A clean segmented control (iOS/Linear style): a pill track with a raised
  * active segment. Used for status/scope toggles instead of ad-hoc coloured
@@ -56,9 +72,7 @@ export default function SegmentedControl<T extends string>({
             className={cn(
               'inline-flex items-center gap-1.5 rounded-lg font-medium transition',
               size === 'sm' ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm',
-              active
-                ? 'bg-white text-slate-900 shadow-soft dark:bg-slate-700 dark:text-slate-100'
-                : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100',
+              active ? ACTIVE_TONE[s.tone ?? 'primary'] : INACTIVE_TONE[s.tone ?? 'primary'],
             )}
           >
             {s.icon}
@@ -67,7 +81,7 @@ export default function SegmentedControl<T extends string>({
               <span
                 className={cn(
                   'rounded-full px-1.5 py-0.5 text-xs font-semibold',
-                  active ? COUNT_TONE[s.tone ?? 'primary'] : 'bg-slate-200/70 text-slate-500 dark:bg-slate-700 dark:text-slate-400',
+                  active ? 'bg-white/25 text-white' : COUNT_TONE[s.tone ?? 'primary'],
                 )}
               >
                 {s.count}
