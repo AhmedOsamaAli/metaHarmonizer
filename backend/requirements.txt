@@ -53,7 +53,7 @@ httpx==0.28.1
 # work everywhere.
 #
 # To rebuild after bumping the upstream pin, see backend/vendor/README.md.
-./vendor/metaharmonizer-0.4.0-py3-none-any.whl
+./vendor/metaharmonizer-0.4.1-py3-none-any.whl
 
 # FAISS is no longer bundled with the engine wheel (>=0.4.0 dropped it from
 # deps due to a libomp collision with torch on macOS). The ontology path
