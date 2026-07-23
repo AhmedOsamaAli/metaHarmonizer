@@ -14,6 +14,11 @@ on:
         description: "shbrief/MetaHarmonizer ref to pin (commit SHA, tag, or branch)"
         required: true
         default: "main"
+      auto_merge:
+        description: "Squash-merge the bump PR automatically once this job's checks pass"
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: write # push the bump branch
@@ -136,7 +141,14 @@ jobs:
           git push -u origin "$BR"
           printf '%s\n\n%s\n' \
             "Automated engine upgrade to upstream ref \`${REF}\` (wheel \`${BASE}\`)." \
-            "Green: engine import boundary, mock contract suite, and the real-engine schema-mapping smoke. If the ontology corpora changed upstream, run the \`Refresh KB bundle\` workflow too. Review + merge to adopt." > "$RUNNER_TEMP/pr_body.md"
-          gh pr create --base main --head "$BR" \
+            "Green in this run: engine import boundary, mock contract suite, and the real-engine schema-mapping smoke. If the ontology corpora changed upstream, run the \`Refresh KB bundle\` workflow too." > "$RUNNER_TEMP/pr_body.md"
+          PR_URL=$(gh pr create --base main --head "$BR" \
             --title "Bump engine wheel (${BASE})" \
-            --body-file "$RUNNER_TEMP/pr_body.md"
+            --body-file "$RUNNER_TEMP/pr_body.md")
+          echo "Opened $PR_URL"
+          if [ "${{ github.event.inputs.auto_merge }}" = "true" ]; then
+            echo "auto_merge=true -> squash-merging (this job's checks already passed)"
+            gh pr merge "$PR_URL" --squash --delete-branch
+          else
+            echo "auto_merge=false -> leaving PR open for manual review"
+          fi
