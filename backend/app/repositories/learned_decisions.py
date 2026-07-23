@@ -25,11 +25,23 @@ from app.db.models import LearnedDecision
 # single space (so "Body_Site", "body-site", "  body   site " all agree).
 _COLLAPSE = re.compile(r"[\s\W_]+")
 
+# Values keep '+'/'-' (clinically significant: ER+ vs ER-, PR+/PR-, HER2+/HER2-,
+# blood type O+/O-). Collapse only whitespace, underscore, and other punctuation.
+_COLLAPSE_VALUE = re.compile(r"(?:[^\w+-]|_)+")
+
 
 def normalize(value: str | None) -> str:
     if not value:
         return ""
     return _COLLAPSE.sub(" ", value.strip().lower()).strip()
+
+
+def normalize_value(value: str | None) -> str:
+    """Normalize an ontology *value*, preserving '+'/'-' so clinically opposite
+    values (e.g. ER+ vs ER-) never collapse to the same KB key."""
+    if not value:
+        return ""
+    return _COLLAPSE_VALUE.sub(" ", value.strip().lower()).strip()
 
 
 def schema_key(raw_column: str) -> str:
@@ -38,8 +50,12 @@ def schema_key(raw_column: str) -> str:
 
 
 def ontology_key(field_name: str, raw_value: str) -> str:
-    """Lookup key for an ontology (value) decision: ``field::value`` normalized."""
-    return f"{normalize(field_name)}::{normalize(raw_value)}"
+    """Lookup key for an ontology (value) decision: ``field::value`` normalized.
+
+    The value uses ``normalize_value`` (keeps '+'/'-') so clinically opposite
+    values like ER+ / ER- can't share a learned-decision key.
+    """
+    return f"{normalize(field_name)}::{normalize_value(raw_value)}"
 
 
 async def record_personal(
