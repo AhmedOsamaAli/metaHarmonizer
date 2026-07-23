@@ -118,6 +118,8 @@ class Study(Base, TimestampMixin, OptimisticVersionMixin):
             unique=True,
             postgresql_where=text("status in ('pending','queued','processing')"),
         ),
+        # Per-owner study listing, newest first (dashboard hot path).
+        Index("ix_studies_owner_created", "owner_id", "created_at"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -287,7 +289,10 @@ class AuditEvent(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    __table_args__ = (Index("ix_audit_events_study_id", "study_id"),)
+    __table_args__ = (
+        Index("ix_audit_events_study_id", "study_id"),
+        Index("ix_audit_events_created_at", "created_at"),
+    )
 
 
 # Sessions + API tokens (auth; populated in Sprint 3)
@@ -304,6 +309,8 @@ class Session(Base):
     )
     last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (Index("ix_sessions_user_id", "user_id"),)
 
 
 class ApiToken(Base):
