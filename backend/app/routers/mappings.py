@@ -4,6 +4,7 @@ rematch, and field suggestions."""
 from __future__ import annotations
 
 import json
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +23,7 @@ from app.repositories import learned_decisions as ld_repo
 from app.repositories import mappings as mappings_repo
 from app.repositories import studies as studies_repo
 from app.services import active_learning
+from app.services.ontology_rerun import rerun_column_ontology
 
 router = APIRouter(prefix="/api/v1/mappings", tags=["mappings"])
 
@@ -135,7 +137,7 @@ async def edit_mapping(
     if not mapping:
         raise HTTPException(status_code=404, detail="Mapping not found")
 
-    old_field = mapping.get("matched_field")
+    old_field = mapping.get("curator_field") or mapping.get("matched_field")
     result = await mappings_repo.update_mapping_status(
         db,
         mapping_id,
@@ -163,6 +165,27 @@ async def edit_mapping(
             origin_study_id=mapping["study_id"],
         )
     await db.commit()
+
+    # Keep the value→ontology mappings consistent with the curator's new field:
+    # add codes when a column moves into an ontology-bearing field, drop stale
+    # ones when it moves out. Best-effort — must never fail the edit itself.
+    if mapping.get("raw_column"):
+        try:
+            study = await studies_repo.get_study(db, mapping["study_id"])
+            summary = await rerun_column_ontology(
+                db,
+                study_id=mapping["study_id"],
+                file_key=study.get("file_path") if study else None,
+                raw_column=mapping["raw_column"],
+                old_field=old_field,
+                new_field=body.new_field,
+            )
+            if summary["added"] or summary["removed"]:
+                await db.commit()
+        except Exception:  # noqa: BLE001 — ontology re-run must not break the edit
+            logging.getLogger(__name__).warning(
+                "ontology re-run after schema edit failed", exc_info=True
+            )
     return result
 
 

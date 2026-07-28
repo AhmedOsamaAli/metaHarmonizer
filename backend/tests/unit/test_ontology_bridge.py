@@ -58,10 +58,12 @@ def test_normalize_engine_rows():
 def test_normalize_engine_rows_enriches_code_from_corpus(monkeypatch):
     # OntoMapEngine.run() emits only the matched *label*, no code column. When
     # category/source are known the adapter recovers the code from the corpus
-    # (label -> obo_id) that the match came from.
+    # (label -> obo_id) that the match came from. The corpus map is lowercase-keyed
+    # and lookup is case-insensitive (UBERON labels are lowercase; the engine may
+    # echo the query's casing), so a Title-case match still resolves.
     monkeypatch.setattr(
         _ontology, "_corpus_label_to_id",
-        lambda category, source: {"Glioblastoma": "NCIT:C3058"},
+        lambda category, source: {"glioblastoma": "NCIT:C3058"},
     )
     frame = pd.DataFrame([{"query": "GBM", "match1": "Glioblastoma", "match1_score": 1.0}])
     rows = _ontology._normalize_engine_rows("disease", frame, "disease", "ncit")

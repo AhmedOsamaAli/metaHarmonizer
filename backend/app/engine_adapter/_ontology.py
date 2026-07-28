@@ -36,10 +36,17 @@ def _auto_accept_threshold() -> float:
 FIELD_ONTOLOGY: dict[str, tuple[str, str]] = {
     "disease": ("disease", "ncit"),
     "target_condition": ("disease", "ncit"),
+    "cancer_type": ("disease", "ncit"),
     "body_site": ("bodysite", "uberon"),
     "treatment": ("treatment", "ncit"),
     "treatment_name": ("treatment", "ncit"),
+    "treatment_type": ("treatment", "ncit"),
 }
+
+
+def is_ontology_field(field: str | None) -> bool:
+    """True when a curated field routes to a first-class ontology (NCIt/UBERON)."""
+    return bool(field) and field.strip().lower() in FIELD_ONTOLOGY
 
 
 def engine_enabled() -> bool:
@@ -85,7 +92,7 @@ def _corpus_label_to_id(category: str, source: str) -> dict[str, str]:
     for label, obo in zip(df["label"], df["obo_id"]):
         if not isinstance(label, str):
             continue
-        key = label.strip()
+        key = label.strip().lower()
         code = "" if obo is None else str(obo).strip()
         if key and code and key not in mapping:  # first-wins for stable output
             mapping[key] = code
@@ -125,7 +132,7 @@ def _normalize_engine_rows(
         if ont_id is None and not term_missing and category and source:
             if label_to_id is None:
                 label_to_id = _corpus_label_to_id(category, source)
-            ont_id = label_to_id.get(str(term).strip())
+            ont_id = label_to_id.get(str(term).strip().lower())
         score = _to_score(raw.get("match1_score"))
         rows.append(
             {

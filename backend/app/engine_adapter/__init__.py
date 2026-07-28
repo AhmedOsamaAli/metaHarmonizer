@@ -24,6 +24,7 @@ import os
 from functools import lru_cache
 
 from .protocol import EngineProtocol
+from ._ontology import is_ontology_field
 from .types import (
     Alternative,
     EngineHealth,
@@ -40,6 +41,7 @@ __all__ = [
     "EngineProtocol",
     "get_engine",
     "reset_engine_cache",
+    "is_ontology_field",
     "Alternative",
     "EngineHealth",
     "LLMSuggestion",

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import OntologyMapping
@@ -82,3 +82,40 @@ async def update_ontology_mapping(
         o.confidence_score = 1.0
     await db.flush()
     return _to_dict(o)
+
+
+async def delete_unreviewed_ontology(
+    db: AsyncSession, study_id: str, fields: set[str], values: set[str]
+) -> int:
+    """Remove ontology rows the curator hasn't reviewed (``reviewed_at`` is NULL)
+    for the given fields+values — used when a column's schema field changes.
+    Auto-accepted engine rows are unreviewed and thus removed; a curator's own
+    accept/edit (which stamps ``reviewed_at``) is left untouched."""
+    fields = {f for f in fields if f}
+    if not fields or not values:
+        return 0
+    stmt = delete(OntologyMapping).where(
+        OntologyMapping.study_id == study_id,
+        OntologyMapping.field_name.in_(fields),
+        OntologyMapping.raw_value.in_(values),
+        OntologyMapping.reviewed_at.is_(None),
+    )
+    res = await db.execute(stmt)
+    return res.rowcount or 0
+
+
+async def existing_value_keys(
+    db: AsyncSession, study_id: str, fields: set[str], values: set[str]
+) -> set[tuple[str, str]]:
+    """(field_name, raw_value) pairs already present for a study — so a re-run
+    doesn't duplicate rows the curator has already reviewed."""
+    fields = {f for f in fields if f}
+    if not fields or not values:
+        return set()
+    stmt = select(OntologyMapping.field_name, OntologyMapping.raw_value).where(
+        OntologyMapping.study_id == study_id,
+        OntologyMapping.field_name.in_(fields),
+        OntologyMapping.raw_value.in_(values),
+    )
+    rows = await db.execute(stmt)
+    return {(f, v) for f, v in rows.all()}
