@@ -282,6 +282,15 @@ def _load_field_value_dict() -> dict[str, list[str]]:
     return _cached_field_value_dict
 
 
+def supports_ontology_mapping(field: str | None) -> bool:
+    if not field:
+        return False
+    key = _normalise(field)
+    return key in ONTOLOGY_MAP or key in {
+        _normalise(name) for name in _load_field_value_dict()
+    }
+
+
 def _resolve_ncit_id(term: str, nci_term2code: dict, field: str) -> str | None:
     """
     Resolve a canonical term name to a NCIT/UBERON ID.

@@ -33,6 +33,19 @@ from app.services.ontology_rerun import rerun_column_ontology
 router = APIRouter(prefix="/api/v1/mappings", tags=["mappings"])
 
 
+async def _sync_accepted_mapping_ontology(db: AsyncSession, mapping: dict) -> dict[str, int]:
+    field = mapping.get("curator_field") or mapping.get("matched_field")
+    study = await studies_repo.get_study(db, mapping["study_id"])
+    return await rerun_column_ontology(
+        db,
+        study_id=mapping["study_id"],
+        file_key=study.get("file_path") if study else None,
+        raw_column=mapping.get("raw_column") or "",
+        old_field=field,
+        new_field=field,
+    )
+
+
 @router.get("/{study_id}", response_model=list[MappingOut])
 async def get_study_mappings(
     study_id: str,
@@ -101,6 +114,15 @@ async def accept_mapping(
             origin_study_id=mapping["study_id"],
         )
     await db.commit()
+
+    try:
+        summary = await _sync_accepted_mapping_ontology(db, mapping)
+        if summary["added"] or summary["removed"]:
+            await db.commit()
+    except Exception:  # noqa: BLE001
+        logging.getLogger(__name__).warning(
+            "ontology re-run after schema acceptance failed", exc_info=True
+        )
     return result
 
 
@@ -220,6 +242,7 @@ async def batch_update_mappings(
     # Per-owner isolation: every id must belong to one of the caller's studies,
     # else a curator could mutate another owner's mappings by guessing ids.
     checked: set[str] = set()
+    mappings: list[dict] = []
     for mid in body.mapping_ids:
         m = await mappings_repo.get_mapping(db, mid)
         if not m:
@@ -230,6 +253,7 @@ async def batch_update_mappings(
                 detail="Mapping not found",
             )
             checked.add(m["study_id"])
+        mappings.append(m)
 
     updated = await mappings_repo.batch_update_mapping_status(
         db, body.mapping_ids, body.action, reviewed_by=user.id
@@ -250,6 +274,20 @@ async def batch_update_mappings(
             )
 
     await db.commit()
+
+    if body.action == "accepted":
+        changed = False
+        for mapping in mappings:
+            try:
+                summary = await _sync_accepted_mapping_ontology(db, mapping)
+                changed = changed or bool(summary["added"] or summary["removed"])
+            except Exception:  # noqa: BLE001
+                logging.getLogger(__name__).warning(
+                    "ontology re-run after batch schema acceptance failed",
+                    exc_info=True,
+                )
+        if changed:
+            await db.commit()
     return BatchUpdateResponse(updated=updated, action=body.action)
 
 

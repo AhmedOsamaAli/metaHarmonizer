@@ -18,7 +18,7 @@ from sqlalchemy import delete, select
 
 from app.core.security import hash_password
 from app.core.storage import get_storage
-from app.db.models import JobRun, Study, User
+from app.db.models import JobRun, Mapping, OntologyMapping, Study, User
 from app.db.session import SessionLocal
 
 
@@ -259,6 +259,34 @@ async def run(origin: str) -> AuditReport:
                     json={"new_field": "body_site", "note": "production audit rerun"},
                 )
             )
+            async with SessionLocal() as db:
+                mapping_row = await db.get(Mapping, mapping_id)
+                require(mapping_row is not None, "synthetic schema mapping disappeared")
+                mapping_row.status = "pending"
+                mapping_row.reviewed_at = None
+                mapping_row.reviewed_by = None
+                await db.execute(
+                    delete(OntologyMapping).where(
+                        OntologyMapping.study_id == study_id,
+                        OntologyMapping.field_name == "body_site",
+                        OntologyMapping.raw_value.in_({"lung", "liver"}),
+                    )
+                )
+                await db.commit()
+            cleared = checked(
+                await client.get(f"/api/v1/ontology/mappings/{study_id}", headers=auth)
+            ).json()
+            require(
+                not [
+                    row for row in cleared
+                    if row["field_name"] == "body_site"
+                    and row["raw_value"] in {"lung", "liver"}
+                ],
+                "synthetic ontology rows were not cleared before acceptance test",
+            )
+            checked(
+                await client.post(f"/api/v1/mappings/{mapping_id}/accept", headers=auth)
+            )
             ontology = checked(
                 await client.get(f"/api/v1/ontology/mappings/{study_id}", headers=auth)
             ).json()
@@ -268,7 +296,7 @@ async def run(origin: str) -> AuditReport:
             ]
             require({row["raw_value"] for row in body_rows} == {"lung", "liver"}, f"ontology rerun missed values: {body_rows}")
             require(all(row.get("ontology_term") and row.get("ontology_id") for row in body_rows), f"ontology rerun returned uncoded rows: {body_rows}")
-            report.pass_("schema edit reruns real ontology mapping")
+            report.pass_("schema acceptance reruns real ontology mapping")
 
             remaining_ids = [row["id"] for row in mappings if row["id"] != mapping_id]
             batch = checked(

@@ -3,10 +3,17 @@ from __future__ import annotations
 import pytest
 
 from app.services import ontology_rerun
+from app.services.harmonizer import supports_ontology_mapping
 
 
 @pytest.mark.asyncio
-async def test_field_edit_into_ontology_adds_value_mappings(monkeypatch):
+@pytest.mark.parametrize(
+    ("old_field", "new_field"),
+    [("notes", "body_site"), ("body_site", "body_site")],
+)
+async def test_field_edit_or_accept_into_ontology_adds_value_mappings(
+    monkeypatch, old_field, new_field
+):
     inserted: list[dict] = []
 
     class Engine:
@@ -52,8 +59,8 @@ async def test_field_edit_into_ontology_adds_value_mappings(monkeypatch):
         study_id="study-1",
         file_key="upload.csv",
         raw_column="biopsy_location",
-        old_field="notes",
-        new_field="body_site",
+        old_field=old_field,
+        new_field=new_field,
     )
 
     assert result == {"added": 2, "removed": 0}
@@ -98,3 +105,10 @@ async def test_field_edit_out_of_ontology_removes_only_repository_selected_rows(
         "fields": {"body_site", "notes"},
         "values": {"lung", "liver"},
     }
+
+
+def test_dictionary_backed_fields_support_ontology_mapping():
+    assert supports_ontology_mapping("sex")
+    assert supports_ontology_mapping("country")
+    assert supports_ontology_mapping("body_site")
+    assert not supports_ontology_mapping("notes")

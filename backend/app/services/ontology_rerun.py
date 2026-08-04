@@ -19,8 +19,9 @@ import anyio
 import pandas as pd
 
 from app.core.storage import get_storage
-from app.engine_adapter import get_engine, is_ontology_field
+from app.engine_adapter import get_engine
 from app.repositories import ontology as ontology_repo
+from app.services.harmonizer import supports_ontology_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ async def rerun_column_ontology(
 ) -> dict[str, int]:
     """Re-map one column's values after its field changed. Returns
     ``{"added": n, "removed": m}``. Does not commit — the caller owns the txn."""
-    if not is_ontology_field(old_field) and not is_ontology_field(new_field):
+    if not supports_ontology_mapping(old_field) and not supports_ontology_mapping(new_field):
         return {"added": 0, "removed": 0}
     if not raw_column or not file_key:
         return {"added": 0, "removed": 0}
@@ -60,7 +61,7 @@ async def rerun_column_ontology(
 
     # Fresh engine output for the new field (empty when it isn't ontology-bearing).
     new_rows: list[dict] = []
-    if is_ontology_field(new_field):
+    if supports_ontology_mapping(new_field):
         raw_df = pd.DataFrame({raw_column: values})
         schema_mappings = [
             {"raw_column": raw_column, "matched_field": new_field, "curator_field": new_field}
@@ -80,7 +81,7 @@ async def rerun_column_ontology(
     # Skip rows the curator already reviewed for the new field (don't clobber decisions).
     existing = (
         await ontology_repo.existing_value_keys(db, study_id, {new_field}, value_set)
-        if is_ontology_field(new_field)
+        if supports_ontology_mapping(new_field)
         else set()
     )
     fresh = [r for r in new_rows if (r.get("field_name"), r.get("raw_value")) not in existing]
