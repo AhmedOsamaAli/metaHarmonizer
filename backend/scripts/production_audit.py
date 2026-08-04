@@ -62,7 +62,7 @@ async def create_audit_users() -> tuple[User, str, User, str]:
     curator_password = secrets.token_urlsafe(24)
     async with SessionLocal() as db:
         admin = User(
-            email=f"production-audit-admin-{suffix}@example.invalid",
+            email=f"production-audit-admin-{suffix}@example.com",
             name="Production Audit Admin",
             role="admin",
             password_hash=hash_password(admin_password),
@@ -71,7 +71,7 @@ async def create_audit_users() -> tuple[User, str, User, str]:
             approved=True,
         )
         curator = User(
-            email=f"production-audit-curator-{suffix}@example.invalid",
+            email=f"production-audit-curator-{suffix}@example.com",
             name="Production Audit Curator",
             role="curator",
             password_hash=hash_password(curator_password),
