@@ -20,7 +20,11 @@ import pandas as pd
 
 from app.core.storage import get_storage
 from app.engine_adapter import get_engine
+from app.repositories import engine_proposals as proposal_repo
+from app.repositories import learned_decisions as learned_repo
 from app.repositories import ontology as ontology_repo
+from app.repositories import studies as studies_repo
+from app.services import engine_proposal_cache as proposal_cache
 from app.services.harmonizer import supports_ontology_mapping
 
 logger = logging.getLogger(__name__)
@@ -68,9 +72,40 @@ async def rerun_column_ontology(
         ]
         try:
             engine = get_engine()
-            new_rows = await anyio.to_thread.run_sync(
-                engine.map_values, raw_df, schema_mappings
+            health = engine.health()
+            study = await studies_repo.get_study(db, study_id)
+            _, ontology_scope = proposal_cache.scopes(
+                schema_version_id=study.get("schema_version_id") if study else None,
+                ontology_snapshot_id=study.get("ontology_snapshot_id") if study else None,
+                target_schema=None,
+                engine_version=health.version,
             )
+            inputs = {
+                learned_repo.ontology_key(str(new_field), value): (
+                    str(new_field), value
+                )
+                for value in values
+            }
+            cached = await proposal_repo.lookup(
+                db,
+                scope_key=ontology_scope,
+                kind="ontology",
+                keys=list(inputs),
+            )
+            hydrated = proposal_cache.hydrate_ontology(inputs, cached)
+            if hydrated is not None:
+                new_rows = hydrated
+            else:
+                new_rows = await anyio.to_thread.run_sync(
+                    engine.map_values, raw_df, schema_mappings
+                )
+                await proposal_repo.upsert_many(
+                    db,
+                    scope_key=ontology_scope,
+                    kind="ontology",
+                    proposals=proposal_cache.ontology_proposals(new_rows),
+                    engine_version=health.version,
+                )
         except Exception as exc:  # noqa: BLE001 — never let the engine break the edit
             logger.warning("ontology re-run: engine map_values failed: %s", exc)
             new_rows = []

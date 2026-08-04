@@ -270,6 +270,32 @@ class LearnedDecision(Base, TimestampMixin):
     )
 
 
+class EngineProposal(Base, TimestampMixin):
+    __tablename__ = "engine_proposals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    scope_key: Mapped[str] = mapped_column(String(240), nullable=False)
+    kind: Mapped[str] = mapped_column(String(10), nullable=False)
+    source_key: Mapped[str] = mapped_column(Text, nullable=False)
+    payload: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    engine_version: Mapped[str | None] = mapped_column(String(100))
+    use_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    last_used_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "scope_key", "kind", "source_key", name="uq_engine_proposal_scope_key"
+        ),
+        Index("ix_engine_proposals_lookup", "scope_key", "kind", "source_key"),
+        Index("ix_engine_proposals_last_used", "last_used_at"),
+        CheckConstraint("kind in ('schema','ontology')", name="engine_proposal_kind_valid"),
+    )
+
+
 # Append-only audit log (G4)
 class AuditEvent(Base):
     """Append-only decision log. No UPDATE/DELETE — enforced by a DB trigger

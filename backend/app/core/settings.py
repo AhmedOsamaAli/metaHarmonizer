@@ -130,6 +130,7 @@ class Settings(BaseSettings):
     # Append-only audit / activity log retention. Kept ~1 year for forensics;
     # rows are tiny (~a few hundred bytes) so it's cheap. 0 = keep forever.
     retention_audit_days: int = 365
+    retention_engine_proposals_days: int = 180
 
     # ── Observability ───────────────────────────────────────────────────────
     log_level: Literal["debug", "info", "warning", "error"] = "info"

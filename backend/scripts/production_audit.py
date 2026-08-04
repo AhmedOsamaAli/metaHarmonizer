@@ -410,7 +410,21 @@ async def run(origin: str) -> AuditReport:
                 and all(row["status"] == "accepted" and row.get("reviewed_at") for row in repeated_body),
                 f"learned ontology decisions were not applied: {repeated_body}",
             )
-            report.pass_("learned schema and ontology decisions apply on repeat upload")
+            repeated_audit = checked(
+                await client.get(
+                    "/api/v1/audit",
+                    headers=auth,
+                    params={"study_id": second_id, "action": "harmonize.completed", "limit": 10},
+                )
+            ).json()
+            completion = repeated_audit.get("items", [])
+            require(completion, "repeat upload has no harmonize provenance event")
+            details = completion[0].get("details") or {}
+            require(details.get("schema_cache_hit") is True, f"schema cache miss: {details}")
+            require(details.get("ontology_cache_hit") is True, f"ontology cache miss: {details}")
+            report.pass_(
+                "learned decisions and shared engine proposals apply on repeat upload"
+            )
 
             quality = checked(await client.get(f"/api/v1/quality/{study_id}", headers=auth)).json()
             require(quality["total_columns"] == 4, f"quality total wrong: {quality}")

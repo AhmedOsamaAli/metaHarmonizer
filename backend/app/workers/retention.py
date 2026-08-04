@@ -29,7 +29,7 @@ from pathlib import Path
 from sqlalchemy import delete
 
 from app.core.settings import settings
-from app.db.models import AuditEvent
+from app.db.models import AuditEvent, EngineProposal
 from app.db.models import Session as SessionModel
 from app.db.session import SessionLocal
 from app.repositories import studies as studies_repo
@@ -93,6 +93,21 @@ async def _purge_audit(older_than_days: int, *, dry_run: bool) -> int:
         return result.rowcount or 0
 
 
+async def _purge_engine_proposals(older_than_days: int, *, dry_run: bool) -> int:
+    if older_than_days <= 0:
+        return 0
+    cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+    async with SessionLocal() as db:
+        result = await db.execute(
+            delete(EngineProposal).where(EngineProposal.last_used_at < cutoff)
+        )
+        if dry_run:
+            await db.rollback()
+        else:
+            await db.commit()
+        return result.rowcount or 0
+
+
 async def run_retention(*, dry_run: bool = False) -> dict[str, int]:
     """Run all retention purges; returns a per-category count."""
     uploads = _purge_dir(UPLOADS_DIR, settings.retention_uploads_days, dry_run=dry_run)
@@ -102,12 +117,16 @@ async def run_retention(*, dry_run: bool = False) -> dict[str, int]:
     )
     idle_studies = await _purge_idle_studies(dry_run=dry_run)
     audit = await _purge_audit(settings.retention_audit_days, dry_run=dry_run)
+    engine_proposals = await _purge_engine_proposals(
+        settings.retention_engine_proposals_days, dry_run=dry_run
+    )
     return {
         "uploads": uploads,
         "exports": exports,
         "revoked_sessions": sessions,
         "idle_studies": idle_studies,
         "audit": audit,
+        "engine_proposals": engine_proposals,
     }
 
 

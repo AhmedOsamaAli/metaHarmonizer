@@ -31,10 +31,12 @@ from app.core.storage import get_storage
 from app.db.session import SessionLocal
 from app.engine_adapter import get_engine
 from app.repositories import audit as audit_repo
+from app.repositories import engine_proposals as proposal_repo
 from app.repositories import jobs as jobs_repo
 from app.repositories import mappings as mappings_repo
 from app.repositories import ontology as ontology_repo
 from app.repositories import studies as studies_repo
+from app.services import engine_proposal_cache as proposal_cache
 
 logger = logging.getLogger("app.jobs")
 
@@ -76,6 +78,8 @@ def _run_pipeline(
     mode: str = "both",
     ontology_columns: list[str] | None = None,
     target_schema: str | None = None,
+    cached_schema: list[dict] | None = None,
+    cached_ontology: list[dict] | None = None,
 ) -> dict:
     """Synchronous, CPU-heavy engine work — executed in a worker thread.
 
@@ -103,7 +107,6 @@ def _run_pipeline(
     with get_storage().local(file_path) as local_csv:
         raw_df = pd.read_csv(local_csv, sep=sep, low_memory=False)
 
-        engine = get_engine()
         scope = {c.strip() for c in (ontology_columns or []) if c and c.strip()}
 
         schema_results: list[dict] = []
@@ -112,10 +115,10 @@ def _run_pipeline(
         # Schema mapping is needed for every mode except a pure ontology run with
         # no work — even "ontology" needs it to resolve each column's curated
         # field so the value pass routes to the right vocabulary.
-        schema_all: list[dict] = []
-        if mode in ("both", "schema", "ontology"):
+        schema_all: list[dict] = cached_schema if cached_schema is not None else []
+        if cached_schema is None and mode in ("both", "schema", "ontology"):
             curated_df = pd.read_csv(curated_path, low_memory=False)
-            schema_all = engine.harmonize_schema(
+            schema_all = get_engine().harmonize_schema(
                 raw_df, curated_df, csv_path=str(local_csv), target_schema=target_schema
             )
 
@@ -123,13 +126,15 @@ def _run_pipeline(
         if mode in ("both", "schema"):
             schema_results = schema_all
 
-        if mode in ("both", "ontology"):
+        if cached_ontology is not None:
+            onto_results = cached_ontology
+        elif mode in ("both", "ontology"):
             schema_for_onto = schema_all
             if scope:
                 schema_for_onto = [
                     m for m in schema_all if m.get("raw_column") in scope
                 ]
-            onto_results = engine.map_values(raw_df, schema_for_onto) or []
+            onto_results = get_engine().map_values(raw_df, schema_for_onto) or []
 
         return {
             "schema_results": schema_results,
@@ -138,6 +143,9 @@ def _run_pipeline(
             "columns": len(schema_results),
             "rows": int(len(raw_df)),
             "ontology_values": len(onto_results),
+            "cache_schema_results": schema_all,
+            "schema_cache_hit": cached_schema is not None,
+            "ontology_cache_hit": cached_ontology is not None,
         }
 
 
@@ -175,6 +183,52 @@ async def run_harmonize(
         )
         await _emit(study_id, stage="schema", message=_schema_msg, pct=30)
 
+        async with SessionLocal() as session:
+            study = await studies_repo.get_study(session, study_id)
+            if study is None:
+                raise RuntimeError(f"study {study_id} disappeared before processing")
+
+            health = get_engine().health()
+            schema_scope, ontology_scope = proposal_cache.scopes(
+                schema_version_id=study.get("schema_version_id"),
+                ontology_snapshot_id=study.get("ontology_snapshot_id"),
+                target_schema=target_schema,
+                engine_version=health.version,
+            )
+            columns = await anyio.to_thread.run_sync(
+                proposal_cache.read_columns, file_path, suffix
+            )
+            schema_key_map = proposal_cache.schema_keys(columns)
+            schema_cached = await proposal_repo.lookup(
+                session,
+                scope_key=schema_scope,
+                kind="schema",
+                keys=list(schema_key_map),
+            )
+            cached_schema = proposal_cache.hydrate_schema(columns, schema_cached)
+
+            cached_ontology: list[dict] | None = None
+            if cached_schema is not None and mode in ("both", "ontology"):
+                ontology_inputs = await anyio.to_thread.run_sync(
+                    functools.partial(
+                        proposal_cache.ontology_inputs,
+                        file_path,
+                        suffix,
+                        cached_schema,
+                        ontology_columns,
+                    )
+                )
+                ontology_cached = await proposal_repo.lookup(
+                    session,
+                    scope_key=ontology_scope,
+                    kind="ontology",
+                    keys=list(ontology_inputs),
+                )
+                cached_ontology = proposal_cache.hydrate_ontology(
+                    ontology_inputs, ontology_cached
+                )
+            await session.commit()
+
         # Heavy engine work off the event loop; re-check cancel before & after.
         await _checkpoint(study_id)
         result = await anyio.to_thread.run_sync(
@@ -187,6 +241,8 @@ async def run_harmonize(
                 mode=mode,
                 ontology_columns=ontology_columns,
                 target_schema=target_schema,
+                cached_schema=cached_schema,
+                cached_ontology=cached_ontology,
             )
         )
         await _checkpoint(study_id)
@@ -194,7 +250,22 @@ async def run_harmonize(
         # Persist engine output on the event loop via async repositories.
         schema_results = result.pop("schema_results")
         onto_results = result.pop("onto_results")
+        cache_schema_results = result.pop("cache_schema_results")
         async with SessionLocal() as session:
+            await proposal_repo.upsert_many(
+                session,
+                scope_key=schema_scope,
+                kind="schema",
+                proposals=proposal_cache.schema_proposals(cache_schema_results),
+                engine_version=health.version,
+            )
+            await proposal_repo.upsert_many(
+                session,
+                scope_key=ontology_scope,
+                kind="ontology",
+                proposals=proposal_cache.ontology_proposals(onto_results),
+                engine_version=health.version,
+            )
             await mappings_repo.insert_mappings(session, study_id, schema_results)
             if onto_results:
                 await ontology_repo.insert_ontology_mappings(
@@ -228,6 +299,8 @@ async def run_harmonize(
                         "engine_version": health.version,
                         "models": health.loaded_models,
                         "mode": mode,
+                        "schema_cache_hit": result["schema_cache_hit"],
+                        "ontology_cache_hit": result["ontology_cache_hit"],
                     },
                 )
                 await session.commit()

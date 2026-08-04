@@ -174,6 +174,7 @@ async def test_single_and_batch_accept_sync_approved_fields(env):
                 "comment": ("accepted", "notes"),
                 "unused": ("rejected", None),
             }
+            assert applied["site"] != ("accepted", "wrong_site")
 
 
 async def test_ontology_accept_and_reject_apply_to_next_study(env):

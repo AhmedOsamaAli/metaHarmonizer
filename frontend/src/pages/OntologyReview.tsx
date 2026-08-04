@@ -12,6 +12,7 @@ import {
   Tags,
   CircleCheck,
   Clock,
+  XCircle,
   HelpCircle,
   Plus,
   Sparkles,
@@ -35,6 +36,7 @@ import OntologyIcon from '../components/icons/OntologyIcon';
 import StudyPicker from '../components/StudyPicker';
 import StudyGate, { isStudyReady } from '../components/StudyGate';
 import { Card, CardBody } from '../components/ui/Card';
+import SegmentedControl from '../components/ui/SegmentedControl';
 import type { OntologyMapping, OntologySearchResult } from '../api/types';
 
 interface EditState { id: number; term: string; ontId: string; raw?: string }
@@ -550,17 +552,34 @@ export default function OntologyReview() {
               </Card>
 
               {/* Status filter */}
-              <div className="flex flex-wrap items-center gap-2">
-                {(['all', 'pending', 'accepted', 'rejected'] as StatusFilter[]).map((f) => (
-                  <button
-                    key={f}
-                    onClick={() => setStatusFilter(f)}
-                    className={`chip capitalize ${statusFilter === f ? 'bg-primary-600 text-white' : 'bg-slate-100 dark:bg-slate-800/70 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700'}`}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
+              <SegmentedControl<StatusFilter>
+                value={statusFilter}
+                onChange={setStatusFilter}
+                segments={[
+                  {
+                    value: 'pending',
+                    label: 'Pending',
+                    icon: <Clock className="h-3.5 w-3.5" />,
+                    tone: 'amber',
+                    count: matched.filter((m) => m.status === 'pending').length,
+                  },
+                  {
+                    value: 'accepted',
+                    label: 'Accepted',
+                    icon: <CircleCheck className="h-3.5 w-3.5" />,
+                    tone: 'emerald',
+                    count: matched.filter((m) => m.status === 'accepted').length,
+                  },
+                  {
+                    value: 'rejected',
+                    label: 'Rejected',
+                    icon: <XCircle className="h-3.5 w-3.5" />,
+                    tone: 'rose',
+                    count: matched.filter((m) => m.status === 'rejected').length,
+                  },
+                  { value: 'all', label: 'All', tone: 'slate', count: matched.length },
+                ]}
+              />
 
               {/* Matched, grouped by field */}
               {matchedFields.length === 0 ? (
