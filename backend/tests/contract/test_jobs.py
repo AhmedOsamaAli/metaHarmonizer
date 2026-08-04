@@ -151,16 +151,20 @@ async def test_ws_ticket_endpoint_requires_auth(env):
 
 async def test_job_status_endpoint(env):
     from app.repositories import jobs as jobs_repo
+    from app.db.models import Study
 
     make_client, domain = env
     study_id = f"jobtest_{uuid.uuid4().hex[:8]}"
-    async with db_session.SessionLocal() as s:
-        await jobs_repo.create_job(s, study_id=study_id, kind="harmonize")
-        await s.commit()
-
     async with make_client() as c:
         reg = await register_and_login(c, f"js@{domain}")
         tok = reg["access_token"]
+        # job_status is owner-scoped, so seed a study owned by this user.
+        async with db_session.SessionLocal() as s:
+            s.add(Study(id=study_id, name="job", status="queued",
+                        file_path=None, owner_id=reg["user"]["id"]))
+            await s.flush()
+            await jobs_repo.create_job(s, study_id=study_id, kind="harmonize")
+            await s.commit()
         r = await c.get(f"/api/v1/jobs/{study_id}", headers={"Authorization": f"Bearer {tok}"})
         assert r.status_code == 200
         assert r.json()["state"] == "queued"

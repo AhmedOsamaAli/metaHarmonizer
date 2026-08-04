@@ -17,7 +17,7 @@ import logging
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import current_user, require_role
+from app.core.deps import current_user, ensure_study_visible, require_role
 from app.core.jobs import (
     get_snapshot,
     job_channel,
@@ -31,6 +31,7 @@ from app.core.redis import get_redis
 from app.db.models import User
 from app.db.session import get_db
 from app.repositories import jobs as jobs_repo
+from app.repositories import studies as studies_repo
 
 logger = logging.getLogger("app.ws")
 
@@ -51,6 +52,7 @@ async def job_status(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
     """Poll fallback: latest job state for a study (for clients without WS)."""
+    ensure_study_visible(await studies_repo.get_study(db, study_id), user)
     job = await jobs_repo.latest_for_study(db, study_id)
     snapshot = await get_snapshot(study_id)
     return {

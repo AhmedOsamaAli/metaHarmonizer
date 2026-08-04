@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import actor_label, current_user, require_role
+from app.core.deps import actor_label, current_user, ensure_study_visible, owned_study, require_role
 from app.core.errors import ServiceUnavailableError
 from app.core.queue import enqueue_harmonize, has_capacity
 from app.core.settings import settings
@@ -292,11 +292,13 @@ async def list_engine_target_schemas(
 
 
 @router.get("/harmonize/{job_id}")
-async def get_harmonization_results(job_id: str, db: AsyncSession = Depends(get_db)):
-    """Get the schema mapping results for a harmonization job."""
-    study = await studies_repo.get_study(db, job_id)
-    if not study:
-        raise HTTPException(status_code=404, detail="Study not found")
+async def get_harmonization_results(
+    job_id: str,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get the schema mapping results for a harmonization job (owner-scoped)."""
+    study = ensure_study_visible(await studies_repo.get_study(db, job_id), user)
 
     mappings = await mappings_repo.get_mappings(db, job_id)
     return {
@@ -315,11 +317,8 @@ async def list_studies(user: User = Depends(current_user), db: AsyncSession = De
 
 
 @router.get("/studies/{study_id}", response_model=StudyOut)
-async def get_study(study_id: str, db: AsyncSession = Depends(get_db)):
-    """Get study details."""
-    study = await studies_repo.get_study(db, study_id)
-    if not study:
-        raise HTTPException(status_code=404, detail="Study not found")
+async def get_study(study: dict = Depends(owned_study)):
+    """Get study details (owner-scoped)."""
     return study
 
 

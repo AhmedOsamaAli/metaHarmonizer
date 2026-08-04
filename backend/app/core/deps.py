@@ -10,7 +10,7 @@ returned so protected routes stay reachable.
 from __future__ import annotations
 
 import jwt
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,6 +20,7 @@ from app.core.settings import settings
 from app.db.models import User
 from app.db.session import get_db
 from app.repositories import api_tokens as api_tokens_repo
+from app.repositories import studies as studies_repo
 from app.repositories import users as users_repo
 
 # Role hierarchy: higher number = more privilege.
@@ -130,6 +131,39 @@ def require_role(minimum: str):
         return user
 
     return _checker
+
+
+def ensure_study_visible(
+    study: dict | None, user: User, *, detail: str = "Study not found"
+) -> dict:
+    """Per-owner isolation guard for a fetched study row.
+
+    Every upload is one curator's private study (two curators never share one,
+    even for the same file). Return the study only when the caller may see it —
+    they own it, it is unowned (local/anonymous/dev studies carry a NULL owner),
+    or they are an admin. Otherwise raise 404 (never 403) so another owner's
+    study — and the sequential mapping ids behind it — cannot be probed for
+    existence.
+    """
+    owner = (study or {}).get("owner_id")
+    if study is not None and (
+        owner is None or owner == user.id or getattr(user, "role", None) == "admin"
+    ):
+        return study
+    raise HTTPException(status_code=404, detail=detail)
+
+
+async def owned_study(
+    study_id: str,
+    user: User = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Path dependency: fetch ``study_id`` and enforce per-owner visibility.
+
+    Use on study-scoped reads so a curator only ever sees their own studies.
+    Returns the study dict (so the handler needn't re-query).
+    """
+    return ensure_study_visible(await studies_repo.get_study(db, study_id), user)
 
 
 def actor_label(user: User) -> str:

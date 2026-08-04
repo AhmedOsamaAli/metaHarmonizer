@@ -14,6 +14,8 @@ from typing import Optional
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.deps import current_user, ensure_study_visible, owned_study
+from app.db.models import User
 from app.db.session import get_db
 from app.models import QualityMetrics
 from app.repositories import mappings as mappings_repo
@@ -85,11 +87,12 @@ def _find_eval_csv_for_study(study: dict) -> Optional[Path]:
 
 
 @router.get("/{study_id}", response_model=QualityMetrics)
-async def get_quality_metrics(study_id: str, db: AsyncSession = Depends(get_db)):
+async def get_quality_metrics(
+    study_id: str,
+    _study: dict = Depends(owned_study),
+    db: AsyncSession = Depends(get_db),
+):
     """Returns confidence distribution, stage breakdown, coverage stats."""
-    study = await studies_repo.get_study(db, study_id)
-    if not study:
-        raise HTTPException(status_code=404, detail="Study not found")
     return await compute_quality_metrics(db, study_id)
 
 
@@ -104,6 +107,7 @@ async def evaluate_mapping_accuracy(
         ),
         embed=True,
     ),
+    user: User = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -115,9 +119,7 @@ async def evaluate_mapping_accuracy(
 
     Returns per-column breakdown and aggregate TP/FP/FN/TN / P / R / F1.
     """
-    study = await studies_repo.get_study(db, study_id)
-    if not study:
-        raise HTTPException(status_code=404, detail="Study not found")
+    study = ensure_study_visible(await studies_repo.get_study(db, study_id), user)
 
     # Resolve ground truth
     if ground_truth is None:

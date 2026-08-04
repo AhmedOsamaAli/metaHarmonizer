@@ -14,6 +14,7 @@ import pytest
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+import app.core.settings as settings_mod
 import app.db.session as db_session
 from app.db.models import Mapping, Study
 
@@ -21,7 +22,7 @@ pytestmark = pytest.mark.asyncio
 
 
 @pytest.fixture
-async def queue_app(database_url):
+async def queue_app(database_url, monkeypatch):
     engine = create_async_engine(database_url, poolclass=sa.pool.NullPool)
     try:
         async with engine.connect() as conn:
@@ -29,6 +30,11 @@ async def queue_app(database_url):
     except Exception:
         await engine.dispose()
         pytest.skip("dev Postgres not reachable")
+
+    # The review-queue read is now owner-scoped (requires an authenticated user).
+    # This test targets queue ORDERING, not auth, so run with auth disabled — the
+    # synthetic admin then satisfies the guard without a token round-trip.
+    monkeypatch.setattr(settings_mod.settings, "auth_mode", "none", raising=False)
 
     db_session.engine = engine
     db_session.SessionLocal = async_sessionmaker(engine, expire_on_commit=False)

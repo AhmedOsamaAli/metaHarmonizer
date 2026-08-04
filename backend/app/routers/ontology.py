@@ -9,7 +9,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from rapidfuzz import fuzz, process
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import actor_label as _actor_label, require_role
+from app.core.deps import (
+    actor_label as _actor_label,
+    ensure_study_visible,
+    owned_study,
+    require_role,
+)
+from app.db.models import OntologyMapping
 from app.db.session import get_db
 from app.models import OntologyEditRequest, OntologyMappingOut, OntologySearchResult
 from app.repositories import audit as audit_repo
@@ -114,11 +120,12 @@ async def list_ontology_snapshots(
 
 
 @router.get("/mappings/{study_id}", response_model=list[OntologyMappingOut])
-async def get_ontology_mappings(study_id: str, db: AsyncSession = Depends(get_db)):
-    """Get all ontology value mappings for a study."""
-    study = await studies_repo.get_study(db, study_id)
-    if not study:
-        raise HTTPException(status_code=404, detail="Study not found")
+async def get_ontology_mappings(
+    study_id: str,
+    _study: dict = Depends(owned_study),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all ontology value mappings for a study (owner-scoped)."""
     return await ontology_repo.get_ontology_mappings(db, study_id)
 
 
@@ -168,7 +175,7 @@ def _is_term_like(value: str) -> bool:
 async def suggest_ontology_terms(
     study_id: str,
     threshold: float = Query(default=0.85, ge=0.0, le=1.0),
-    _curator=Depends(require_role("curator")),
+    user=Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, object]:
     """Batch-suggest ontology terms for a study's *unmatched* values in ONE call.
@@ -178,9 +185,7 @@ async def suggest_ontology_terms(
     clears ``threshold``, return it keyed by mapping id. Computing this
     server-side avoids the client firing one HTTP request per value (which both
     hammers the rate limiter and is an N+1)."""
-    study = await studies_repo.get_study(db, study_id)
-    if not study:
-        raise HTTPException(status_code=404, detail="Study not found")
+    study = ensure_study_visible(await studies_repo.get_study(db, study_id), user)
 
     rows = await ontology_repo.get_ontology_mappings(db, study_id)
 
@@ -224,6 +229,13 @@ async def accept_ontology_mapping(
     db: AsyncSession = Depends(get_db),
 ):
     """Accept the automated ontology term assignment."""
+    _row = await db.get(OntologyMapping, mapping_id)
+    if _row is None:
+        raise HTTPException(status_code=404, detail="Ontology mapping not found")
+    ensure_study_visible(
+        await studies_repo.get_study(db, _row.study_id), user,
+        detail="Ontology mapping not found",
+    )
     result = await ontology_repo.update_ontology_mapping(
         db, mapping_id, status="accepted", reviewed_by=user.id
     )
@@ -257,6 +269,13 @@ async def reject_ontology_mapping(
     db: AsyncSession = Depends(get_db),
 ):
     """Reject the automated ontology term assignment."""
+    _row = await db.get(OntologyMapping, mapping_id)
+    if _row is None:
+        raise HTTPException(status_code=404, detail="Ontology mapping not found")
+    ensure_study_visible(
+        await studies_repo.get_study(db, _row.study_id), user,
+        detail="Ontology mapping not found",
+    )
     result = await ontology_repo.update_ontology_mapping(
         db, mapping_id, status="rejected", reviewed_by=user.id
     )
@@ -297,6 +316,13 @@ async def edit_ontology_mapping(
         if code:
             resolved_id = code if ":" in code else f"NCIT:{code}"
 
+    _row = await db.get(OntologyMapping, mapping_id)
+    if _row is None:
+        raise HTTPException(status_code=404, detail="Ontology mapping not found")
+    ensure_study_visible(
+        await studies_repo.get_study(db, _row.study_id), user,
+        detail="Ontology mapping not found",
+    )
     result = await ontology_repo.update_ontology_mapping(
         db,
         mapping_id,

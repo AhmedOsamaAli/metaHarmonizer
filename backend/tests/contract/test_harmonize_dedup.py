@@ -48,6 +48,46 @@ async def _make_owner(session) -> int:
     return user.id
 
 
+async def test_same_file_different_owners_are_separate_studies(session):
+    """Two curators uploading the SAME file get independent studies — dedup is
+    per-owner, so one curator's run never blocks or is visible to the other."""
+    owner_a = await _make_owner(session)
+    owner_b = await _make_owner(session)
+    sha = uuid.uuid4().hex + uuid.uuid4().hex
+
+    sid_a = f"ownA_{uuid.uuid4().hex[:8]}"
+    await studies_repo.create_study(
+        session, study_id=sid_a, name="A", file_path=f"{sid_a}.csv",
+        row_count=3, column_count=2, owner_id=owner_a, content_sha256=sha,
+    )
+    await studies_repo.update_status(session, sid_a, "queued")
+    await session.commit()
+
+    # Owner B's identical upload is NOT deduped against A's in-flight study.
+    assert await studies_repo.find_active_by_content(
+        session, owner_id=owner_b, content_sha256=sha
+    ) is None
+
+    # B creates their own active study for the same content (no unique clash).
+    sid_b = f"ownB_{uuid.uuid4().hex[:8]}"
+    await studies_repo.create_study(
+        session, study_id=sid_b, name="B", file_path=f"{sid_b}.csv",
+        row_count=3, column_count=2, owner_id=owner_b, content_sha256=sha,
+    )
+    await studies_repo.update_status(session, sid_b, "queued")
+    await session.commit()
+
+    found_a = await studies_repo.find_active_by_content(
+        session, owner_id=owner_a, content_sha256=sha
+    )
+    found_b = await studies_repo.find_active_by_content(
+        session, owner_id=owner_b, content_sha256=sha
+    )
+    assert found_a["id"] == sid_a
+    assert found_b["id"] == sid_b
+    assert found_a["id"] != found_b["id"]
+
+
 async def test_active_content_dedup(session):
     owner_id = await _make_owner(session)
     sha = uuid.uuid4().hex + uuid.uuid4().hex  # 64-char stand-in hash

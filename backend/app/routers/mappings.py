@@ -9,7 +9,12 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import actor_label as _actor_label, require_role
+from app.core.deps import (
+    actor_label as _actor_label,
+    ensure_study_visible,
+    owned_study,
+    require_role,
+)
 from app.db.models import User
 from app.db.session import get_db
 from app.models import (
@@ -29,17 +34,21 @@ router = APIRouter(prefix="/api/v1/mappings", tags=["mappings"])
 
 
 @router.get("/{study_id}", response_model=list[MappingOut])
-async def get_study_mappings(study_id: str, db: AsyncSession = Depends(get_db)):
-    """Get all mappings for a study."""
-    study = await studies_repo.get_study(db, study_id)
-    if not study:
-        raise HTTPException(status_code=404, detail="Study not found")
-    mappings = await mappings_repo.get_mappings(db, study_id)
-    return mappings
+async def get_study_mappings(
+    study_id: str,
+    _study: dict = Depends(owned_study),
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all mappings for a study (owner-scoped)."""
+    return await mappings_repo.get_mappings(db, study_id)
 
 
 @router.get("/{study_id}/review-queue")
-async def get_review_queue(study_id: str, db: AsyncSession = Depends(get_db)):
+async def get_review_queue(
+    study_id: str,
+    _study: dict = Depends(owned_study),
+    db: AsyncSession = Depends(get_db),
+):
     """Active-learning review queue (G7): pending mappings ordered risky-first
     and grouped by suggested target so look-alikes are adjacent and batchable.
 
@@ -48,9 +57,6 @@ async def get_review_queue(study_id: str, db: AsyncSession = Depends(get_db)):
     summarizes the queue shape (pending, groups, batchable_groups, risky).
     Ordering only — no mapping is changed or hidden.
     """
-    study = await studies_repo.get_study(db, study_id)
-    if not study:
-        raise HTTPException(status_code=404, detail="Study not found")
     mappings = await mappings_repo.get_mappings(db, study_id)
     queue = active_learning.build_review_queue(mappings)
     return {"items": queue, "stats": active_learning.queue_stats(queue)}
@@ -67,6 +73,10 @@ async def accept_mapping(
     mapping = await mappings_repo.get_mapping(db, mapping_id)
     if not mapping:
         raise HTTPException(status_code=404, detail="Mapping not found")
+    ensure_study_visible(
+        await studies_repo.get_study(db, mapping["study_id"]), user,
+        detail="Mapping not found",
+    )
 
     old_status = mapping["status"]
     result = await mappings_repo.update_mapping_status(
@@ -104,6 +114,10 @@ async def reject_mapping(
     mapping = await mappings_repo.get_mapping(db, mapping_id)
     if not mapping:
         raise HTTPException(status_code=404, detail="Mapping not found")
+    ensure_study_visible(
+        await studies_repo.get_study(db, mapping["study_id"]), user,
+        detail="Mapping not found",
+    )
 
     old_status = mapping["status"]
     result = await mappings_repo.update_mapping_status(
@@ -136,6 +150,10 @@ async def edit_mapping(
     mapping = await mappings_repo.get_mapping(db, mapping_id)
     if not mapping:
         raise HTTPException(status_code=404, detail="Mapping not found")
+    ensure_study_visible(
+        await studies_repo.get_study(db, mapping["study_id"]), user,
+        detail="Mapping not found",
+    )
 
     old_field = mapping.get("curator_field") or mapping.get("matched_field")
     result = await mappings_repo.update_mapping_status(
@@ -199,6 +217,20 @@ async def batch_update_mappings(
     if not body.mapping_ids:
         raise HTTPException(status_code=400, detail="No mapping IDs provided")
 
+    # Per-owner isolation: every id must belong to one of the caller's studies,
+    # else a curator could mutate another owner's mappings by guessing ids.
+    checked: set[str] = set()
+    for mid in body.mapping_ids:
+        m = await mappings_repo.get_mapping(db, mid)
+        if not m:
+            raise HTTPException(status_code=404, detail="Mapping not found")
+        if m["study_id"] not in checked:
+            ensure_study_visible(
+                await studies_repo.get_study(db, m["study_id"]), user,
+                detail="Mapping not found",
+            )
+            checked.add(m["study_id"])
+
     updated = await mappings_repo.batch_update_mapping_status(
         db, body.mapping_ids, body.action, reviewed_by=user.id
     )
@@ -244,6 +276,7 @@ async def llm_rematch(
         raise HTTPException(status_code=404, detail="Mapping not found")
 
     study = await studies_repo.get_study(db, mapping["study_id"])
+    ensure_study_visible(study, user, detail="Mapping not found")
     if not study or not study.get("file_path"):
         raise HTTPException(status_code=404, detail="Study CSV not found")
 
@@ -294,6 +327,7 @@ async def get_column_context(
     import pandas as pd
 
     study = await studies_repo.get_study(db, study_id)
+    ensure_study_visible(study, user, detail="Study not found")
     if not study or not study.get("file_path"):
         raise HTTPException(status_code=404, detail="Study CSV not found")
 
