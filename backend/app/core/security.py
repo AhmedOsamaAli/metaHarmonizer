@@ -23,6 +23,7 @@ from app.core.settings import settings
 _ph = PasswordHasher()
 
 JWT_ALG = "HS256"
+API_TOKEN_PREFIX = "mh_"
 
 # Cookie name for the refresh token (httpOnly, not readable by JS).
 REFRESH_COOKIE = "mh_refresh"

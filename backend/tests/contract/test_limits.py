@@ -14,6 +14,7 @@ from fastapi import FastAPI
 import app.core.redis as redis_mod
 from app.core.limits import install_limits
 from app.core.middleware import install_observability
+from app.core.security import create_access_token
 from app.core.settings import settings
 
 pytestmark = pytest.mark.asyncio
@@ -73,7 +74,8 @@ def _client(app: FastAPI) -> httpx.AsyncClient:
 
 
 @skip_no_redis
-async def test_anonymous_rate_limit_returns_429(_redis_clean):
+async def test_anonymous_rate_limit_returns_429(_redis_clean, monkeypatch):
+    monkeypatch.setattr(settings, "rate_limit_anon", 2)
     limit = settings.rate_limit_anon
     app = _app()
     async with _client(app) as client:
@@ -83,6 +85,32 @@ async def test_anonymous_rate_limit_returns_429(_redis_clean):
     assert r.status_code == 429
     assert r.headers["Retry-After"]
     assert r.json()["error"]["code"] == "RATE_LIMITED"
+
+
+@skip_no_redis
+async def test_valid_access_token_uses_authenticated_budget(_redis_clean, monkeypatch):
+    monkeypatch.setattr(settings, "rate_limit_anon", 2)
+    monkeypatch.setattr(settings, "rate_limit_auth", 5)
+    app = _app()
+    token = create_access_token(user_id=123, role="curator", email="audit@example.com")
+    headers = {"Authorization": f"Bearer {token}"}
+    async with _client(app) as client:
+        responses = [
+            await client.get("/ping", headers=headers)
+            for _ in range(settings.rate_limit_anon + 1)
+        ]
+    assert all(response.status_code == 200 for response in responses)
+
+
+@skip_no_redis
+async def test_invalid_bearer_token_stays_on_anonymous_budget(_redis_clean, monkeypatch):
+    monkeypatch.setattr(settings, "rate_limit_anon", 2)
+    monkeypatch.setattr(settings, "rate_limit_auth", 5)
+    app = _app()
+    headers = {"Authorization": "Bearer not-a-valid-token"}
+    async with _client(app) as client:
+        responses = [await client.get("/ping", headers=headers) for _ in range(3)]
+    assert [response.status_code for response in responses] == [200, 200, 429]
 
 
 @skip_no_redis

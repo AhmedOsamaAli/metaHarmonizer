@@ -26,12 +26,14 @@ import logging
 import time
 import uuid
 
+import jwt
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.errors import error_envelope
 from app.core.redis import get_redis
+from app.core.security import API_TOKEN_PREFIX, decode_token, hash_api_token
 from app.core.settings import settings
 
 logger = logging.getLogger("app.ratelimit")
@@ -53,11 +55,34 @@ RATE_LIMIT_EXEMPT_PREFIXES = (
 )
 
 
-def _client_id(request: Request) -> tuple[str, bool]:
+async def _client_id(request: Request) -> tuple[str, bool]:
     """Return (identity, is_authenticated). User id when available, else IP."""
     user = getattr(request.state, "user_id", None)
     if user:
         return f"user:{user}", True
+
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        token = auth[7:]
+        if token.startswith(API_TOKEN_PREFIX):
+            from app.db.session import SessionLocal
+            from app.repositories import api_tokens as api_tokens_repo
+
+            async with SessionLocal() as db:
+                record = await api_tokens_repo.get_active_by_hash(db, hash_api_token(token))
+            if record is not None:
+                return f"user:{record.user_id}", True
+        else:
+            try:
+                payload = decode_token(token)
+                if payload.get("type") == "access" and payload.get("sub"):
+                    return f"user:{int(payload['sub'])}", True
+            except (jwt.PyJWTError, TypeError, ValueError):
+                pass
+
+    if settings.auth_mode == "none":
+        ip = request.client.host if request.client else "unknown"
+        return f"dev:{ip}", True
     ip = request.client.host if request.client else "unknown"
     return f"ip:{ip}", False
 
@@ -67,7 +92,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith(RATE_LIMIT_EXEMPT_PREFIXES):
             return await call_next(request)
 
-        identity, is_auth = _client_id(request)
+        identity, is_auth = await _client_id(request)
         window = settings.rate_limit_window_sec
         limit = settings.rate_limit_auth if is_auth else settings.rate_limit_anon
         now = time.time()

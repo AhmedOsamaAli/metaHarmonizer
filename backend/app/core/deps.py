@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import AppError
-from app.core.security import decode_token, hash_api_token
+from app.core.security import API_TOKEN_PREFIX, decode_token, hash_api_token
 from app.core.settings import settings
 from app.db.models import User
 from app.db.session import get_db
@@ -25,10 +25,6 @@ from app.repositories import users as users_repo
 
 # Role hierarchy: higher number = more privilege.
 ROLE_RANK = {"curator": 1, "admin": 2}
-
-# API-token prefix (see app.core.security.generate_api_token).
-API_TOKEN_PREFIX = "mh_"
-
 
 class AuthError(AppError):
     code = "AUTH_FAILED"
