@@ -94,7 +94,7 @@ def test_corpus_label_to_id_reads_real_corpus():
     mapping = _ontology._corpus_label_to_id("disease", "ncit")
     if not mapping:
         pytest.skip("disease corpus not present in this environment")
-    assert mapping.get("Glioblastoma") == "NCIT:C3058"
+    assert mapping.get("glioblastoma") == "NCIT:C3058"
 
 
 class _FakeEngine:
