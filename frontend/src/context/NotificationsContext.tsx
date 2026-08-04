@@ -17,9 +17,16 @@ import {
     useState,
     type ReactNode,
 } from 'react';
+import { adminListUsers } from '../api/auth';
+import type { User } from '../api/types';
 import { useAuth } from './AuthContext';
 
-export type NotificationKind = 'job_done' | 'job_failed' | 'job_cancelled' | 'info';
+export type NotificationKind =
+    | 'job_done'
+    | 'job_failed'
+    | 'job_cancelled'
+    | 'approval_request'
+    | 'info';
 
 export interface AppNotification {
     id: string;
@@ -50,6 +57,36 @@ const storageKey = (userId: number | null | undefined): string | null =>
 
 /** Cap stored notifications so the list (and localStorage) stays bounded. */
 const MAX_NOTIFICATIONS = 50;
+
+export function adminApprovalNotifications(
+    users: User[],
+): Array<Omit<AppNotification, 'createdAt' | 'read'>> {
+    return users.flatMap((candidate) => {
+        if (!candidate.is_active || candidate.role === 'admin') return [];
+        const label = candidate.name?.trim() || candidate.email;
+        const pending: Array<Omit<AppNotification, 'createdAt' | 'read'>> = [];
+
+        if (!candidate.approved) {
+            pending.push({
+                id: `account-approval:${candidate.id}`,
+                kind: 'approval_request',
+                title: 'Account approval needed',
+                body: `${label} is waiting for account approval.`,
+                href: '/admin',
+            });
+        }
+        if (candidate.admin_requested) {
+            pending.push({
+                id: `admin-access:${candidate.id}`,
+                kind: 'approval_request',
+                title: 'Admin access requested',
+                body: `${label} requested administrator access.`,
+                href: '/admin',
+            });
+        }
+        return pending;
+    });
+}
 
 function loadPersisted(key: string | null): AppNotification[] {
     if (!key) return [];
@@ -105,6 +142,41 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         };
         setNotifications((prev) => [entry, ...prev].slice(0, MAX_NOTIFICATIONS));
     }, []);
+
+    useEffect(() => {
+        if (user?.role !== 'admin') return;
+        let cancelled = false;
+
+        const checkPendingApprovals = async () => {
+            try {
+                const users = await adminListUsers();
+                if (cancelled) return;
+                const pending = adminApprovalNotifications(users);
+                setNotifications((prev) => {
+                    const existing = new Set(prev.map((notification) => notification.id));
+                    const additions = pending
+                        .filter((notification) => !existing.has(notification.id))
+                        .map((notification) => ({
+                            ...notification,
+                            createdAt: Date.now(),
+                            read: false,
+                        }));
+                    return additions.length > 0
+                        ? [...additions, ...prev].slice(0, MAX_NOTIFICATIONS)
+                        : prev;
+                });
+            } catch {}
+        };
+
+        void checkPendingApprovals();
+        const interval = window.setInterval(checkPendingApprovals, 30_000);
+        window.addEventListener('focus', checkPendingApprovals);
+        return () => {
+            cancelled = true;
+            window.clearInterval(interval);
+            window.removeEventListener('focus', checkPendingApprovals);
+        };
+    }, [user?.role]);
 
     const markAllRead = useCallback(() => {
         setNotifications((prev) =>

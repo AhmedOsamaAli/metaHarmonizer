@@ -7,6 +7,7 @@ import {
     CircleX,
     Info,
     Trash2,
+    UserCheck,
     X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -20,6 +21,7 @@ const KIND_ICON: Record<NotificationKind, ReactNode> = {
     job_done: <CircleCheck className="h-4 w-4 text-emerald-500" />,
     job_failed: <CircleX className="h-4 w-4 text-rose-500" />,
     job_cancelled: <Info className="h-4 w-4 text-slate-400" />,
+    approval_request: <UserCheck className="h-4 w-4 text-amber-500" />,
     info: <Info className="h-4 w-4 text-primary-500" />,
 };
 
