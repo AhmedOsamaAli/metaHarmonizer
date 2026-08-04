@@ -33,7 +33,9 @@ from app.services.ontology_rerun import rerun_column_ontology
 router = APIRouter(prefix="/api/v1/mappings", tags=["mappings"])
 
 
-async def _sync_accepted_mapping_ontology(db: AsyncSession, mapping: dict) -> dict[str, int]:
+async def _sync_mapping_ontology(
+    db: AsyncSession, mapping: dict, new_field: str | None
+) -> dict[str, int]:
     field = mapping.get("curator_field") or mapping.get("matched_field")
     study = await studies_repo.get_study(db, mapping["study_id"])
     return await rerun_column_ontology(
@@ -42,7 +44,7 @@ async def _sync_accepted_mapping_ontology(db: AsyncSession, mapping: dict) -> di
         file_key=study.get("file_path") if study else None,
         raw_column=mapping.get("raw_column") or "",
         old_field=field,
-        new_field=field,
+        new_field=new_field,
     )
 
 
@@ -78,7 +80,7 @@ async def get_review_queue(
 @router.post("/{mapping_id}/accept", response_model=MappingOut)
 async def accept_mapping(
     mapping_id: int,
-    remember: bool = Query(False, description="Remember this decision for the curator's future studies (ADR-0002)."),
+    remember: bool = Query(True, description="Remember this decision for the curator's future studies (ADR-0002)."),
     user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -116,7 +118,8 @@ async def accept_mapping(
     await db.commit()
 
     try:
-        summary = await _sync_accepted_mapping_ontology(db, mapping)
+        field = mapping.get("curator_field") or mapping.get("matched_field")
+        summary = await _sync_mapping_ontology(db, mapping, field)
         if summary["added"] or summary["removed"]:
             await db.commit()
     except Exception:  # noqa: BLE001
@@ -129,6 +132,7 @@ async def accept_mapping(
 @router.post("/{mapping_id}/reject", response_model=MappingOut)
 async def reject_mapping(
     mapping_id: int,
+    remember: bool = Query(True, description="Remember this decision for the curator's future studies (ADR-0002)."),
     user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -156,7 +160,21 @@ async def reject_mapping(
         actor_id=user.id,
         curator=_actor_label(user),
     )
+    if remember and mapping.get("raw_column"):
+        await ld_repo.record_personal(
+            db, owner_id=user.id, kind="schema",
+            source_key=ld_repo.schema_key(mapping["raw_column"]),
+            decision="reject", origin_study_id=mapping["study_id"],
+        )
     await db.commit()
+    try:
+        summary = await _sync_mapping_ontology(db, mapping, None)
+        if summary["added"] or summary["removed"]:
+            await db.commit()
+    except Exception:  # noqa: BLE001
+        logging.getLogger(__name__).warning(
+            "ontology cleanup after schema rejection failed", exc_info=True
+        )
     return result
 
 
@@ -164,7 +182,7 @@ async def reject_mapping(
 async def edit_mapping(
     mapping_id: int,
     body: MappingEditRequest,
-    remember: bool = Query(False, description="Remember this decision for the curator's future studies (ADR-0002)."),
+    remember: bool = Query(True, description="Remember this decision for the curator's future studies (ADR-0002)."),
     user: User = Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -259,6 +277,20 @@ async def batch_update_mappings(
         db, body.mapping_ids, body.action, reviewed_by=user.id
     )
 
+    if body.remember:
+        for mapping in mappings:
+            target = (
+                mapping.get("curator_field") or mapping.get("matched_field")
+                if body.action == "accepted"
+                else None
+            )
+            await ld_repo.record_personal(
+                db, owner_id=user.id, kind="schema",
+                source_key=ld_repo.schema_key(mapping["raw_column"]),
+                decision="accept" if body.action == "accepted" else "reject",
+                target_field=target, origin_study_id=mapping["study_id"],
+            )
+
     # Audit log for batch
     if body.mapping_ids:
         first = await mappings_repo.get_mapping(db, body.mapping_ids[0])
@@ -275,19 +307,23 @@ async def batch_update_mappings(
 
     await db.commit()
 
-    if body.action == "accepted":
-        changed = False
-        for mapping in mappings:
-            try:
-                summary = await _sync_accepted_mapping_ontology(db, mapping)
-                changed = changed or bool(summary["added"] or summary["removed"])
-            except Exception:  # noqa: BLE001
-                logging.getLogger(__name__).warning(
-                    "ontology re-run after batch schema acceptance failed",
-                    exc_info=True,
-                )
-        if changed:
-            await db.commit()
+    changed = False
+    for mapping in mappings:
+        new_field = (
+            mapping.get("curator_field") or mapping.get("matched_field")
+            if body.action == "accepted"
+            else None
+        )
+        try:
+            summary = await _sync_mapping_ontology(db, mapping, new_field)
+            changed = changed or bool(summary["added"] or summary["removed"])
+        except Exception:  # noqa: BLE001
+            logging.getLogger(__name__).warning(
+                "ontology sync after batch schema decision failed",
+                exc_info=True,
+            )
+    if changed:
+        await db.commit()
     return BatchUpdateResponse(updated=updated, action=body.action)
 
 

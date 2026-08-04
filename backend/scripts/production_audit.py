@@ -86,15 +86,15 @@ async def create_audit_users() -> tuple[User, str, User, str]:
         return admin, admin_password, curator, curator_password
 
 
-async def cleanup(user_ids: list[int], study_id: str | None, file_key: str | None) -> None:
+async def cleanup(user_ids: list[int], study_ids: list[str], file_keys: set[str]) -> None:
     async with SessionLocal() as db:
-        if study_id:
-            await db.execute(delete(Study).where(Study.id == study_id))
-            await db.execute(delete(JobRun).where(JobRun.study_id == study_id))
+        if study_ids:
+            await db.execute(delete(Study).where(Study.id.in_(study_ids)))
+            await db.execute(delete(JobRun).where(JobRun.study_id.in_(study_ids)))
         if user_ids:
             await db.execute(delete(User).where(User.id.in_(user_ids)))
         await db.commit()
-    if file_key:
+    for file_key in file_keys:
         get_storage().delete(file_key)
 
 
@@ -115,7 +115,8 @@ async def run(origin: str) -> AuditReport:
     admin: User | None = None
     curator: User | None = None
     study_id: str | None = None
-    file_key: str | None = None
+    study_ids: list[str] = []
+    file_keys: set[str] = set()
     sample = (
         "participant_id,biopsy_location,diagnosis,treatment_name\n"
         "P001,lung,CRC,chemotherapy\n"
@@ -192,6 +193,7 @@ async def run(origin: str) -> AuditReport:
                 202,
             ).json()
             study_id = upload["study_id"]
+            study_ids.append(study_id)
             require(upload.get("row_count") == 3, f"upload row count wrong: {upload}")
             require(upload.get("column_count") == 4, f"upload column count wrong: {upload}")
             report.pass_("CSV upload and queued harmonization", study_id)
@@ -202,7 +204,8 @@ async def run(origin: str) -> AuditReport:
                 study_response = checked(
                     await client.get(f"/api/v1/studies/{study_id}", headers=auth)
                 ).json()
-                file_key = study_response.get("file_path")
+                if study_response.get("file_path"):
+                    file_keys.add(study_response["file_path"])
                 status = study_response["status"]
                 if status in {"review", "failed", "error"}:
                     break
@@ -298,7 +301,12 @@ async def run(origin: str) -> AuditReport:
             require(all(row.get("ontology_term") and row.get("ontology_id") for row in body_rows), f"ontology rerun returned uncoded rows: {body_rows}")
             report.pass_("schema acceptance reruns real ontology mapping")
 
-            remaining_ids = [row["id"] for row in mappings if row["id"] != mapping_id]
+            rejected_mapping = by_column["treatment_name"]
+            remaining_ids = [
+                row["id"]
+                for row in mappings
+                if row["id"] not in {mapping_id, rejected_mapping["id"]}
+            ]
             batch = checked(
                 await client.post(
                     "/api/v1/mappings/batch",
@@ -307,11 +315,28 @@ async def run(origin: str) -> AuditReport:
                 )
             ).json()
             require(batch["updated"] == len(remaining_ids), f"batch update count wrong: {batch}")
+            rejected = checked(
+                await client.post(
+                    "/api/v1/mappings/batch",
+                    headers=auth,
+                    json={"mapping_ids": [rejected_mapping["id"]], "action": "rejected"},
+                )
+            ).json()
+            require(rejected["updated"] == 1, f"batch rejection count wrong: {rejected}")
             final_mappings = checked(
                 await client.get(f"/api/v1/mappings/{study_id}", headers=auth)
             ).json()
-            require(all(row["status"] == "accepted" for row in final_mappings), "not all schema mappings are accepted")
-            report.pass_("schema edit and batch approval persistence")
+            final_by_column = {row["raw_column"]: row for row in final_mappings}
+            require(final_by_column["treatment_name"]["status"] == "rejected", "batch rejection did not persist")
+            require(
+                all(
+                    row["status"] == "accepted"
+                    for name, row in final_by_column.items()
+                    if name != "treatment_name"
+                ),
+                "batch acceptance did not persist",
+            )
+            report.pass_("schema edit, batch approval, and batch rejection persistence")
 
             search = checked(
                 await client.get("/api/v1/ontology/search", params={"query": "lung", "limit": 5})
@@ -322,7 +347,7 @@ async def run(origin: str) -> AuditReport:
             ).json()
             require("suggestions" in suggestions, "ontology suggestion payload invalid")
             for row in ontology:
-                if row.get("ontology_term") and row["status"] != "accepted":
+                if row.get("ontology_term"):
                     checked(
                         await client.post(
                             f"/api/v1/ontology/mappings/{row['id']}/accept",
@@ -330,6 +355,62 @@ async def run(origin: str) -> AuditReport:
                         )
                     )
             report.pass_("ontology search, suggestions, and curation")
+
+            second_upload = checked(
+                await client.post(
+                    "/api/v1/harmonize",
+                    headers=auth,
+                    files={"file": ("production_audit_repeat.csv", sample, "text/csv")},
+                    data={"mode": "both"},
+                ),
+                202,
+            ).json()
+            second_id = second_upload["study_id"]
+            study_ids.append(second_id)
+            deadline = time.monotonic() + 900
+            second_status = "queued"
+            while time.monotonic() < deadline:
+                second_study = checked(
+                    await client.get(f"/api/v1/studies/{second_id}", headers=auth)
+                ).json()
+                if second_study.get("file_path"):
+                    file_keys.add(second_study["file_path"])
+                second_status = second_study["status"]
+                if second_status in {"review", "failed", "error"}:
+                    break
+                await asyncio.sleep(2)
+            require(second_status == "review", f"repeat harmonization ended in {second_status}")
+
+            repeated_mappings = checked(
+                await client.get(f"/api/v1/mappings/{second_id}", headers=auth)
+            ).json()
+            repeated_by_column = {row["raw_column"]: row for row in repeated_mappings}
+            require(
+                repeated_by_column["biopsy_location"]["status"] == "accepted"
+                and repeated_by_column["biopsy_location"]["curator_field"] == "body_site",
+                f"learned schema edit was not applied: {repeated_by_column['biopsy_location']}",
+            )
+            require(
+                repeated_by_column["treatment_name"]["status"] == "rejected",
+                "learned batch rejection was not applied",
+            )
+            require(
+                all(row.get("reviewed_at") for row in repeated_mappings),
+                "not every repeated schema decision was marked as KB-applied",
+            )
+            repeated_ontology = checked(
+                await client.get(f"/api/v1/ontology/mappings/{second_id}", headers=auth)
+            ).json()
+            repeated_body = [
+                row for row in repeated_ontology
+                if row["field_name"] == "body_site" and row["raw_value"] in {"lung", "liver"}
+            ]
+            require(
+                {row["raw_value"] for row in repeated_body} == {"lung", "liver"}
+                and all(row["status"] == "accepted" and row.get("reviewed_at") for row in repeated_body),
+                f"learned ontology decisions were not applied: {repeated_body}",
+            )
+            report.pass_("learned schema and ontology decisions apply on repeat upload")
 
             quality = checked(await client.get(f"/api/v1/quality/{study_id}", headers=auth)).json()
             require(quality["total_columns"] == 4, f"quality total wrong: {quality}")
@@ -354,6 +435,10 @@ async def run(origin: str) -> AuditReport:
             harmonized = list(csv.DictReader(io.StringIO(harmonized_response.text)))
             require(len(harmonized) == 3, "harmonized export row count changed")
             require("body_site" in harmonized[0], f"harmonized export lacks curated body_site: {list(harmonized[0])}")
+            require("treatment_name" in harmonized[0], "rejected raw column was dropped from harmonized export")
+            rejected_target = rejected_mapping.get("matched_field")
+            if rejected_target and rejected_target != "treatment_name":
+                require(rejected_target not in harmonized[0], "rejected engine target leaked into harmonized export")
 
             cbio = checked(await client.get(f"/api/v1/export/{study_id}/cbioportal", headers=auth))
             require(len(cbio.content) > 100, "cBioPortal text export is unexpectedly empty")
@@ -375,6 +460,8 @@ async def run(origin: str) -> AuditReport:
                 await client.get(f"/api/v1/export/{study_id}/report", headers=auth)
             ).json()
             require(report_payload.get("study", {}).get("id") == study_id, "mapping report study identity mismatch")
+            require(report_payload["summary"]["rejected"] == 1, "report omitted rejected mapping")
+            require("treatment_name" not in labeled.text, "rejected mapping leaked into accepted-only labeled export")
             report.pass_("harmonized, cBioPortal, labeled, LinkML, and audit exports")
 
             audit = checked(
@@ -421,8 +508,8 @@ async def run(origin: str) -> AuditReport:
     finally:
         await cleanup(
             [user.id for user in (admin, curator) if user is not None],
-            study_id,
-            file_key,
+            study_ids,
+            file_keys,
         )
         print("[CLEANUP] temporary users, study, jobs, and upload removed", flush=True)
 

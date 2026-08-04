@@ -8,7 +8,7 @@ describe('activeJobMessage', () => {
 
     it('describes processing without a misleading percentage', () => {
         const message = activeJobMessage('processing');
-        expect(message).toBe('Processing with the real engine…');
+        expect(message).toBe('Processing…');
         expect(message).not.toContain('%');
     });
 });

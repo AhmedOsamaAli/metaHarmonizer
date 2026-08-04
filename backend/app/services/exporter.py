@@ -216,8 +216,16 @@ async def export_harmonized_csv(
             best_by_target[target] = (rank, raw)
 
     rename_map: dict[str, str] = {raw: target for target, (_r, raw) in best_by_target.items()}
+    mapped_targets = set(rename_map.values())
+    rejected_raw = [
+        m["raw_column"]
+        for m in mappings
+        if m.get("status") == "rejected"
+        and m.get("raw_column") in raw_df.columns
+        and m.get("raw_column") not in mapped_targets
+    ]
     # Preserve original column order for a stable, diff-friendly output.
-    keep_cols = [c for c in raw_df.columns if c in rename_map]
+    keep_cols = [c for c in raw_df.columns if c in rename_map or c in rejected_raw]
 
     out_df = raw_df[keep_cols].rename(columns=rename_map)
 
@@ -291,10 +299,10 @@ def _clinical_column_specs(
     cols: list[dict[str, Any]] = []
     seen_targets: set[str] = set()
     for m in mappings:
+        if m["status"] not in ("accepted", "pending"):
+            continue
         target = m.get("curator_field") or m.get("matched_field")
         if not target:
-            continue
-        if m["status"] not in ("accepted", "pending"):
             continue
         raw = m["raw_column"]
         if raw not in raw_df.columns:

@@ -224,7 +224,7 @@ async def suggest_ontology_terms(
 @router.post("/mappings/{mapping_id}/accept", response_model=OntologyMappingOut)
 async def accept_ontology_mapping(
     mapping_id: int,
-    remember: bool = Query(False, description="Remember this decision for the curator's future studies (ADR-0002)."),
+    remember: bool = Query(True, description="Remember this decision for the curator's future studies (ADR-0002)."),
     user=Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -265,6 +265,7 @@ async def accept_ontology_mapping(
 @router.post("/mappings/{mapping_id}/reject", response_model=OntologyMappingOut)
 async def reject_ontology_mapping(
     mapping_id: int,
+    remember: bool = Query(True, description="Remember this decision for the curator's future studies (ADR-0002)."),
     user=Depends(require_role("curator")),
     db: AsyncSession = Depends(get_db),
 ):
@@ -291,6 +292,12 @@ async def reject_ontology_mapping(
         actor_id=user.id,
         curator=_actor_label(user),
     )
+    if remember and result.get("field_name") and result.get("raw_value"):
+        await ld_repo.record_personal(
+            db, owner_id=user.id, kind="ontology",
+            source_key=ld_repo.ontology_key(result["field_name"], result["raw_value"]),
+            decision="reject", origin_study_id=result["study_id"],
+        )
     await db.commit()
     return result
 

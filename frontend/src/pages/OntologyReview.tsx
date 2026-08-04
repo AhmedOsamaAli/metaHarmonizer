@@ -97,7 +97,7 @@ export default function OntologyReview() {
 
   const handleReject = async (id: number) => {
     setBusy((b) => ({ ...b, [id]: true }));
-    try { patch(await rejectOntologyMapping(id)); } catch { /* ignore */ }
+    try { patch(await rejectOntologyMapping(id, remember)); } catch { /* ignore */ }
     finally { setBusy((b) => ({ ...b, [id]: false })); }
   };
 

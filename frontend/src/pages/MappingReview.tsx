@@ -306,7 +306,7 @@ export default function MappingReview() {
   };
   const handleReject = async (id: number) => {
     try {
-      const m = await rejectMapping(id);
+      const m = await rejectMapping(id, remember);
       updateMapping(m);
     } catch {
       showToast('Failed to reject mapping', 'error');
@@ -328,7 +328,7 @@ export default function MappingReview() {
   // 1-click: apply one of the engine's alternative suggestions as the field.
   const handleApplyAlternative = async (id: number, field: string) => {
     try {
-      const m = await editMapping(id, field, 'Applied alternative suggestion');
+      const m = await editMapping(id, field, 'Applied alternative suggestion', remember);
       updateMapping(m);
     } catch {
       showToast('Failed to apply alternative', 'error');
@@ -362,7 +362,7 @@ export default function MappingReview() {
   const handleBatch = async (action: 'accepted' | 'rejected') => {
     if (selected.size === 0) return;
     try {
-      await batchUpdateMappings([...selected], action);
+      await batchUpdateMappings([...selected], action, remember);
       // Reload
       if (selectedId) {
         const fresh = await getStudyMappings(selectedId);

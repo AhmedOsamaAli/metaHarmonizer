@@ -9,7 +9,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 import app.core.settings as settings_mod
 import app.db.session as db_session
-from app.db.models import Mapping, Study, User
+from app.db.models import LearnedDecision, Mapping, OntologyMapping, Study, User
+from app.repositories import learned_decisions as ld_repo
+from app.services.learned_apply import apply_learned_decisions
 
 from _authflow import register_and_login
 
@@ -39,7 +41,7 @@ async def env(database_url, monkeypatch):
 
     from fastapi import FastAPI
     from app.core.middleware import install_observability
-    from app.routers import auth, mappings
+    from app.routers import auth, mappings, ontology
 
     calls: list[dict] = []
 
@@ -53,6 +55,7 @@ async def env(database_url, monkeypatch):
     install_observability(app)
     app.include_router(auth.router)
     app.include_router(mappings.router)
+    app.include_router(ontology.router)
 
     def make_client() -> httpx.AsyncClient:
         return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
@@ -125,4 +128,114 @@ async def test_single_and_batch_accept_sync_approved_fields(env):
             json={"mapping_ids": [ids[3]], "action": "rejected"},
         )
         assert response.status_code == 200
-        assert len(calls) == before_reject
+        assert len(calls) == before_reject + 1
+        assert calls[-1]["raw_column"] == "unused"
+        assert calls[-1]["old_field"] == "notes"
+        assert calls[-1]["new_field"] is None
+
+        async with db_session.SessionLocal() as db:
+            learned = list(
+                await db.scalars(
+                    sa.select(LearnedDecision).where(
+                        LearnedDecision.owner_id == curator["user"]["id"],
+                        LearnedDecision.kind == "schema",
+                    )
+                )
+            )
+            decisions = {row.source_key: (row.decision, row.target_field) for row in learned}
+            assert decisions == {
+                ld_repo.schema_key("site"): ("accept", "body_site"),
+                ld_repo.schema_key("gender"): ("accept", "sex"),
+                ld_repo.schema_key("comment"): ("accept", "notes"),
+                ld_repo.schema_key("unused"): ("reject", None),
+            }
+
+            next_study = f"accept_sync_{uuid.uuid4().hex[:8]}"
+            db.add(Study(id=next_study, name="next", status="review", owner_id=curator["user"]["id"]))
+            await db.flush()
+            next_rows = [
+                Mapping(study_id=next_study, raw_column="site", matched_field="wrong_site", status="accepted"),
+                Mapping(study_id=next_study, raw_column="gender", matched_field="wrong_gender", status="accepted"),
+                Mapping(study_id=next_study, raw_column="comment", matched_field="wrong_comment", status="pending"),
+                Mapping(study_id=next_study, raw_column="unused", matched_field="wrong_unused", status="pending"),
+            ]
+            db.add_all(next_rows)
+            await db.commit()
+
+            assert await apply_learned_decisions(db, next_study, curator["user"]["id"]) == 4
+            await db.commit()
+            refreshed = list(
+                await db.scalars(sa.select(Mapping).where(Mapping.study_id == next_study))
+            )
+            applied = {row.raw_column: (row.status, row.curator_field) for row in refreshed}
+            assert applied == {
+                "site": ("accepted", "body_site"),
+                "gender": ("accepted", "sex"),
+                "comment": ("accepted", "notes"),
+                "unused": ("rejected", None),
+            }
+
+
+async def test_ontology_accept_and_reject_apply_to_next_study(env):
+    make_client, domain, _calls = env
+    async with make_client() as client:
+        await register_and_login(client, f"admin2@{domain}")
+        curator = await register_and_login(client, f"ontology@{domain}")
+        headers = {"Authorization": f"Bearer {curator['access_token']}"}
+
+        first_study = f"accept_sync_{uuid.uuid4().hex[:8]}"
+        async with db_session.SessionLocal() as db:
+            db.add(Study(id=first_study, name="ontology source", status="review", owner_id=curator["user"]["id"]))
+            await db.flush()
+            accepted = OntologyMapping(
+                study_id=first_study, field_name="body_site", raw_value="lung",
+                ontology_term="Lung", ontology_id="UBERON:0002048", status="pending",
+            )
+            rejected = OntologyMapping(
+                study_id=first_study, field_name="disease", raw_value="noise",
+                ontology_term="Neoplasm", ontology_id="NCIT:C3262", status="pending",
+            )
+            db.add_all([accepted, rejected])
+            await db.flush()
+            accepted_id, rejected_id = accepted.id, rejected.id
+            await db.commit()
+
+        assert (
+            await client.post(f"/api/v1/ontology/mappings/{accepted_id}/accept", headers=headers)
+        ).status_code == 200
+        assert (
+            await client.post(f"/api/v1/ontology/mappings/{rejected_id}/reject", headers=headers)
+        ).status_code == 200
+
+        async with db_session.SessionLocal() as db:
+            next_study = f"accept_sync_{uuid.uuid4().hex[:8]}"
+            db.add(Study(id=next_study, name="ontology next", status="review", owner_id=curator["user"]["id"]))
+            await db.flush()
+            db.add_all(
+                [
+                    OntologyMapping(
+                        study_id=next_study, field_name="body_site", raw_value="lung",
+                        ontology_term="Wrong Lung", ontology_id="WRONG:1", status="accepted",
+                    ),
+                    OntologyMapping(
+                        study_id=next_study, field_name="disease", raw_value="noise",
+                        ontology_term="Wrong Disease", ontology_id="WRONG:2", status="pending",
+                    ),
+                ]
+            )
+            await db.commit()
+
+            assert await apply_learned_decisions(db, next_study, curator["user"]["id"]) == 2
+            await db.commit()
+            rows = list(
+                await db.scalars(
+                    sa.select(OntologyMapping)
+                    .where(OntologyMapping.study_id == next_study)
+                    .order_by(OntologyMapping.field_name)
+                )
+            )
+            by_value = {row.raw_value: row for row in rows}
+            assert by_value["lung"].status == "accepted"
+            assert by_value["lung"].curator_term == "Lung"
+            assert by_value["lung"].curator_id == "UBERON:0002048"
+            assert by_value["noise"].status == "rejected"

@@ -153,14 +153,14 @@ export async function getColumnContext(
     );
 }
 
-export async function acceptMapping(mappingId: number, remember = false): Promise<Mapping> {
+export async function acceptMapping(mappingId: number, remember = true): Promise<Mapping> {
     return request<Mapping>(`${BASE}/mappings/${mappingId}/accept?remember=${remember}`, {
         method: 'POST',
     });
 }
 
-export async function rejectMapping(mappingId: number): Promise<Mapping> {
-    return request<Mapping>(`${BASE}/mappings/${mappingId}/reject`, {
+export async function rejectMapping(mappingId: number, remember = true): Promise<Mapping> {
+    return request<Mapping>(`${BASE}/mappings/${mappingId}/reject?remember=${remember}`, {
         method: 'POST',
     });
 }
@@ -169,7 +169,7 @@ export async function editMapping(
     mappingId: number,
     newField: string,
     note = '',
-    remember = false,
+    remember = true,
 ): Promise<Mapping> {
     return request<Mapping>(`${BASE}/mappings/${mappingId}/edit?remember=${remember}`, {
         method: 'POST',
@@ -181,11 +181,12 @@ export async function editMapping(
 export async function batchUpdateMappings(
     mappingIds: number[],
     action: 'accepted' | 'rejected',
+    remember = true,
 ): Promise<{ updated: number; action: string }> {
     return request(`${BASE}/mappings/batch`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mapping_ids: mappingIds, action }),
+        body: JSON.stringify({ mapping_ids: mappingIds, action, remember }),
     });
 }
 
@@ -234,19 +235,19 @@ export async function suggestOntologyTerms(
     return res.suggestions ?? {};
 }
 
-export async function acceptOntologyMapping(id: number, remember = false): Promise<OntologyMapping> {
+export async function acceptOntologyMapping(id: number, remember = true): Promise<OntologyMapping> {
     return request<OntologyMapping>(`${BASE}/ontology/mappings/${id}/accept?remember=${remember}`, { method: 'POST' });
 }
 
-export async function rejectOntologyMapping(id: number): Promise<OntologyMapping> {
-    return request<OntologyMapping>(`${BASE}/ontology/mappings/${id}/reject`, { method: 'POST' });
+export async function rejectOntologyMapping(id: number, remember = true): Promise<OntologyMapping> {
+    return request<OntologyMapping>(`${BASE}/ontology/mappings/${id}/reject?remember=${remember}`, { method: 'POST' });
 }
 
 export async function editOntologyMapping(
     id: number,
     newTerm: string,
     newId = '',
-    remember = false,
+    remember = true,
 ): Promise<OntologyMapping> {
     return request<OntologyMapping>(`${BASE}/ontology/mappings/${id}`, {
         method: 'PATCH',

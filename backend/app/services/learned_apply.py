@@ -17,6 +17,8 @@ from app.repositories import audit as audit_repo
 from app.repositories import learned_decisions as ld_repo
 from app.repositories import mappings as mappings_repo
 from app.repositories import ontology as ontology_repo
+from app.repositories import studies as studies_repo
+from app.services.ontology_rerun import rerun_column_ontology
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +45,9 @@ async def apply_learned_decisions(
     schema_hits = await ld_repo.lookup_batch(
         db, kind="schema", keys=list(set(schema_keys.values())), owner_id=owner_id
     )
+    schema_sync: list[tuple[dict, str | None]] = []
     for m in schema:
-        if m.get("status") not in (None, "pending"):
+        if m.get("reviewed_at"):
             continue
         hit = schema_hits.get(schema_keys.get(m["id"]))
         if not hit:
@@ -53,18 +56,32 @@ async def apply_learned_decisions(
             await mappings_repo.update_mapping_status(
                 db, m["id"], "rejected", reviewed_by=owner_id
             )
+            schema_sync.append((m, None))
         else:
+            target_field = hit.get("target_field") or m.get("matched_field")
             await mappings_repo.update_mapping_status(
                 db, m["id"], "accepted",
-                curator_field=hit.get("target_field") or None,
+                curator_field=target_field or None,
                 reviewed_by=owner_id,
             )
+            schema_sync.append((m, target_field))
         await audit_repo.add_audit_entry(
             db, study_id=study_id, action="kb_apply", mapping_id=m["id"],
             old_value=m.get("status"), new_value=hit["decision"],
             actor_id=owner_id, curator=f"learned:{hit['scope']}#{hit['id']}",
         )
         applied += 1
+
+    study = await studies_repo.get_study(db, study_id)
+    for mapping, new_field in schema_sync:
+        await rerun_column_ontology(
+            db,
+            study_id=study_id,
+            file_key=study.get("file_path") if study else None,
+            raw_column=mapping.get("raw_column") or "",
+            old_field=mapping.get("curator_field") or mapping.get("matched_field"),
+            new_field=new_field,
+        )
 
     # ── Ontology (value) decisions ──────────────────────────────────────────
     onto = await ontology_repo.get_ontology_mappings(db, study_id)
@@ -76,7 +93,7 @@ async def apply_learned_decisions(
         db, kind="ontology", keys=list(set(onto_keys.values())), owner_id=owner_id
     )
     for o in onto:
-        if o.get("status") not in (None, "pending"):
+        if o.get("reviewed_at"):
             continue
         hit = onto_hits.get(onto_keys.get(o["id"]))
         if not hit:

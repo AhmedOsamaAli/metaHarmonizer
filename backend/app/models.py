@@ -62,6 +62,7 @@ class MappingEditRequest(BaseModel):
 class BatchUpdateRequest(BaseModel):
     mapping_ids: list[int]
     action: str = Field(..., pattern="^(accepted|rejected)$")
+    remember: bool = True
 
 
 class BatchUpdateResponse(BaseModel):
@@ -92,7 +93,7 @@ class OntologyEditRequest(BaseModel):
     new_term: str
     new_id: Optional[str] = None
     note: str = ""
-    remember: bool = False  # ADR-0002: remember for the curator's future studies
+    remember: bool = True  # ADR-0002: remember for the curator's future studies
 
 
 class OntologySearchResult(BaseModel):
