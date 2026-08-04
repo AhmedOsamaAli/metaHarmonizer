@@ -13,6 +13,7 @@
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, AlertCircle, Loader2, X, ArrowRight, Ban } from 'lucide-react';
 import { useJobs, type TrackedJob } from '../context/JobsContext';
+import { activeJobMessage } from '../lib/jobPresentation';
 import { Card } from './ui/Card';
 
 function relTime(ms: number): string {
@@ -23,13 +24,6 @@ function relTime(ms: number): string {
     const h = Math.round(m / 60);
     return `${h}h ago`;
 }
-
-const STAGE_LABEL: Record<string, string> = {
-    parse: 'Reading file',
-    schema: 'Mapping columns',
-    ontology: 'Resolving ontology',
-    done: 'Finalizing',
-};
 
 export default function JobsPanel() {
     const { jobs, cancel, dismiss, activeCount } = useJobs();
@@ -124,13 +118,10 @@ function JobRow({
             {active && (
                 <div className="mt-2">
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                        <div
-                            className="h-full rounded-full bg-primary-500 transition-all duration-500"
-                            style={{ width: `${Math.max(5, job.pct)}%` }}
-                        />
+                        <div className="job-progress-indeterminate h-full w-1/3 rounded-full bg-primary-500" />
                     </div>
                     <p className="mt-1 text-xs text-slate-500">
-                        {STAGE_LABEL[job.stage] ?? job.message} · {job.pct}%
+                        {activeJobMessage(job.phase)}
                     </p>
                 </div>
             )}

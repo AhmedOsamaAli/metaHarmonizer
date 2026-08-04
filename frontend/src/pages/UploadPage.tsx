@@ -224,8 +224,8 @@ export default function UploadPage() {
             </CardBody>
           </Card>
 
-          <div className={preview ? 'grid gap-5 lg:grid-cols-2 lg:items-start' : ''}>
-            <Card>
+          <div className={preview ? 'grid gap-5 lg:grid-cols-2 lg:items-stretch' : ''}>
+            <Card className="h-full">
               <CardBody className="space-y-5">
                 <div>
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Run mode</p>
@@ -293,8 +293,8 @@ export default function UploadPage() {
             </Card>
 
             {preview && (
-              <Card>
-                <CardBody className="space-y-3">
+              <Card className="h-full">
+                <CardBody className="flex h-full flex-col gap-3">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2">
                       <Table2 className="h-4 w-4 shrink-0 text-slate-400 dark:text-slate-500" />
@@ -312,7 +312,11 @@ export default function UploadPage() {
                       Expand
                     </button>
                   </div>
-                  <PreviewTable columns={preview.columns} rows={preview.rows.slice(0, 5)} heightClass="max-h-64" />
+                  <PreviewTable
+                    columns={preview.columns}
+                    rows={preview.rows.slice(0, 5)}
+                    heightClass="max-h-64 lg:max-h-none lg:min-h-0 lg:flex-1"
+                  />
                   <button
                     type="button"
                     onClick={() => setPreviewOpen(true)}
