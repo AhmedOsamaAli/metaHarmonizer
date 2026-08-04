@@ -41,10 +41,14 @@ import {
 } from '../api/client';
 import { ApiError } from '../api/http';
 import type { Mapping } from '../api/types';
+import {
+  defaultMappingStatusFilter,
+  type MappingStatusFilter,
+} from '../lib/mappingFilters';
 
 type SortKey = 'raw_column' | 'confidence_score' | 'stage' | 'status';
 type FilterStage = 'all' | 'stage1' | 'stage2' | 'stage3' | 'stage4' | 'invalid' | 'unmapped';
-type FilterStatus = 'all' | 'pending' | 'accepted' | 'rejected';
+type FilterStatus = MappingStatusFilter;
 
 // Stage display order + colours for the distribution bar (colour-blind-safe,
 // aligned with StageBadge: blue / orange / teal / pink — all clearly distinct).
@@ -136,7 +140,8 @@ export default function MappingReview() {
   // Filters — default to "pending" so curators see only actionable items.
   // Deep-links from the Quality dashboard can preset them via ?status= / ?stage=.
   const [searchParams] = useSearchParams();
-  const initialStatus = (searchParams.get('status') as FilterStatus) || 'pending';
+  const requestedStatus = searchParams.get('status') as FilterStatus | null;
+  const initialStatus = requestedStatus || 'pending';
   const initialStage = (searchParams.get('stage') as FilterStage) || 'all';
   const [filterStage, setFilterStage] = useState<FilterStage>(initialStage);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>(initialStatus);
@@ -170,10 +175,13 @@ export default function MappingReview() {
     if (!selectedId) return;
     setLoading(true);
     getStudyMappings(selectedId)
-      .then(setMappings)
+      .then((fresh) => {
+        setMappings(fresh);
+        setFilterStatus(defaultMappingStatusFilter(fresh, requestedStatus));
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [selectedId]);
+  }, [requestedStatus, selectedId]);
 
   // Load the active-learning queue (group metadata + stats) when smart order is
   // on. Re-runs when mappings change so the grouping reflects cleared decisions.
@@ -359,6 +367,7 @@ export default function MappingReview() {
       if (selectedId) {
         const fresh = await getStudyMappings(selectedId);
         setMappings(fresh);
+        setFilterStatus(action);
       }
     } catch {
       showToast('Batch update failed', 'error');
