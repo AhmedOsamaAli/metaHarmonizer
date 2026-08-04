@@ -144,6 +144,7 @@ async def health():
 
 
 @app.get("/config", tags=["config"])
+@app.get("/api/v1/config", tags=["config"])
 async def config():
     """Public feature flags the SPA reads to hide capabilities the server lacks."""
     return {"llm_enabled": settings.llm_enabled}
