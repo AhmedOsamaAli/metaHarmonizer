@@ -204,7 +204,7 @@ function LearnMock() {
     <div className="space-y-2.5 text-xs">
       <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
         <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
-          <Wand2 className="h-3.5 w-3.5 text-primary-600" />Remember my decisions
+          <Wand2 className="h-3.5 w-3.5 text-primary-600" />Learning is always on
         </span>
         <span className="flex h-4 w-7 items-center rounded-full bg-primary-600 px-0.5">
           <span className="ml-auto h-3 w-3 rounded-full bg-white" />
@@ -380,7 +380,7 @@ const FEATURE_SLIDES: Slide[] = [
     icon: <Wand2 className="h-5 w-5" />,
     tone: 'bg-amber-50 text-amber-700',
     title: 'It learns your decisions',
-    action: 'Turn on "Remember my decisions" and the same columns are pre-filled on your next study — no repeating yourself.',
+    action: 'Your accept and edit decisions are remembered automatically, so the same columns are pre-filled on your next study — no repeating yourself.',
     visual: (
       <Frame label="Learned decisions">
         <LearnMock />

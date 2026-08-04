@@ -49,7 +49,6 @@ from app.db.session import get_db
 from app.repositories import sessions as sessions_repo
 from app.repositories import users as users_repo
 from app.schemas.auth import (
-    ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
     MessageResponse,
@@ -362,28 +361,6 @@ async def reset_password(
     await sessions_repo.revoke_all_for_user(db, user.id)
     await db.commit()
     return MessageResponse(message="Password updated. You can now sign in.")
-
-
-@router.post("/change-password", response_model=MessageResponse)
-async def change_password(
-    body: ChangePasswordRequest,
-    user: User = Depends(current_user),
-    db: AsyncSession = Depends(get_db),
-) -> MessageResponse:
-    """Change the signed-in user's password after confirming the current one.
-    Revokes all other sessions so a change locks out other devices."""
-    if not user.password_hash or not verify_password(
-        body.current_password, user.password_hash
-    ):
-        raise AuthError("Your current password is incorrect.")
-    if settings.hibp_check and await password_breach_count(body.new_password) > 0:
-        raise WeakPasswordError(
-            "This password has appeared in a data breach. Please choose a different one."
-        )
-    await users_repo.set_password(db, user, hash_password(body.new_password))
-    await sessions_repo.revoke_all_for_user(db, user.id)
-    await db.commit()
-    return MessageResponse(message="Password changed. Other devices have been signed out.")
 
 
 @router.post("/refresh", response_model=TokenResponse)

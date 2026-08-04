@@ -28,14 +28,12 @@ import {
   suggestOntologyTerms,
 } from '../api/client';
 import { useStudies } from '../hooks/queries';
-import { useRememberDecisions } from '../hooks/useRememberDecisions';
 import ConfidenceBadge from '../components/ConfidenceBadge';
 import StatusBadge from '../components/StatusBadge';
 import PageHeader from '../components/ui/PageHeader';
 import OntologyIcon from '../components/icons/OntologyIcon';
 import StudyPicker from '../components/StudyPicker';
 import StudyGate, { isStudyReady } from '../components/StudyGate';
-import RememberToggle from '../components/RememberToggle';
 import { Card, CardBody } from '../components/ui/Card';
 import type { OntologyMapping, OntologySearchResult } from '../api/types';
 
@@ -89,7 +87,7 @@ export default function OntologyReview() {
   const patch = (updated: OntologyMapping) =>
     setOntoMappings((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
 
-  const [remember] = useRememberDecisions();
+  const remember = true;
 
   const handleAccept = async (id: number) => {
     setBusy((b) => ({ ...b, [id]: true }));
@@ -479,11 +477,6 @@ export default function OntologyReview() {
         title="Ontology review"
         description="Curate the controlled-vocabulary terms the engine assigned to each categorical value."
         icon={<OntologyIcon className="h-6 w-6" />}
-        actions={
-          <div className="flex items-center gap-2">
-            <RememberToggle />
-          </div>
-        }
       />
 
       {loading ? (
@@ -660,7 +653,7 @@ export default function OntologyReview() {
                 </button>
               </div>
               {showUnmatched && (
-                <CardBody className="space-y-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+                <CardBody className="max-h-[60vh] space-y-4 overflow-y-auto border-t border-slate-100 pt-4 dark:border-slate-800">
                   {/* Suggested matches found by the ontology search */}
                   {suggestedRows.length > 0 && (
                     <div className="space-y-2 rounded-xl border border-primary-100 bg-primary-50/40 p-3">

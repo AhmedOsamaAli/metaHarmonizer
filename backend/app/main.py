@@ -143,6 +143,12 @@ async def health():
     return {"status": "ok"}
 
 
+@app.get("/config", tags=["config"])
+async def config():
+    """Public feature flags the SPA reads to hide capabilities the server lacks."""
+    return {"llm_enabled": settings.llm_enabled}
+
+
 @app.get("/health/engine", tags=["health"])
 async def health_engine():
     """Report which engine adapter is active and whether it is ready."""

@@ -20,6 +20,17 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     return apiFetch<T>(path, init);
 }
 
+/* ---------- Server config (public feature flags) ---------- */
+
+export interface ServerConfig {
+    /** True only when the server has an LLM (Gemini) API key configured. */
+    llm_enabled: boolean;
+}
+
+export async function getServerConfig(): Promise<ServerConfig> {
+    return request<ServerConfig>(`${BASE}/config`);
+}
+
 /* ---------- Studies ---------- */
 
 export async function listStudies(): Promise<Study[]> {

@@ -27,9 +27,7 @@ import SegmentedControl from '../components/ui/SegmentedControl';
 import { TableFrame } from '../components/ui/Table';
 import StudyPicker from '../components/StudyPicker';
 import StudyGate, { isStudyReady } from '../components/StudyGate';
-import RememberToggle from '../components/RememberToggle';
-import { useStudies } from '../hooks/queries';
-import { useRememberDecisions } from '../hooks/useRememberDecisions';
+import { useStudies, useServerConfig } from '../hooks/queries';
 import {
   getStudyMappings,
   acceptMapping,
@@ -147,9 +145,8 @@ export default function MappingReview() {
   const [search, setSearch] = useState('');
 
   // Active-learning "smart review" (G7): order risky-first and keep look-alikes
-  // (same suggested target) adjacent so a curator can batch a whole group. Off
-  // by default — it's assistive ordering, never enforced.
-  const [smartOrder, setSmartOrder] = useState(false);
+  // (same suggested target) adjacent so a curator can batch a whole group.
+  const smartOrder = true;
   const [groupInfo, setGroupInfo] = useState<Record<number, { key: string; size: number; min: number; rank: number }>>({});
   const [queueStats, setQueueStats] = useState<{ groups: number; batchable_groups: number; risky: number } | null>(null);
 
@@ -206,7 +203,7 @@ export default function MappingReview() {
   const showToast = (message: string, type: 'success' | 'error' = 'success') =>
     type === 'success' ? toast.success(message) : toast.error(message);
 
-  const [remember] = useRememberDecisions();
+  const remember = true;
 
   // Status filter
 
@@ -329,6 +326,10 @@ export default function MappingReview() {
       showToast('Failed to apply alternative', 'error');
     }
   };
+
+  // LLM (Gemini) features are hidden entirely when the server has no API key.
+  const { data: serverConfig } = useServerConfig();
+  const llmEnabled = serverConfig?.llm_enabled ?? false;
 
   // On-demand Stage-4 LLM rematch for a stuck column (needs GEMINI_API_KEY).
   const [llmBusyId, setLlmBusyId] = useState<number | null>(null);
@@ -509,7 +510,6 @@ export default function MappingReview() {
                 </span>
               </div>
             )}
-            <RememberToggle />
             {selected.size > 0 ? (
               <>
                 <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{selected.size} selected</span>
@@ -627,7 +627,7 @@ export default function MappingReview() {
             <option value="stage1">S1 Dict/Fuzzy</option>
             <option value="stage2">S2 Value/Ontology</option>
             <option value="stage3">S3 Semantic</option>
-            <option value="stage4">S4 LLM</option>
+            {llmEnabled && <option value="stage4">S4 LLM</option>}
             <option value="invalid">Invalid</option>
             <option value="unmapped">Unmapped</option>
           </select>
@@ -643,20 +643,7 @@ export default function MappingReview() {
             className="w-48 rounded-lg border border-slate-200 py-1 pl-7 pr-2 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           />
         </div>
-        <button
-          onClick={() => setSmartOrder((v) => !v)}
-          aria-pressed={smartOrder}
-          title="Order risky mappings first and keep look-alikes together so you can batch a whole group"
-          className={`flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium transition ${
-            smartOrder
-              ? 'border-primary-300 bg-primary-50 text-primary-700 dark:border-primary-500/40 dark:bg-primary-500/15 dark:text-primary-300'
-              : 'border-slate-200 text-slate-500 hover:text-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-          }`}
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          Smart review
-        </button>
-        {smartOrder && queueStats && (
+        {queueStats && (
           <span className="text-xs text-slate-500">
             {queueStats.risky} risky · {queueStats.batchable_groups} batchable group
             {queueStats.batchable_groups === 1 ? '' : 's'}
@@ -838,7 +825,8 @@ export default function MappingReview() {
                               </p>
                             )}
 
-                            {/* On-demand Stage-4 LLM rematch */}
+                            {/* On-demand Stage-4 LLM rematch — hidden when the server has no LLM key */}
+                            {llmEnabled && (
                             <div className="mt-3 border-t border-slate-200 pt-3 dark:border-slate-800">
                               <button
                                 onClick={() => handleLlmRematch(m.id)}
@@ -868,6 +856,7 @@ export default function MappingReview() {
                                 </ul>
                               )}
                             </div>
+                            )}
                           </div>
                           <div>
                             <h4 className="font-semibold text-slate-700 mb-2 dark:text-slate-300">

@@ -11,6 +11,7 @@ Mirrors the catalogue in ``.env.example``.
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from typing import Literal
 
@@ -191,10 +192,24 @@ class Settings(BaseSettings):
             )
         return self
 
+    @model_validator(mode="after")
+    def _propagate_gemini_key(self):
+        # The engine's LLM client and the adapter read GEMINI_API_KEY from the
+        # process env. Mirror a key supplied via .env so LLM detection is
+        # consistent everywhere; absent -> every LLM feature stays disabled.
+        if self.gemini_api_key and not os.getenv("GEMINI_API_KEY"):
+            os.environ["GEMINI_API_KEY"] = self.gemini_api_key
+        return self
+
     @property
     def is_production_like(self) -> bool:
         """Heuristic: internet-facing deployment (HTTPS base URL or Secure cookie)."""
         return self.cookie_secure or self.app_base_url.lower().startswith("https://")
+
+    @property
+    def llm_enabled(self) -> bool:
+        """LLM (Gemini) features are available only when an API key is configured."""
+        return bool(self.gemini_api_key)
 
     @field_validator("llm_threshold")
     @classmethod

@@ -127,17 +127,6 @@ export async function getMe(): Promise<User> {
     return apiFetch<User>('/auth/me');
 }
 
-export async function changePassword(
-    currentPassword: string,
-    newPassword: string,
-): Promise<MessageResponse> {
-    return apiFetch<MessageResponse>('/auth/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
-    });
-}
-
 export async function logout(): Promise<void> {
     try {
         await apiFetch('/auth/logout', { method: 'POST', json: false });

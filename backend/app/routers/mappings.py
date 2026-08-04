@@ -231,6 +231,14 @@ async def llm_rematch(
 ):
     """Re-run Stage 4 (LLM / Gemini) for one mapping on demand (needs
     GEMINI_API_KEY). Returns suggested matches without accepting them."""
+    from app.core.settings import settings
+
+    if not settings.llm_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="LLM matching is disabled (GEMINI_API_KEY not set).",
+        )
+
     mapping = await mappings_repo.get_mapping(db, mapping_id)
     if not mapping:
         raise HTTPException(status_code=404, detail="Mapping not found")

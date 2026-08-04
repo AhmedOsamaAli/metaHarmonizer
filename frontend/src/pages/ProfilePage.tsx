@@ -21,15 +21,12 @@ import Badge from '../components/ui/Badge';
 import { LoadingBlock, EmptyState } from '../components/ui/Feedback';
 import { useAuth } from '../context/AuthContext';
 import {
-  changePassword,
   createApiToken,
   listApiTokens,
   listSessions,
   revokeApiToken,
   revokeSession,
 } from '../api/auth';
-import { ApiError } from '../api/http';
-import Input from '../components/ui/Input';
 import type { ApiTokenCreated } from '../api/types';
 
 function timeAgo(iso: string | null): string {
@@ -53,21 +50,6 @@ export default function ProfilePage() {
   const [newToken, setNewToken] = useState<ApiTokenCreated | null>(null);
   const [copied, setCopied] = useState(false);
   const [scope, setScope] = useState<'read' | 'write'>('read');
-
-  const [curPw, setCurPw] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [confirmPw, setConfirmPw] = useState('');
-  const changePwM = useMutation({
-    mutationFn: () => changePassword(curPw, newPw),
-    onSuccess: (r) => {
-      toast.success(r.message);
-      setCurPw('');
-      setNewPw('');
-      setConfirmPw('');
-    },
-    onError: (e: unknown) =>
-      toast.error(e instanceof ApiError ? e.message : 'Could not change password'),
-  });
 
   const revokeSessionM = useMutation({
     mutationFn: revokeSession,
@@ -136,60 +118,6 @@ export default function ProfilePage() {
               <Badge tone="amber">Unverified</Badge>
             )}
           </div>
-        </CardBody>
-      </Card>
-
-      {/* Change password */}
-      <Card>
-        <CardHeader
-          icon={<KeyRound className="h-4 w-4" />}
-          title="Change password"
-          description="Updating your password signs out your other devices."
-        />
-        <CardBody>
-          <form
-            className="grid max-w-md gap-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              changePwM.mutate();
-            }}
-          >
-            <Input
-              type="password"
-              label="Current password"
-              autoComplete="current-password"
-              value={curPw}
-              onChange={(e) => setCurPw(e.target.value)}
-              required
-            />
-            <Input
-              type="password"
-              label="New password"
-              autoComplete="new-password"
-              minLength={8}
-              value={newPw}
-              onChange={(e) => setNewPw(e.target.value)}
-              required
-            />
-            <Input
-              type="password"
-              label="Confirm new password"
-              autoComplete="new-password"
-              value={confirmPw}
-              onChange={(e) => setConfirmPw(e.target.value)}
-              error={confirmPw && newPw !== confirmPw ? 'Passwords do not match.' : undefined}
-              required
-            />
-            <Button
-              type="submit"
-              className="w-fit"
-              loading={changePwM.isPending}
-              disabled={!curPw || newPw.length < 8 || newPw !== confirmPw}
-              icon={<KeyRound className="h-4 w-4" />}
-            >
-              Update password
-            </Button>
-          </form>
         </CardBody>
       </Card>
 

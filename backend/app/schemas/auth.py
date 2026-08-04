@@ -42,11 +42,6 @@ class ResetPasswordRequest(BaseModel):
     password: str = Field(min_length=8, max_length=200)
 
 
-class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str = Field(min_length=8, max_length=200)
-
-
 class MessageResponse(BaseModel):
     """Generic non-sensitive acknowledgement (kept deliberately vague for the
     email flows so it never reveals whether an address is registered)."""
