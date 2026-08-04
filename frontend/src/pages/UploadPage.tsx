@@ -15,6 +15,7 @@ import { parseDelimitedPreview, type ParsedPreview } from '../lib/parseDelimited
 import { useJobs } from '../context/JobsContext';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/http';
+import { COMPACT_PREVIEW_ROWS, compactPreviewRows } from '../lib/previewRows';
 
 type UploadState = 'idle' | 'uploading' | 'error';
 
@@ -314,7 +315,7 @@ export default function UploadPage() {
                   </div>
                   <PreviewTable
                     columns={preview.columns}
-                    rows={preview.rows.slice(0, 5)}
+                    rows={compactPreviewRows(preview.rows)}
                     heightClass="max-h-64 lg:max-h-none lg:min-h-0 lg:flex-1"
                   />
                   <button
@@ -322,7 +323,7 @@ export default function UploadPage() {
                     onClick={() => setPreviewOpen(true)}
                     className="w-full rounded-lg py-1 text-center text-xs font-semibold text-primary-600 transition hover:bg-primary-50 dark:text-primary-300 dark:hover:bg-primary-500/10"
                   >
-                    {preview.rows.length > 5
+                    {preview.rows.length > COMPACT_PREVIEW_ROWS
                       ? `View all ${preview.rows.length}${preview.truncated ? '+' : ''} rows`
                       : 'Open full preview'}
                   </button>
