@@ -17,7 +17,7 @@ from app.core.limits import install_limits
 from app.core.metrics import MetricsMiddleware
 from app.core.sentry import init_sentry
 from app.core.settings import settings
-from app.routers import admin, audit, auth, export, federation, harmonize, health, mappings, ontology, quality, support, tokens, ws
+from app.routers import admin, audit, auth, export, federation, harmonize, health, mappings, ontology, quality, tokens, ws
 
 configure_logging(settings.log_level)
 init_sentry()
@@ -127,7 +127,6 @@ app.include_router(quality.router)
 app.include_router(export.router)
 app.include_router(federation.router)
 app.include_router(ontology.router)
-app.include_router(support.router)
 
 
 @app.get("/", tags=["health"])

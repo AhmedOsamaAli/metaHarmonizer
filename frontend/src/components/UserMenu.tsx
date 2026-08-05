@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useNavigate } from 'react-router-dom';
-import { LifeBuoy, LogOut, ShieldCheck, User as UserIcon, ChevronDown } from 'lucide-react';
+import { LogOut, ShieldCheck, User as UserIcon, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
 import type { Role } from '../api/types';
@@ -67,9 +67,6 @@ export default function UserMenu() {
 
           <Item icon={<UserIcon className="h-4 w-4" />} onSelect={() => navigate('/profile')}>
             Profile &amp; sessions
-          </Item>
-          <Item icon={<LifeBuoy className="h-4 w-4" />} onSelect={() => navigate('/support')}>
-            Support
           </Item>
           {user.role === 'curator' && (
             <Item
