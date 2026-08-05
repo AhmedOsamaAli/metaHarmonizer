@@ -159,6 +159,8 @@ async def _review_import(
             detail=f"Import already {existing['status']}.",
         )
     out = await fed_repo.set_import_status(db, import_id, status, reviewed_by=admin.id)
+    if status == "approved":
+        await fed_repo.promote_imported_decisions(db, import_id, admin_id=admin.id)
     await audit_repo.add_audit_entry(
         db,
         study_id="",

@@ -16,7 +16,7 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 import app.db.session as db_session
-from app.db.models import Mapping, OntologyMapping, Study, User
+from app.db.models import LearnedDecision, Mapping, OntologyMapping, Study, User
 
 pytestmark = pytest.mark.asyncio
 
@@ -59,6 +59,30 @@ async def fed_app(database_url):
                 status="accepted",
             )
         )
+        s.add_all(
+            [
+                LearnedDecision(
+                    scope="shared", owner_id=None, kind="schema",
+                    source_key=f"gender {study_id}", decision="accept",
+                    target_field="sex", promoted_by=admin_id,
+                ),
+                LearnedDecision(
+                    scope="shared", owner_id=None, kind="ontology",
+                    source_key=f"sex::male {study_id}", decision="accept",
+                    target_term="Male", target_id="NCIT:C20197", promoted_by=admin_id,
+                ),
+                LearnedDecision(
+                    scope="shared", owner_id=None, kind="schema",
+                    source_key=f"noise {study_id}", decision="reject",
+                    promoted_by=admin_id,
+                ),
+                LearnedDecision(
+                    scope="personal", owner_id=admin_id, kind="schema",
+                    source_key=f"private {study_id}", decision="accept",
+                    target_field="private_field",
+                ),
+            ]
+        )
         s.add(
             OntologyMapping(
                 study_id=study_id,
@@ -89,6 +113,7 @@ async def fed_app(database_url):
     async with db_session.SessionLocal() as s:
         await s.execute(sa.text("DELETE FROM federation_mappings"))
         await s.execute(sa.text("DELETE FROM federation_imports"))
+        await s.execute(sa.text("DELETE FROM learned_decisions WHERE source_key LIKE :key"), {"key": f"%{study_id}"})
         await s.execute(sa.text("DELETE FROM mappings WHERE study_id = :sid"), {"sid": study_id})
         await s.execute(sa.text("DELETE FROM ontology_mappings WHERE study_id = :sid"), {"sid": study_id})
         await s.execute(sa.text("DELETE FROM studies WHERE id = :sid"), {"sid": study_id})
@@ -109,9 +134,12 @@ async def test_export_is_signed_and_contains_accepted_mappings(fed_app):
     bundle = r.json()
     assert bundle["signature"]
     assert bundle["public_key"]
-    targets = {m["accepted_target"] for m in bundle["payload"]["mappings"]}
+    records = bundle["payload"]["mappings"]
+    targets = {m["accepted_target"] for m in records}
     assert "sex" in targets  # schema mapping
     assert "Male" in targets  # ontology mapping
+    assert any(m["decision"] == "reject" for m in records)
+    assert not any(m["raw_key"].startswith("private") for m in records)
 
 
 async def test_self_export_import_roundtrip_pending(fed_app):
@@ -176,6 +204,22 @@ async def test_approve_flow(fed_app):
         approved = await client.post(f"/api/v1/federation/imports/{imp['id']}/approve")
         assert approved.status_code == 200
         assert approved.json()["status"] == "approved"
+        async with db_session.SessionLocal() as s:
+            shared = list(
+                await s.scalars(
+                    sa.select(LearnedDecision).where(
+                        LearnedDecision.scope == "shared",
+                        LearnedDecision.source_key.in_(
+                            [f"gender {study_id}", f"sex::male {study_id}", f"noise {study_id}"]
+                        ),
+                    )
+                )
+            )
+            assert {row.source_key: row.decision for row in shared} == {
+                f"gender {study_id}": "accept",
+                f"sex::male {study_id}": "accept",
+                f"noise {study_id}": "reject",
+            }
         # Approving again is a conflict (already reviewed).
         again = await client.post(f"/api/v1/federation/imports/{imp['id']}/approve")
         assert again.status_code == 409

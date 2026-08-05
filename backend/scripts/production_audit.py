@@ -18,7 +18,8 @@ from sqlalchemy import delete, select
 
 from app.core.security import hash_password
 from app.core.storage import get_storage
-from app.db.models import JobRun, Mapping, OntologyMapping, Study, User
+from app.db.models import FederationImport, JobRun, LearnedDecision, Mapping, OntologyMapping, Study, User
+from app.repositories import learned_decisions as learned_repo
 from app.db.session import SessionLocal
 
 
@@ -88,6 +89,15 @@ async def create_audit_users() -> tuple[User, str, User, str]:
 
 async def cleanup(user_ids: list[int], study_ids: list[str], file_keys: set[str]) -> None:
     async with SessionLocal() as db:
+        if user_ids:
+            await db.execute(
+                delete(FederationImport).where(FederationImport.imported_by.in_(user_ids))
+            )
+        await db.execute(
+            delete(LearnedDecision).where(
+                LearnedDecision.source_key.like("production audit federation%")
+            )
+        )
         if study_ids:
             await db.execute(delete(Study).where(Study.id.in_(study_ids)))
             await db.execute(delete(JobRun).where(JobRun.study_id.in_(study_ids)))
@@ -493,15 +503,55 @@ async def run(origin: str) -> AuditReport:
 
             fed_key = checked(await client.get("/api/v1/federation/public-key", headers=auth)).json()
             require(len(fed_key.get("public_key", "")) == 64, f"federation public key invalid: {fed_key}")
+            federation_key = f"production audit federation {uuid.uuid4().hex[:12]}"
+            async with SessionLocal() as db:
+                await learned_repo.promote(
+                    db,
+                    kind="schema",
+                    source_key=federation_key,
+                    decision="accept",
+                    target_field="body_site",
+                    admin_id=admin.id,
+                )
+                await db.commit()
             fed_export = checked(await client.get("/api/v1/federation/export", headers=auth)).json()
             require("payload" in fed_export and "signature" in fed_export, "federation export shape invalid")
+            exported_records = fed_export["payload"].get("mappings", [])
+            require(
+                any(
+                    row.get("raw_key") == federation_key
+                    and row.get("decision") == "accept"
+                    and row.get("accepted_target") == "body_site"
+                    for row in exported_records
+                ),
+                "shared decision missing from federation export",
+            )
+            imported = checked(
+                await client.post("/api/v1/federation/import", headers=auth, json=fed_export)
+            ).json()
+            require(imported["status"] == "pending", "federation import bypassed review")
+            approved_import = checked(
+                await client.post(
+                    f"/api/v1/federation/imports/{imported['id']}/approve", headers=auth
+                )
+            ).json()
+            require(approved_import["status"] == "approved", "federation approval failed")
+            async with SessionLocal() as db:
+                shared = await learned_repo.lookup_batch(
+                    db, kind="schema", keys=[federation_key], owner_id=curator.id
+                )
+                require(
+                    shared.get(federation_key, {}).get("scope") == "shared"
+                    and shared[federation_key].get("target_field") == "body_site",
+                    "approved federation import did not reach shared KB",
+                )
             invalid_import = await client.post(
                 "/api/v1/federation/import",
                 headers=auth,
                 json={"payload": {"source_instance": "untrusted"}, "signature": "bad"},
             )
             require(invalid_import.status_code == 400, f"invalid federation import returned {invalid_import.status_code}")
-            report.pass_("federation signing and invalid-signature rejection")
+            report.pass_("federation export, staged import, approval, and signature rejection")
 
             completed = checked(
                 await client.post(f"/api/v1/studies/{study_id}/complete", headers=auth)

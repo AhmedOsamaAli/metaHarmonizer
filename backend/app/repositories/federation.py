@@ -16,8 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.models import (
     FederationImport,
     FederationMapping,
-    Mapping,
-    OntologyMapping,
+    LearnedDecision,
 )
 from app.services import federation as fed_sig
 
@@ -32,50 +31,25 @@ def _dedup_key(record_type: str, raw_key: str, target: str, ontology_id: str | N
 # Export
 # ---------------------------------------------------------------------------
 async def build_export_records(db: AsyncSession) -> list[dict[str, Any]]:
-    """Collect this instance's curator-confirmed mappings as portable records.
-
-    Schema mappings: accepted column → field. Ontology mappings: accepted
-    value → ontology term/id. Deduped by content so the bundle is a clean
-    knowledge set, not a per-study dump.
-    """
+    """Collect admin-promoted shared human decisions as portable records."""
     records: dict[str, dict[str, Any]] = {}
 
-    schema_stmt = select(Mapping).where(Mapping.status == "accepted")
-    for m in await db.scalars(schema_stmt):
-        target = m.curator_field or m.matched_field
-        if not target:
-            continue
-        key = _dedup_key("schema_mapping", m.raw_column, target, None)
-        records.setdefault(
-            key,
-            {
-                "record_type": "schema_mapping",
-                "raw_key": m.raw_column,
-                "accepted_target": target,
-                "ontology_id": None,
-                "confidence_score": m.confidence_score,
-                "dedup_key": key,
-            },
-        )
-
-    onto_stmt = select(OntologyMapping).where(OntologyMapping.status == "accepted")
-    for o in await db.scalars(onto_stmt):
-        term = o.curator_term or o.ontology_term
-        if not term:
-            continue
-        raw_key = f"{o.field_name}={o.raw_value}"
-        key = _dedup_key("ontology_mapping", raw_key, term, o.ontology_id)
-        records.setdefault(
-            key,
-            {
-                "record_type": "ontology_mapping",
-                "raw_key": raw_key,
-                "accepted_target": term,
-                "ontology_id": o.ontology_id,
-                "confidence_score": o.confidence_score,
-                "dedup_key": key,
-            },
-        )
+    stmt = select(LearnedDecision).where(LearnedDecision.scope == "shared")
+    for decision in await db.scalars(stmt):
+        record_type = f"{decision.kind}_mapping"
+        target = (
+            decision.target_field if decision.kind == "schema" else decision.target_term
+        ) or ""
+        key = _dedup_key(record_type, decision.source_key, target, decision.target_id)
+        records[key] = {
+            "record_type": record_type,
+            "raw_key": decision.source_key,
+            "decision": decision.decision,
+            "accepted_target": target,
+            "ontology_id": decision.target_id,
+            "confidence_score": None,
+            "dedup_key": key,
+        }
 
     return list(records.values())
 
@@ -154,12 +128,16 @@ async def record_import(
         if record_type not in ("schema_mapping", "ontology_mapping"):
             continue
         seen_keys.add(dedup_key)
+        decision = str(rec.get("decision") or "accept")
+        if decision not in ("accept", "reject"):
+            continue
         db.add(
             FederationMapping(
                 import_id=imp.id,
                 source_instance=source,
                 record_type=record_type,
                 raw_key=str(rec.get("raw_key") or ""),
+                decision=decision,
                 accepted_target=str(rec.get("accepted_target") or ""),
                 ontology_id=rec.get("ontology_id"),
                 confidence_score=rec.get("confidence_score"),
@@ -215,6 +193,7 @@ async def get_import(db: AsyncSession, import_id: int) -> dict[str, Any] | None:
         {
             "record_type": r.record_type,
             "raw_key": r.raw_key,
+            "decision": r.decision,
             "accepted_target": r.accepted_target,
             "ontology_id": r.ontology_id,
             "confidence_score": r.confidence_score,
@@ -222,6 +201,31 @@ async def get_import(db: AsyncSession, import_id: int) -> dict[str, Any] | None:
         for r in rows
     ]
     return out
+
+
+async def promote_imported_decisions(
+    db: AsyncSession, import_id: int, *, admin_id: int
+) -> int:
+    rows = list(
+        await db.scalars(
+            select(FederationMapping).where(FederationMapping.import_id == import_id)
+        )
+    )
+    from app.repositories import learned_decisions as learned_repo
+
+    for row in rows:
+        kind = "schema" if row.record_type == "schema_mapping" else "ontology"
+        await learned_repo.promote(
+            db,
+            kind=kind,
+            source_key=row.raw_key,
+            decision=row.decision,
+            admin_id=admin_id,
+            target_field=row.accepted_target or None if kind == "schema" else None,
+            target_term=row.accepted_target or None if kind == "ontology" else None,
+            target_id=row.ontology_id if kind == "ontology" else None,
+        )
+    return len(rows)
 
 
 async def set_import_status(

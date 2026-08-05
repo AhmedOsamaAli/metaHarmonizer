@@ -469,6 +469,9 @@ class FederationMapping(Base):
     source_instance: Mapped[str] = mapped_column(String(120), nullable=False)
     record_type: Mapped[str] = mapped_column(String(20), nullable=False)
     raw_key: Mapped[str] = mapped_column(Text, nullable=False)
+    decision: Mapped[str] = mapped_column(
+        String(10), nullable=False, default="accept", server_default="accept"
+    )
     accepted_target: Mapped[str] = mapped_column(Text, nullable=False)
     ontology_id: Mapped[str | None] = mapped_column(String(100))
     confidence_score: Mapped[float | None] = mapped_column(Float)
@@ -478,6 +481,10 @@ class FederationMapping(Base):
     )
 
     parent: Mapped["FederationImport"] = relationship(back_populates="mappings")
+
+    __table_args__ = (
+        CheckConstraint("decision in ('accept','reject')", name="fed_mapping_decision_valid"),
+    )
 
     __table_args__ = (
         UniqueConstraint(
