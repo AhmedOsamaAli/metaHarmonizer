@@ -356,6 +356,9 @@ async def run(origin: str) -> AuditReport:
                 await client.post(f"/api/v1/ontology/suggest/{study_id}", headers=auth)
             ).json()
             require("suggestions" in suggestions, "ontology suggestion payload invalid")
+            ontology = checked(
+                await client.get(f"/api/v1/ontology/mappings/{study_id}", headers=auth)
+            ).json()
             for row in ontology:
                 if row.get("ontology_term"):
                     checked(
