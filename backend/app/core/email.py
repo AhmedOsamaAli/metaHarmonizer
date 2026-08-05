@@ -10,6 +10,7 @@ development, and never used in production (set the key there).
 from __future__ import annotations
 
 import logging
+from html import escape
 
 import httpx
 
@@ -157,4 +158,63 @@ async def send_account_rejected_email(*, to: str, name: str | None) -> None:
         "About your MetaHarmonizer account",
         html,
         text_fallback="Your MetaHarmonizer account request was declined.",
+    )
+
+
+async def send_support_ticket_confirmation(
+    *, to: str, name: str | None, ticket_id: int, subject: str
+) -> None:
+    link = f"{settings.app_base_url}/support"
+    greeting = f"Hi {escape(name)}," if name else "Hi,"
+    html = (
+        "<div style='font-family:system-ui,sans-serif;max-width:520px'>"
+        f"<h2>Support request #{ticket_id} received</h2><p>{greeting}</p>"
+        f"<p>We received your request: <strong>{escape(subject)}</strong>.</p>"
+        "<p>The support team will follow up in the application and by email.</p>"
+        f"<p>{_button(link, 'View support requests')}</p></div>"
+    )
+    await _send(
+        to,
+        f"MetaHarmonizer support request #{ticket_id}",
+        html,
+        text_fallback=f"Support request #{ticket_id} received: {link}",
+    )
+
+
+async def send_admin_support_ticket_email(
+    *, to: str, ticket_id: int, requester: str, category: str, subject: str
+) -> None:
+    link = f"{settings.app_base_url}/support?ticket={ticket_id}"
+    html = (
+        "<div style='font-family:system-ui,sans-serif;max-width:520px'>"
+        f"<h2>New support request #{ticket_id}</h2>"
+        f"<p><strong>From:</strong> {escape(requester)}<br>"
+        f"<strong>Category:</strong> {escape(category)}<br>"
+        f"<strong>Subject:</strong> {escape(subject)}</p>"
+        f"<p>{_button(link, 'Review support request')}</p></div>"
+    )
+    await _send(
+        to,
+        f"MetaHarmonizer support #{ticket_id}: {subject}",
+        html,
+        text_fallback=f"New support request #{ticket_id} from {requester}: {link}",
+    )
+
+
+async def send_support_update_email(
+    *, to: str, name: str | None, ticket_id: int, subject: str, update: str
+) -> None:
+    link = f"{settings.app_base_url}/support?ticket={ticket_id}"
+    greeting = f"Hi {escape(name)}," if name else "Hi,"
+    html = (
+        "<div style='font-family:system-ui,sans-serif;max-width:520px'>"
+        f"<h2>Support request #{ticket_id} updated</h2><p>{greeting}</p>"
+        f"<p><strong>{escape(subject)}</strong></p><p>{escape(update)}</p>"
+        f"<p>{_button(link, 'View update')}</p></div>"
+    )
+    await _send(
+        to,
+        f"Update on MetaHarmonizer support #{ticket_id}",
+        html,
+        text_fallback=f"Support request #{ticket_id} updated: {link}",
     )

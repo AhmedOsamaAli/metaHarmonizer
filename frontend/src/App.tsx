@@ -26,6 +26,7 @@ const ExportPage = lazy(() => import('./pages/ExportPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const ActivityPage = lazy(() => import('./pages/ActivityPage'));
+const SupportPage = lazy(() => import('./pages/SupportPage'));
 
 const NAV_ITEMS: {
   to: string;
@@ -250,6 +251,7 @@ export default function App() {
       <Route path="/export" element={<Shell><ExportPage /></Shell>} />
       <Route path="/export/:studyId" element={<Shell><ExportPage /></Shell>} />
       <Route path="/profile" element={<Shell><ProfilePage /></Shell>} />
+      <Route path="/support" element={<Shell><SupportPage /></Shell>} />
       <Route path="/admin" element={<Shell role="admin"><AdminPage /></Shell>} />
       <Route path="/activity" element={<Shell role="admin"><ActivityPage /></Shell>} />
 

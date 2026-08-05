@@ -484,9 +484,6 @@ class FederationMapping(Base):
 
     __table_args__ = (
         CheckConstraint("decision in ('accept','reject')", name="fed_mapping_decision_valid"),
-    )
-
-    __table_args__ = (
         UniqueConstraint(
             "source_instance", "dedup_key", name="federation_mapping_source_dedup"
         ),
@@ -496,4 +493,59 @@ class FederationMapping(Base):
             name="fed_mapping_type_valid",
         ),
     )
+
+
+class SupportTicket(Base, TimestampMixin):
+    __tablename__ = "support_tickets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    category: Mapped[str] = mapped_column(String(30), nullable=False)
+    subject: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="open", server_default="open"
+    )
+    screenshot_key: Mapped[str | None] = mapped_column(Text)
+    screenshot_name: Mapped[str | None] = mapped_column(String(255))
+    screenshot_type: Mapped[str | None] = mapped_column(String(50))
+
+    replies: Mapped[list["SupportTicketReply"]] = relationship(
+        back_populates="ticket", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        Index("ix_support_tickets_creator_created", "created_by", "created_at"),
+        Index("ix_support_tickets_status_created", "status", "created_at"),
+        CheckConstraint(
+            "category in ('question','bug','data','feature','other')",
+            name="support_ticket_category_valid",
+        ),
+        CheckConstraint(
+            "status in ('open','in_progress','resolved')",
+            name="support_ticket_status_valid",
+        ),
+    )
+
+
+class SupportTicketReply(Base):
+    __tablename__ = "support_ticket_replies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ticket_id: Mapped[int] = mapped_column(
+        ForeignKey("support_tickets.id", ondelete="CASCADE"), nullable=False
+    )
+    author_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+    ticket: Mapped["SupportTicket"] = relationship(back_populates="replies")
+
+    __table_args__ = (Index("ix_support_replies_ticket_created", "ticket_id", "created_at"),)
 
