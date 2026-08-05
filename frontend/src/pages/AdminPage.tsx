@@ -46,8 +46,8 @@ import {
 } from '../api/federation';
 
 const ROLES: Role[] = ['curator', 'admin'];
-type AdminTab = 'users' | 'schemas' | 'knowledge' | 'federation';
-const ADMIN_TABS: AdminTab[] = ['users', 'schemas', 'knowledge', 'federation'];
+type AdminTab = 'users' | 'schemas' | 'aliases' | 'knowledge' | 'federation';
+const ADMIN_TABS: AdminTab[] = ['users', 'schemas', 'aliases', 'knowledge', 'federation'];
 
 export default function AdminPage() {
   const { user: me } = useAuth();
@@ -158,7 +158,8 @@ export default function AdminPage() {
             icon: <Users className="h-4 w-4" />,
             count: pendingRequests.length + pendingApprovals.length,
           },
-          { value: 'schemas', label: 'Schemas & aliases', icon: <Layers className="h-4 w-4" /> },
+          { value: 'schemas', label: 'Schema versions', icon: <Layers className="h-4 w-4" /> },
+          { value: 'aliases', label: 'Aliases', icon: <Search className="h-4 w-4" /> },
           { value: 'knowledge', label: 'Knowledge', icon: <BrainCircuit className="h-4 w-4" /> },
           { value: 'federation', label: 'Federation', icon: <Network className="h-4 w-4" /> },
         ]}
@@ -369,12 +370,8 @@ export default function AdminPage() {
         </>
       )}
 
-      {activeTab === 'schemas' && (
-        <>
-          <SchemaVersionsCard />
-          <AliasDictCard />
-        </>
-      )}
+      {activeTab === 'schemas' && <SchemaVersionsCard />}
+      {activeTab === 'aliases' && <AliasDictCard />}
       {activeTab === 'knowledge' && <LearnedDecisionsCard />}
       {activeTab === 'federation' && <FederationCard />}
     </div>
