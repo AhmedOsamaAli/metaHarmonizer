@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2, Download, RefreshCw, Network } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
+import SegmentedControl from '../components/ui/SegmentedControl';
 import { LoadingBlock, EmptyState } from '../components/ui/Feedback';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -44,12 +46,21 @@ import {
 } from '../api/federation';
 
 const ROLES: Role[] = ['curator', 'admin'];
+type AdminTab = 'users' | 'schemas' | 'knowledge' | 'federation';
+const ADMIN_TABS: AdminTab[] = ['users', 'schemas', 'knowledge', 'federation'];
 
 export default function AdminPage() {
   const { user: me } = useAuth();
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab') as AdminTab | null;
+  const activeTab = requestedTab && ADMIN_TABS.includes(requestedTab) ? requestedTab : 'users';
 
-  const users = useQuery({ queryKey: ['admin', 'users'], queryFn: adminListUsers });
+  const users = useQuery({
+    queryKey: ['admin', 'users'],
+    queryFn: adminListUsers,
+    enabled: activeTab === 'users',
+  });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['admin', 'users'] });
 
@@ -131,6 +142,30 @@ export default function AdminPage() {
         }
       />
 
+      <SegmentedControl<AdminTab>
+        value={activeTab}
+        onChange={(tab) => {
+          const next = new URLSearchParams(searchParams);
+          if (tab === 'users') next.delete('tab');
+          else next.set('tab', tab);
+          setSearchParams(next);
+        }}
+        className="w-full overflow-x-auto"
+        segments={[
+          {
+            value: 'users',
+            label: 'Users & access',
+            icon: <Users className="h-4 w-4" />,
+            count: pendingRequests.length + pendingApprovals.length,
+          },
+          { value: 'schemas', label: 'Schemas & aliases', icon: <Layers className="h-4 w-4" /> },
+          { value: 'knowledge', label: 'Knowledge', icon: <BrainCircuit className="h-4 w-4" /> },
+          { value: 'federation', label: 'Federation', icon: <Network className="h-4 w-4" /> },
+        ]}
+      />
+
+      {activeTab === 'users' && (
+        <>
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Stat label="Total users" value={stats.total} />
@@ -331,11 +366,17 @@ export default function AdminPage() {
           </div>
         )}
       </Card>
+        </>
+      )}
 
-      <SchemaVersionsCard />
-      <AliasDictCard />
-      <LearnedDecisionsCard />
-      <FederationCard />
+      {activeTab === 'schemas' && (
+        <>
+          <SchemaVersionsCard />
+          <AliasDictCard />
+        </>
+      )}
+      {activeTab === 'knowledge' && <LearnedDecisionsCard />}
+      {activeTab === 'federation' && <FederationCard />}
     </div>
   );
 }
