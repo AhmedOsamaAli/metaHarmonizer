@@ -156,7 +156,7 @@ export default function AdminPage() {
             value: 'users',
             label: 'Users & access',
             icon: <Users className="h-4 w-4" />,
-            count: pendingRequests.length + pendingApprovals.length,
+            count: pendingRequests.length + pendingApprovals.length || undefined,
           },
           { value: 'schemas', label: 'Schema versions', icon: <Layers className="h-4 w-4" /> },
           { value: 'aliases', label: 'Aliases', icon: <Search className="h-4 w-4" /> },
