@@ -10,9 +10,7 @@ def test_frontend_config_path_returns_feature_flags():
     assert isinstance(response.json()["llm_enabled"], bool)
 
 
-def test_redoc_uses_pinned_bundle_without_google_fonts():
+def test_redoc_is_not_exposed():
     response = TestClient(app).get("/redoc")
 
-    assert response.status_code == 200
-    assert "https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js" in response.text
-    assert "fonts.googleapis.com" not in response.text
+    assert response.status_code == 404

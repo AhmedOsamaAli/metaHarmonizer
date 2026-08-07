@@ -21,8 +21,9 @@
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), browsing-topics=()"
 		-Server
 	}
-	@app_pages not path /docs /docs/* /redoc /openapi.json
+	@app_pages not path /docs /docs/* /openapi.json
 	header @app_pages Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+	respond /redoc 404
 
 	# Backend: REST + WebSocket.
 	@api path /api/* /healthz /readyz /metrics
@@ -30,12 +31,12 @@
 		reverse_proxy api:8000
 	}
 
-	# FastAPI's Swagger/ReDoc pages load their UI bundles from jsDelivr. Keep
+	# FastAPI's Swagger page loads its UI bundle from jsDelivr. Keep
 	# that broader CSP limited to documentation routes; the application remains
 	# self-only under the stricter policy above.
-	@docs path /docs /docs/* /redoc /openapi.json
+	@docs path /docs /docs/* /openapi.json
 	handle @docs {
-		header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; worker-src blob:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https://fastapi.tiangolo.com https://cdn.redoc.ly; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+		header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https://fastapi.tiangolo.com; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 		reverse_proxy api:8000
 	}
 
