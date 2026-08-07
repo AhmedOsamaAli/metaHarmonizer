@@ -9,6 +9,7 @@ import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.openapi.docs import get_redoc_html
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.logging import configure_logging
@@ -91,6 +92,7 @@ app = FastAPI(
     description="Automated metadata harmonization for cBioPortal — curator review dashboard backend.",
     version="0.1.0",
     lifespan=lifespan,
+    redoc_url=None,
 )
 
 # Request-id + unified error envelope (spec §6.1).
@@ -127,6 +129,16 @@ app.include_router(quality.router)
 app.include_router(export.router)
 app.include_router(federation.router)
 app.include_router(ontology.router)
+
+
+@app.get("/redoc", include_in_schema=False)
+async def redoc():
+    return get_redoc_html(
+        openapi_url=app.openapi_url,
+        title=f"{app.title} - ReDoc",
+        redoc_js_url="https://cdn.jsdelivr.net/npm/redoc@2/bundles/redoc.standalone.js",
+        with_google_fonts=False,
+    )
 
 
 @app.get("/", tags=["health"])
