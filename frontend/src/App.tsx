@@ -35,7 +35,7 @@ const NAV_ITEMS: {
   minRole?: Role;
 }[] = [
   { to: '/upload', icon: Upload, label: 'Upload', end: false, minRole: 'curator' },
-  { to: '/review', icon: Table2, label: 'Mappings', end: false },
+  { to: '/review', icon: Table2, label: 'Schema', end: false },
   { to: '/ontology', icon: OntologyIcon, label: 'Ontology', end: false },
   { to: '/quality', icon: BarChart3, label: 'Quality', end: false },
   { to: '/export', icon: Download, label: 'Export', end: false },

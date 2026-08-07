@@ -83,7 +83,7 @@ class Settings(BaseSettings):
     )
     access_ttl_min: int = 15
     refresh_ttl_days: int = 30
-    allowed_email_domains: str = ""  # comma-separated; empty -> admin-invite-only
+    allowed_email_domains: str = ""  # comma-separated; "*" auto-approves every verified email
     resend_api_key: str | None = None
     # Email sending (verification + password reset). When resend_api_key is unset
     # in a non-production env, links are logged instead of sent (dev convenience).

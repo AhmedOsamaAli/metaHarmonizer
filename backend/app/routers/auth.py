@@ -100,6 +100,8 @@ def _domain_allowed(email: str) -> bool:
     domains = settings.allowed_email_domain_list
     if not domains:
         return False  # empty -> registration closed (invite-only)
+    if "*" in domains:
+        return True
     return email.split("@")[-1].lower() in domains
 
 

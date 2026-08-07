@@ -127,6 +127,34 @@ async def test_untrusted_domain_registers_pending(client):
         assert u.approved is False
 
 
+async def test_wildcard_domain_auto_approves_but_still_requires_verification(
+    client, monkeypatch
+):
+    make_client, domain, SessionLocal = client
+    monkeypatch.setattr(
+        settings_mod.settings, "allowed_email_domains", "*", raising=False
+    )
+    email = "open-registration@gmail.com"
+    async with await make_client() as c:
+        await _register(c, f"admin@{domain}")
+        registered = await _register(c, email)
+        assert registered.status_code == 201
+        assert "verify" in registered.json()["message"].lower()
+
+        blocked = await c.post(
+            "/api/v1/auth/login",
+            json={"email": email, "password": "pw-123456"},
+        )
+        assert blocked.status_code == 403
+        assert blocked.json()["error"]["code"] == "EMAIL_NOT_VERIFIED"
+
+    async with SessionLocal() as s:
+        user = await s.scalar(sa.select(User).where(User.email == email))
+        assert user is not None
+        assert user.approved is True
+        assert user.email_verified is False
+
+
 async def test_duplicate_email_conflict(client):
     make_client, domain, _ = client
     email = f"dup@{domain}"

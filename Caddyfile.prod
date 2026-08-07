@@ -1,6 +1,6 @@
 # Caddy — production config (automatic HTTPS via Let's Encrypt).
 # Used by docker-compose.prod.yml. Requires DOMAIN + ACME_EMAIL in the env.
-#   /api/*, /healthz, /readyz, /metrics  -> FastAPI (api:8000)   (WS upgrades too)
+#   /api/*, /healthz, /readyz, /metrics, API docs -> FastAPI (api:8000)
 #   everything else                      -> SPA static files, HTML5 history fallback
 
 {
@@ -26,6 +26,15 @@
 	# Backend: REST + WebSocket.
 	@api path /api/* /healthz /readyz /metrics
 	handle @api {
+		reverse_proxy api:8000
+	}
+
+	# FastAPI's Swagger/ReDoc pages load their UI bundles from jsDelivr. Keep
+	# that broader CSP limited to documentation routes; the application remains
+	# self-only under the stricter policy above.
+	@docs path /docs /docs/* /redoc /openapi.json
+	handle @docs {
+		header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https://fastapi.tiangolo.com; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 		reverse_proxy api:8000
 	}
 
