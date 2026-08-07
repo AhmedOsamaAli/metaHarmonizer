@@ -13,7 +13,9 @@
 		reverse_proxy api:8000
 	}
 
-	respond /redoc 404
+	handle /redoc {
+		respond 404
+	}
 
 	@docs path /docs /docs/* /openapi.json
 	handle @docs {
