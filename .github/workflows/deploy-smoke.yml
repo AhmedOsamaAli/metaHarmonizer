@@ -15,11 +15,13 @@ on:
     paths:
       - "docker-compose.yml"
       - "backend/**"
+      - "frontend/**"
       - ".github/workflows/deploy-smoke.yml"
   pull_request:
     paths:
       - "docker-compose.yml"
       - "backend/**"
+      - "frontend/**"
       - ".github/workflows/deploy-smoke.yml"
   workflow_dispatch:
 
@@ -54,11 +56,26 @@ jobs:
                 - "8000:8000"
           EOF
 
-      - name: Build API image
-        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build api
+      - name: Build application images
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build api web
 
-      - name: Start stack (postgres, redis, api, worker)
-        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d postgres redis api worker
+      - name: Scan application images
+        env:
+          TRIVY_VERSION: "0.73.0"
+        run: |
+          set -euo pipefail
+          archive="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
+          curl -sSfL "$base/$archive" -o "/tmp/$archive"
+          curl -sSfL "$base/trivy_${TRIVY_VERSION}_checksums.txt" -o /tmp/trivy-checksums.txt
+          grep " $archive$" /tmp/trivy-checksums.txt | sed 's|  |  /tmp/|' | sha256sum --check --strict
+          mkdir /tmp/trivy
+          tar -xzf "/tmp/$archive" -C /tmp/trivy trivy
+          /tmp/trivy/trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --quiet metaharmonizer-api
+          /tmp/trivy/trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --quiet metaharmonizer-web
+
+      - name: Start stack
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d postgres redis api worker caddy
 
       - name: Wait for API health
         run: |
@@ -69,6 +86,15 @@ jobs:
             sleep 3
           done
           echo "API did not become healthy"; exit 1
+
+      - name: Verify non-root runtime and writable volumes
+        run: |
+          set -e
+          test "$(docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T api id -u)" = "1000"
+          test "$(docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T worker id -u)" = "1000"
+          test "$(docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T caddy id -u)" = "1000"
+          test "$(docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm web id -u)" = "1000"
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T api sh -c 'test -w /app/data/uploads && test -w /app/data/corpus && test -w /app/data/schema/versions && test -w /app/data/schema/aliases && test -w /home/app/.metaharmonizer && test -w /home/app/.cache/huggingface'
 
       - name: Seed bootstrap admin
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm seed

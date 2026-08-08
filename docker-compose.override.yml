@@ -28,7 +28,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app          # live code reload in dev
-      - engine_cache:/root/.metaharmonizer
+      - engine_cache:/home/app/.metaharmonizer
     command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
 
   worker:
@@ -36,7 +36,7 @@ services:
       JWT_SECRET: dev-secret-key-at-least-32-bytes-long-please
     volumes:
       - ./backend:/app
-      - engine_cache:/root/.metaharmonizer
+      - engine_cache:/home/app/.metaharmonizer
 
   caddy:
     ports:

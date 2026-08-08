@@ -1,12 +1,13 @@
 # MetaHarmonizer backend — dev image.
 # Single image used for both the API (uvicorn) and the arq worker; the
 # docker-compose `command` selects which one runs.
-FROM python:3.12-slim
+FROM python:3.12-slim@sha256:229a2c5bfa27522db7815ea81f9bed70af17ccb9de9fc7ad142b1877b5830d36
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HOME=/home/app
 
 WORKDIR /app
 
@@ -26,6 +27,12 @@ RUN python -m pip install pip==26.2.1 \
 # App code (bind-mounted over this in dev via compose, but copied so the
 # image is runnable standalone too).
 COPY . .
+RUN groupadd --gid 1000 app \
+    && useradd --uid 1000 --gid app --create-home app \
+    && mkdir -p /home/app/.metaharmonizer /home/app/.cache/huggingface \
+    && chown -R app:app /app /home/app
+
+USER app:app
 
 EXPOSE 8000
 

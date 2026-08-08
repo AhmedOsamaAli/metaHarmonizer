@@ -16,12 +16,6 @@ services:
     volumes:
       - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
       - web_dist:/srv:ro
-      - caddy_data:/data          # ACME certs + keys (persist across restarts)
-      - caddy_config:/config
     environment:
       DOMAIN: ${DOMAIN:?set DOMAIN in .env}
       ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
-
-volumes:
-  caddy_data:
-  caddy_config:

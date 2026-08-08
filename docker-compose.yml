@@ -37,6 +37,19 @@ services:
       timeout: 3s
       retries: 10
 
+  volume-init:
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+    user: "0:0"
+    volumes:
+      - engine_cache:/volumes/engine_cache
+      - hf_cache:/volumes/hf_cache
+      - corpus_data:/volumes/corpus_data
+      - uploads:/volumes/uploads
+      - schema_versions:/volumes/schema_versions
+      - schema_aliases:/volumes/schema_aliases
+    command: ["sh", "-c", "touch /volumes/engine_cache/.initialized /volumes/hf_cache/.initialized /volumes/corpus_data/.initialized /volumes/uploads/.initialized /volumes/schema_versions/.initialized /volumes/schema_aliases/.initialized && chown -R 1000:1000 /volumes/engine_cache /volumes/hf_cache /volumes/corpus_data /volumes/uploads /volumes/schema_versions /volumes/schema_aliases"]
+    restart: "no"
+
   api:
     build:
       context: ./backend
@@ -48,6 +61,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
+      HOME: /home/app
       # Real ontology mapping (NCIt/UBERON via the engine KB). Falls back to the
       # curated dictionary if the KB isn't seeded, so it's safe on by default.
       ONTOLOGY_ENGINE: "${ONTOLOGY_ENGINE:-1}"
@@ -55,8 +69,8 @@ services:
       HF_HUB_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"
     volumes:
-      - engine_cache:/root/.metaharmonizer
-      - hf_cache:/root/.cache/huggingface   # schema model (all-MiniLM-L6-v2), seeded offline
+      - engine_cache:/home/app/.metaharmonizer
+      - hf_cache:/home/app/.cache/huggingface   # schema model (all-MiniLM-L6-v2), seeded offline
       - corpus_data:/app/data/corpus       # seeded ontology corpus (kb-import writes, api/worker read)
       - uploads:/app/data/uploads          # shared with the worker so queue mode can read uploads
       - schema_versions:/app/data/schema/versions  # admin-uploaded schema versions (shared + persistent)
@@ -70,6 +84,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      volume-init:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
       interval: 10s
@@ -87,6 +105,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
+      HOME: /home/app
       # Real ontology mapping (NCIt/UBERON via the engine KB). Falls back to the
       # curated dictionary if the KB isn't seeded, so it's safe on by default.
       ONTOLOGY_ENGINE: "${ONTOLOGY_ENGINE:-1}"
@@ -94,8 +113,8 @@ services:
       HF_HUB_OFFLINE: "1"
       TRANSFORMERS_OFFLINE: "1"
     volumes:
-      - engine_cache:/root/.metaharmonizer
-      - hf_cache:/root/.cache/huggingface   # schema model, same cache as the API
+      - engine_cache:/home/app/.metaharmonizer
+      - hf_cache:/home/app/.cache/huggingface   # schema model, same cache as the API
       - corpus_data:/app/data/corpus       # same corpus volume as the API
       - uploads:/app/data/uploads          # same volume as the API — reads the uploaded file
       - schema_versions:/app/data/schema/versions  # same schema-version store as the API
@@ -117,18 +136,42 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+      volume-init:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
 
   caddy:
     image: caddy:2-alpine
+    user: "1000:1000"
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - web_dist:/srv:ro          # SPA static assets, published by the `web` service
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       api:
         condition: service_started
       web:
         condition: service_completed_successfully
+      caddy-volume-init:
+        condition: service_completed_successfully
+
+  caddy-volume-init:
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+    user: "0:0"
+    volumes:
+      - caddy_data:/volumes/data
+      - caddy_config:/volumes/config
+    command: ["sh", "-c", "touch /volumes/data/.initialized /volumes/config/.initialized && chown -R 1000:1000 /volumes/data /volumes/config"]
+    restart: "no"
 
   # One-shot: builds the React SPA and publishes it into the shared `web_dist`
   # volume, then exits. Caddy serves those assets. Re-run after a frontend change
@@ -138,6 +181,19 @@ services:
       context: ./frontend
     volumes:
       - web_dist:/srv
+    depends_on:
+      web-volume-init:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
+    restart: "no"
+
+  web-volume-init:
+    image: alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc
+    user: "0:0"
+    volumes:
+      - web_dist:/srv
+    command: ["sh", "-c", "touch /srv/.initialized && chown -R 1000:1000 /srv"]
     restart: "no"
 
   # One-shot: seed a prebuilt knowledge DB into the engine_cache volume before
@@ -156,18 +212,24 @@ services:
       # Match the api/worker data root so seed_kb installs the corpus where they
       # read it (/app/data/corpus), not the engine's default (~/.metaharmonizer).
       METAHARMONIZER_DATA_DIR: /app/data
+      HOME: /home/app
       # Auto-download the bundle when it isn't provided locally at ./kb. Publish
       # it once (python -m scripts.package_kb) and set KB_BUNDLE_URL in .env; the
       # command below fetches it to a writable path, then seeds the volumes.
       KB_BUNDLE_URL: "${KB_BUNDLE_URL:-}"
       KB_BUNDLE_SHA256: "${KB_BUNDLE_SHA256:-}"
     volumes:
-      - engine_cache:/root/.metaharmonizer
-      - hf_cache:/root/.cache/huggingface   # seed the schema model into the shared HF cache
+      - engine_cache:/home/app/.metaharmonizer
+      - hf_cache:/home/app/.cache/huggingface   # seed the schema model into the shared HF cache
       - corpus_data:/app/data/corpus       # seed the corpus into the shared volume api/worker read
       - ./kb:/kb:ro
     # Use ./kb/<archive> if it's mounted there, otherwise download from KB_BUNDLE_URL.
     command: ["sh", "-c", "F=/kb/${KB_ARCHIVE:-kb_offline_bundle.tar.gz}; if [ -f \"$$F\" ]; then python -m scripts.seed_kb \"$$F\" --force; else python -m scripts.seed_kb /tmp/kb_offline_bundle.tar.gz --force; fi"]
+    depends_on:
+      volume-init:
+        condition: service_completed_successfully
+    security_opt:
+      - no-new-privileges:true
     restart: "no"
 
   # One-shot: create the bootstrap admin account. Opt-in via the `seed` profile:
@@ -185,6 +247,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
     restart: "no"
 
 volumes:
@@ -197,3 +261,5 @@ volumes:
   uploads:
   schema_versions:
   schema_aliases:
+  caddy_data:
+  caddy_config:
