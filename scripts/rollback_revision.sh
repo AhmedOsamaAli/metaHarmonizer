@@ -65,6 +65,16 @@ wait_healthy() {
   return 1
 }
 
+wait_public() {
+  for _ in $(seq 1 30); do
+    if curl -fsS "${ROLLBACK_BASE_URL%/}/healthz" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  return 1
+}
+
 deploy_ref() {
   local ref=$1
   git switch --detach "$ref"
@@ -86,17 +96,27 @@ print(json.dumps({
 }))
 PY
 )
-  status=$(curl -sS -o /tmp/metaharmonizer-rollback-login.json -w '%{http_code}' \
-    -H 'Content-Type: application/json' \
-    --data "$payload" \
-    "${ROLLBACK_BASE_URL%/}/api/v1/auth/login")
-  [[ "$status" == "200" ]] && grep -q 'access_token' /tmp/metaharmonizer-rollback-login.json
+  for _ in $(seq 1 30); do
+    status=$(curl -sS -o /tmp/metaharmonizer-rollback-login.json -w '%{http_code}' \
+      -H 'Content-Type: application/json' \
+      --data "$payload" \
+      "${ROLLBACK_BASE_URL%/}/api/v1/auth/login" || true)
+    if [[ "$status" == "200" ]] && grep -q 'access_token' /tmp/metaharmonizer-rollback-login.json; then
+      rm -f /tmp/metaharmonizer-rollback-login.json
+      return 0
+    fi
+    sleep 2
+  done
   rm -f /tmp/metaharmonizer-rollback-login.json
+  return 1
 }
 
 recover() {
   local exit_code=$?
+  local failed_command=$BASH_COMMAND
+  local failed_line=${BASH_LINENO[0]:-unknown}
   trap - ERR
+  echo "Rollback failed at line $failed_line: $failed_command" >&2
   if [[ "$switched" == "1" ]]; then
     echo "Rollback validation failed; restoring $current_commit." >&2
     deploy_ref "$current_commit" || true
@@ -107,7 +127,7 @@ trap recover ERR
 
 switched=1
 deploy_ref "$target_commit"
-curl -fsS "${ROLLBACK_BASE_URL%/}/healthz" >/dev/null
+wait_public
 login_smoke
 trap - ERR
 
