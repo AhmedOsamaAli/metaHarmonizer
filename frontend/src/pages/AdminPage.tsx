@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2, Download, RefreshCw, Network } from 'lucide-react';
+import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2, Download, RefreshCw, Network, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
@@ -850,7 +850,7 @@ function LearnedDecisionsCard() {
       <CardHeader
         icon={<BrainCircuit className="h-4 w-4" />}
         title="Learned decisions — promotion queue"
-        description="Curators' remembered decisions. Promote one to the shared layer to apply it for every curator on future studies (two-stage approval)."
+        description="Repeated personal decisions grouped for review. Promote one only when it should become the default for every curator's future studies."
         action={
           <button
             type="button"
@@ -878,11 +878,21 @@ function LearnedDecisionsCard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400 dark:border-slate-800">
-                  <th className="px-2 py-2">Kind</th>
-                  <th className="px-2 py-2">Key</th>
-                  <th className="px-2 py-2">Decision → target</th>
-                  <th className="px-2 py-2 text-center">Curators</th>
-                  <th className="px-2 py-2 text-center">Confirmations</th>
+                  <th className="px-2 py-2">
+                    <LearnedHeader label="Kind" help="Schema means a column-to-field mapping. Ontology means a raw value-to-standard-term mapping." />
+                  </th>
+                  <th className="px-2 py-2">
+                    <LearnedHeader label="Source" help="The normalized column name, or field and raw value, that this learned decision applies to." />
+                  </th>
+                  <th className="px-2 py-2">
+                    <LearnedHeader label="Decision → target" help="The identical decision these curators made. Accept uses the displayed target; reject means this source should not use the proposed automatic mapping." />
+                  </th>
+                  <th className="px-2 py-2 text-center">
+                    <LearnedHeader label="Curators" help="Number of distinct curators who made this exact same decision." centered />
+                  </th>
+                  <th className="px-2 py-2 text-center">
+                    <LearnedHeader label="Confirmations" help="Total times this exact decision was made across studies. One curator can confirm it more than once." centered />
+                  </th>
                   <th className="px-2 py-2 text-right">Action</th>
                 </tr>
               </thead>
@@ -895,7 +905,9 @@ function LearnedDecisionsCard() {
                     <td className="px-2 py-2 font-mono text-xs text-slate-600 dark:text-slate-300">{c.source_key}</td>
                     <td className="px-2 py-2 text-slate-700 dark:text-slate-300">
                       {c.decision === 'reject'
-                        ? 'reject'
+                        ? c.kind === 'schema'
+                          ? 'Reject automatic field mapping'
+                          : 'Reject automatic ontology term'
                         : `accept → ${c.target_field ?? c.target_term ?? ''}${
                             c.target_id ? ` (${c.target_id})` : ''
                           }`}
@@ -920,6 +932,17 @@ function LearnedDecisionsCard() {
         )}
       </CardBody>
     </Card>
+  );
+}
+
+function LearnedHeader({ label, help, centered = false }: { label: string; help: string; centered?: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1 normal-case ${centered ? 'justify-center' : ''}`}>
+      <span className="uppercase">{label}</span>
+      <span title={help} aria-label={`${label}: ${help}`} className="cursor-help text-slate-400 dark:text-slate-500">
+        <Info className="h-3.5 w-3.5" aria-hidden="true" />
+      </span>
+    </span>
   );
 }
 
