@@ -1,11 +1,11 @@
 fastapi==0.141.1
 starlette==1.5.0
-uvicorn[standard]==0.30.6
+uvicorn[standard]==0.52.1
 python-multipart==0.0.32
-pydantic==2.9.2
-pydantic-settings==2.5.2
+pydantic==2.13.4
+pydantic-settings==2.14.2
 pandas==2.2.3
-rapidfuzz==3.9.7
+rapidfuzz==3.14.5
 numpy==1.26.4
 sentence-transformers==5.7.0
 transformers==5.14.1
@@ -14,23 +14,23 @@ requests>=2.31.0
 google-genai>=1.0.0
 
 # --- Persistence + cache (Sprint 2 / Dev infra) ---------------------------
-sqlalchemy[asyncio]==2.0.35
-asyncpg==0.29.0
-alembic==1.13.3
+sqlalchemy[asyncio]==2.0.51
+asyncpg==0.31.0
+alembic==1.19.0
 redis==5.0.8
 # Job queue for the harmonize pipeline (Sprint 4).
-arq==0.26.3
+arq==0.28.0
 
 # --- Observability --------------------------------------------------------
 # Optional: error tracking. init_sentry() no-ops if unset/uninstalled.
-sentry-sdk[fastapi]==2.14.0
+sentry-sdk[fastapi]==2.66.1
 # Prometheus golden-signal metrics at admin-scoped /metrics.
-prometheus-client==0.21.0
+prometheus-client==0.26.0
 
 # --- Auth (Sprint 3) ------------------------------------------------------
 argon2-cffi==23.1.0
 pyjwt==2.13.0
-email-validator==2.2.0
+email-validator==2.3.0
 
 # --- Federation-lite (G1): Ed25519 signing --------------------------------
 cryptography==50.0.0
