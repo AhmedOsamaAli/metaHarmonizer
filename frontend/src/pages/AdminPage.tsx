@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Tooltip from '@radix-ui/react-tooltip';
 import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2, Download, RefreshCw, Network, Info } from 'lucide-react';
@@ -939,9 +940,31 @@ function LearnedHeader({ label, help, centered = false }: { label: string; help:
   return (
     <span className={`inline-flex items-center gap-1 normal-case ${centered ? 'justify-center' : ''}`}>
       <span className="uppercase">{label}</span>
-      <span title={help} aria-label={`${label}: ${help}`} className="cursor-help text-slate-400 dark:text-slate-500">
-        <Info className="h-3.5 w-3.5" aria-hidden="true" />
-      </span>
+      <Tooltip.Provider delayDuration={180}>
+        <Tooltip.Root>
+          <Tooltip.Trigger asChild>
+            <button
+              type="button"
+              aria-label={`About ${label}`}
+              className="rounded-full text-slate-400 transition hover:text-primary-600 focus-visible:text-primary-600 dark:text-slate-500 dark:hover:text-primary-300 dark:focus-visible:text-primary-300"
+            >
+              <Info className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Content
+              side="top"
+              sideOffset={8}
+              collisionPadding={12}
+              className="z-50 max-w-72 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left text-xs font-normal leading-relaxed tracking-normal text-slate-600 shadow-pop data-[state=delayed-open]:animate-fade-in dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+            >
+              <span className="mb-0.5 block font-semibold text-slate-900 dark:text-slate-100">{label}</span>
+              {help}
+              <Tooltip.Arrow className="fill-white dark:fill-slate-900" />
+            </Tooltip.Content>
+          </Tooltip.Portal>
+        </Tooltip.Root>
+      </Tooltip.Provider>
     </span>
   );
 }
