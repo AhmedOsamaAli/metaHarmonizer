@@ -86,7 +86,7 @@ export default function RegisterPage() {
         }
       >
         <div className="space-y-4 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-500/15">
             {needsVerification ? (
               <MailCheck className="h-7 w-7 text-emerald-600" />
             ) : (
@@ -157,7 +157,7 @@ export default function RegisterPage() {
           />
           {password && (
             <div className="mt-2 flex items-center gap-2">
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
                 <div
                   className={`h-full rounded-full transition-all ${pwStrength.tone}`}
                   style={{ width: `${(pwStrength.score / 5) * 100}%` }}
@@ -187,7 +187,7 @@ export default function RegisterPage() {
         </label>
 
         {error && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-700">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
             {error}
           </div>
         )}

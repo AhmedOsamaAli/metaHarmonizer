@@ -98,7 +98,7 @@ function JobRow({
                         type="button"
                         onClick={onCancel}
                         title="Cancel"
-                        className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                        className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/15 dark:hover:text-rose-400"
                     >
                         <Ban className="h-4 w-4" />
                     </button>
@@ -117,7 +117,7 @@ function JobRow({
             {/* Progress bar while active */}
             {active && (
                 <div className="mt-2">
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                         <div className="job-progress-indeterminate h-full w-1/3 rounded-full bg-primary-500" />
                     </div>
                     <p className="mt-1 text-xs text-slate-500">

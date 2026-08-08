@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Mapping } from '../api/types';
-import { defaultMappingStatusFilter, sortMappings } from './mappingFilters';
+import {
+    defaultMappingStatusFilter,
+    nextMappingSortMode,
+    sortMappings,
+    sortMappingsBySmartRank,
+} from './mappingFilters';
 
 const mapping = (id: number, status: Mapping['status']): Mapping => ({
     id,
@@ -74,5 +79,19 @@ describe('sortMappings', () => {
             'delta',
             'gamma',
         ]);
+    });
+});
+
+describe('smart review sorting', () => {
+    it('cycles smart to descending to ascending and back to smart', () => {
+        expect(nextMappingSortMode('smart', true)).toBe('descending');
+        expect(nextMappingSortMode('descending', true)).toBe('ascending');
+        expect(nextMappingSortMode('ascending', true)).toBe('smart');
+        expect(nextMappingSortMode('ascending', false)).toBe('descending');
+    });
+
+    it('uses server smart-review rank and places unranked rows last', () => {
+        const rows = [mapping(1, 'pending'), mapping(2, 'pending'), mapping(3, 'accepted')];
+        expect(sortMappingsBySmartRank(rows, { 1: 1, 2: 0 }).map((row) => row.id)).toEqual([2, 1, 3]);
     });
 });

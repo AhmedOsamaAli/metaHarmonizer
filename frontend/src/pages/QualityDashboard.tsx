@@ -23,6 +23,7 @@ import { Card, CardBody } from '../components/ui/Card';
 import { LoadingBlock } from '../components/ui/Feedback';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
 import ConfidenceBadge from '../components/ConfidenceBadge';
+import { useTheme } from '../context/ThemeContext';
 import StageBadge from '../components/StageBadge';
 import StudyPicker from '../components/StudyPicker';
 import type { Mapping, QualityMetrics } from '../api/types';
@@ -48,6 +49,7 @@ const STAGE_LABELS: Record<string, string> = {
 export default function QualityDashboard() {
   const { studyId } = useParams<{ studyId: string }>();
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const { data: studies, isLoading: studiesLoading } = useStudies();
 
   const { data: metrics, isLoading } = useQuery({
@@ -118,7 +120,7 @@ export default function QualityDashboard() {
         <Widget title="Confidence distribution" subtitle="How many columns at each score band">
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={metrics.confidence_distribution} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
-              <CartesianGrid vertical={false} stroke="#eef2f7" />
+              <CartesianGrid vertical={false} stroke={theme === 'dark' ? '#334155' : '#eef2f7'} />
               <XAxis dataKey="bucket" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
               <Tooltip cursor={{ fill: 'rgba(41,134,226,0.06)' }} content={<ChartTooltip />} />

@@ -137,7 +137,7 @@ export default function ProfilePage() {
             sessions.data.map((s) => (
               <div
                 key={s.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3"
+                className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/50"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -154,7 +154,7 @@ export default function ProfilePage() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-rose-600 hover:bg-rose-50"
+                    className="text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/15 dark:shadow-none"
                     icon={<LogOut className="h-3.5 w-3.5" />}
                     loading={revokeSessionM.isPending && revokeSessionM.variables === s.id}
                     onClick={() => revokeSessionM.mutate(s.id)}
@@ -180,7 +180,7 @@ export default function ProfilePage() {
               <div
                 role="radiogroup"
                 aria-label="Token scope"
-                className="inline-flex items-center rounded-lg bg-slate-100 p-0.5"
+                className="inline-flex items-center rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800"
               >
                 <button
                   type="button"
@@ -189,8 +189,8 @@ export default function ProfilePage() {
                   onClick={() => setScope('read')}
                   className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition ${
                     scope === 'read'
-                      ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:shadow-none dark:ring-slate-700'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
                   <Eye className="h-3.5 w-3.5" />
@@ -203,8 +203,8 @@ export default function ProfilePage() {
                   onClick={() => setScope('write')}
                   className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition ${
                     scope === 'write'
-                      ? 'bg-white text-accent-700 shadow-sm ring-1 ring-accent-200'
-                      : 'text-slate-500 hover:text-slate-700'
+                      ? 'bg-white text-accent-700 shadow-sm ring-1 ring-accent-200 dark:bg-slate-950 dark:text-accent-300 dark:shadow-none dark:ring-accent-500/30'
+                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
                   <Pencil className="h-3.5 w-3.5" />
@@ -225,12 +225,12 @@ export default function ProfilePage() {
         <CardBody className="space-y-3">
           {/* Freshly created token (shown once) */}
           {newToken && (
-            <div className="rounded-xl border border-accent-200 bg-accent-50 p-4">
-              <p className="text-xs font-semibold text-accent-800">
+            <div className="rounded-xl border border-accent-200 bg-accent-50 p-4 dark:border-accent-500/30 dark:bg-accent-500/10">
+              <p className="text-xs font-semibold text-accent-800 dark:text-accent-300">
                 Copy your token now — it won't be shown again.
               </p>
               <div className="mt-2 flex items-center gap-2">
-                <code className="flex-1 truncate rounded-lg bg-white px-3 py-2 font-mono text-xs text-slate-700 ring-1 ring-slate-200">
+                <code className="flex-1 truncate rounded-lg bg-white px-3 py-2 font-mono text-xs text-slate-700 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-200 dark:ring-slate-700">
                   {newToken.token}
                 </code>
                 <Button
@@ -257,10 +257,10 @@ export default function ProfilePage() {
             tokens.data.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3"
+                className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3 dark:border-slate-800 dark:bg-slate-800/50"
               >
                 <div className="flex items-center gap-3">
-                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-white text-slate-400 shadow-soft">
+                  <span className="grid h-8 w-8 place-items-center rounded-lg bg-white text-slate-400 shadow-soft dark:bg-slate-900 dark:text-slate-500 dark:shadow-none">
                     <KeyRound className="h-4 w-4" />
                   </span>
                   <div>
@@ -277,7 +277,7 @@ export default function ProfilePage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-rose-600 hover:bg-rose-50"
+                  className="text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/15 dark:shadow-none"
                   icon={<Trash2 className="h-3.5 w-3.5" />}
                   loading={revokeTokenM.isPending && revokeTokenM.variables === t.id}
                   onClick={() => revokeTokenM.mutate(t.id)}

@@ -598,7 +598,7 @@ export default function OntologyReview() {
                           {groupedMatched[field].length} value{groupedMatched[field].length !== 1 ? 's' : ''}
                         </span>
                       </div>
-                      <ul className="divide-y divide-slate-100">
+                      <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                         {groupedMatched[field].map((om) => {
                           const isBusy = !!busy[om.id];
                           const term = om.curator_term ?? om.ontology_term;
@@ -621,19 +621,19 @@ export default function OntologyReview() {
                                 ) : (
                                   <>
                                     {om.status !== 'accepted' && (
-                                      <button title="Accept" onClick={() => handleAccept(om.id)} className="rounded p-1 text-emerald-600 hover:bg-emerald-50">
+                                      <button title="Accept" onClick={() => handleAccept(om.id)} className="rounded p-1 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-500/15 dark:shadow-none">
                                         <Check className="h-3.5 w-3.5" />
                                       </button>
                                     )}
                                     {om.status !== 'rejected' && (
-                                      <button title="Reject" onClick={() => handleReject(om.id)} className="rounded p-1 text-rose-500 hover:bg-rose-50">
+                                      <button title="Reject" onClick={() => handleReject(om.id)} className="rounded p-1 text-rose-500 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/15 dark:shadow-none">
                                         <X className="h-3.5 w-3.5" />
                                       </button>
                                     )}
                                     <button
                                       title="Edit term"
                                       onClick={() => setEditState({ id: om.id, term: term ?? '', ontId: oid ?? '', raw: om.raw_value })}
-                                      className="rounded p-1 text-blue-500 hover:bg-blue-50"
+                                      className="rounded p-1 text-blue-500 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/15 dark:shadow-none"
                                     >
                                       <Pencil className="h-3.5 w-3.5" />
                                     </button>
@@ -675,8 +675,8 @@ export default function OntologyReview() {
                 <CardBody className="max-h-[60vh] space-y-4 overflow-y-auto border-t border-slate-100 pt-4 dark:border-slate-800">
                   {/* Suggested matches found by the ontology search */}
                   {suggestedRows.length > 0 && (
-                    <div className="space-y-2 rounded-xl border border-primary-100 bg-primary-50/40 p-3">
-                      <p className="flex items-center gap-1.5 text-xs font-semibold text-primary-800">
+                    <div className="space-y-2 rounded-xl border border-primary-100 bg-primary-50/40 p-3 dark:border-primary-500/25 dark:bg-primary-500/10">
+                      <p className="flex items-center gap-1.5 text-xs font-semibold text-primary-800 dark:text-primary-300">
                         <Sparkles className="h-3.5 w-3.5" />
                         {suggestedRows.length} suggested {suggestedRows.length === 1 ? 'match' : 'matches'} — review &amp; apply
                       </p>
@@ -711,14 +711,14 @@ export default function OntologyReview() {
                                   <button
                                     title="Edit before applying"
                                     onClick={() => setEditState({ id: m.id, term: s.term, ontId: s.ontId, raw: m.raw_value })}
-                                    className="rounded p-1 text-blue-500 hover:bg-blue-50"
+                                    className="rounded p-1 text-blue-500 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/15 dark:shadow-none"
                                   >
                                     <Pencil className="h-3.5 w-3.5" />
                                   </button>
                                   <button
                                     title="Dismiss"
                                     onClick={() => dismissSuggestion(m)}
-                                    className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                    className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-200 dark:shadow-none"
                                   >
                                     <X className="h-3.5 w-3.5" />
                                   </button>
@@ -731,7 +731,7 @@ export default function OntologyReview() {
                       {suggestedRows.length > 8 && (
                         <button
                           onClick={() => setShowAllSuggestions((v) => !v)}
-                          className="text-xs font-medium text-primary-700 hover:text-primary-800"
+                          className="text-xs font-medium text-primary-700 hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200"
                         >
                           {showAllSuggestions ? 'Show fewer' : `View all ${suggestedRows.length} suggestions`}
                         </button>
@@ -762,7 +762,7 @@ export default function OntologyReview() {
                               key={m.id}
                               title={count > 1 ? `Assign a term to all ${count} occurrences` : 'Assign an ontology term'}
                               onClick={() => setEditState({ id: m.id, term: '', ontId: '', raw: m.raw_value })}
-                              className="group inline-flex items-center gap-1 rounded bg-slate-100 dark:bg-slate-800/70 px-1.5 py-0.5 text-[11px] text-slate-500 hover:bg-primary-50 hover:text-primary-700"
+                              className="group inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500 hover:bg-primary-50 hover:text-primary-700 dark:bg-slate-800/70 dark:hover:bg-primary-500/15 dark:hover:text-primary-300"
                             >
                               {m.raw_value}
                               {count > 1 && <span className="text-slate-400">×{count}</span>}
@@ -772,7 +772,7 @@ export default function OntologyReview() {
                           {items.length > 40 && (
                             <button
                               onClick={() => setExpandedFields((p) => ({ ...p, [field]: !expanded }))}
-                              className="px-1 py-0.5 text-[11px] font-medium text-primary-700 hover:text-primary-800"
+                              className="px-1 py-0.5 text-[11px] font-medium text-primary-700 hover:text-primary-800 dark:text-primary-300 dark:hover:text-primary-200"
                             >
                               {expanded ? 'Show fewer' : `View all ${items.length}`}
                             </button>

@@ -43,8 +43,11 @@ import { ApiError } from '../api/http';
 import type { Mapping } from '../api/types';
 import {
   defaultMappingStatusFilter,
+  nextMappingSortMode,
   sortMappings,
+  sortMappingsBySmartRank,
   type MappingStatusFilter,
+  type MappingSortMode,
 } from '../lib/mappingFilters';
 
 type SortKey = 'raw_column' | 'confidence_score' | 'stage' | 'status';
@@ -147,7 +150,7 @@ export default function MappingReview() {
   const [filterStage, setFilterStage] = useState<FilterStage>(initialStage);
   const [filterStatus, setFilterStatus] = useState<FilterStatus>(initialStatus);
   const [sortKey, setSortKey] = useState<SortKey>('confidence_score');
-  const [sortAsc, setSortAsc] = useState(false);
+  const [sortMode, setSortMode] = useState<MappingSortMode>('smart');
   const [search, setSearch] = useState('');
 
   // Active-learning "smart review" (G7): order risky-first and keep look-alikes
@@ -229,8 +232,14 @@ export default function MappingReview() {
           (m.curator_field || m.matched_field || '').toLowerCase().includes(q),
       );
     }
-    return sortMappings(result, sortKey, sortAsc);
-  }, [mappings, filterStage, filterStatus, sortKey, sortAsc, search, smartOrder, groupInfo]);
+    if (sortMode === 'smart') {
+      return sortMappingsBySmartRank(
+        result,
+        Object.fromEntries(Object.entries(groupInfo).map(([id, info]) => [id, info.rank])),
+      );
+    }
+    return sortMappings(result, sortKey, sortMode === 'ascending');
+  }, [mappings, filterStage, filterStatus, sortKey, sortMode, search, groupInfo]);
 
   // Per-stage counts for the distribution bar (full study, not the filtered view).
   const stageCounts = useMemo(() => {
@@ -385,11 +394,8 @@ export default function MappingReview() {
   };
 
   const toggleSort = (key: SortKey) => {
-    if (sortKey === key) setSortAsc(!sortAsc);
-    else {
-      setSortKey(key);
-      setSortAsc(false);
-    }
+    setSortMode(nextMappingSortMode(sortMode, sortKey === key));
+    setSortKey(key);
   };
 
   const openEdit = (m: Mapping) => {
@@ -561,7 +567,7 @@ export default function MappingReview() {
               </button>
             )}
           </div>
-          <div className="flex h-2.5 overflow-hidden rounded-full bg-slate-100">
+          <div className="flex h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
             {STAGE_ORDER.map((s) => {
               const count = stageCounts[s] ?? 0;
               if (!count) return null;
@@ -636,6 +642,11 @@ export default function MappingReview() {
             {queueStats.batchable_groups === 1 ? '' : 's'}
           </span>
         )}
+        {sortMode === 'smart' && (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 dark:text-primary-300">
+            <Sparkles className="h-3 w-3" /> Smart review order
+          </span>
+        )}
         <span className="text-xs text-slate-400 ml-auto">
           {filteredMappings.length} of {mappings.length} shown
         </span>
@@ -667,13 +678,13 @@ export default function MappingReview() {
                     className="checkbox"
                   />
                 </th>
-                <SortableHeader label="Raw Column" sortKey="raw_column" current={sortKey} asc={sortAsc} onSort={toggleSort} />
+                <SortableHeader label="Raw Column" sortKey="raw_column" current={sortKey} mode={sortMode} onSort={toggleSort} />
                 <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">
                   Matched Field
                 </th>
-                <SortableHeader label="Confidence" sortKey="confidence_score" current={sortKey} asc={sortAsc} onSort={toggleSort} />
-                <SortableHeader label="Stage" sortKey="stage" current={sortKey} asc={sortAsc} onSort={toggleSort} />
-                <SortableHeader label="Status" sortKey="status" current={sortKey} asc={sortAsc} onSort={toggleSort} />
+                <SortableHeader label="Confidence" sortKey="confidence_score" current={sortKey} mode={sortMode} onSort={toggleSort} />
+                <SortableHeader label="Stage" sortKey="stage" current={sortKey} mode={sortMode} onSort={toggleSort} />
+                <SortableHeader label="Status" sortKey="status" current={sortKey} mode={sortMode} onSort={toggleSort} />
                 <th className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase">
                   Actions
                 </th>
@@ -959,25 +970,26 @@ function SortableHeader({
   label,
   sortKey,
   current,
-  asc,
+  mode,
   onSort,
 }: {
   label: string;
   sortKey: SortKey;
   current: SortKey;
-  asc: boolean;
+  mode: MappingSortMode;
   onSort: (k: SortKey) => void;
 }) {
   return (
     <th
       className="px-3 py-3 text-left text-xs font-medium text-slate-500 uppercase cursor-pointer select-none hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
       onClick={() => onSort(sortKey)}
+      title={mode === 'smart' ? `Smart review order active. Sort ${label} descending` : `Sort ${label}`}
     >
       <span className="flex items-center gap-1">
         {label}
         <ArrowUpDown className="w-3 h-3" />
-        {current === sortKey && (
-          <span className="text-primary-600">{asc ? '↑' : '↓'}</span>
+        {mode !== 'smart' && current === sortKey && (
+          <span className="text-primary-600 dark:text-primary-300">{mode === 'ascending' ? '↑' : '↓'}</span>
         )}
       </span>
     </th>

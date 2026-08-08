@@ -2,6 +2,7 @@ import type { Mapping } from '../api/types';
 
 export type MappingStatusFilter = 'all' | 'pending' | 'accepted' | 'rejected';
 export type MappingSortKey = 'raw_column' | 'confidence_score' | 'stage' | 'status';
+export type MappingSortMode = 'smart' | 'descending' | 'ascending';
 
 const STAGE_RANK: Record<string, number> = {
     stage1: 0,
@@ -45,5 +46,25 @@ export function sortMappings(
             : leftValue.localeCompare(rightValue as string);
         if (comparison === 0) return left.raw_column.localeCompare(right.raw_column);
         return ascending ? comparison : -comparison;
+    });
+}
+
+export function nextMappingSortMode(
+    current: MappingSortMode,
+    sameColumn: boolean,
+): MappingSortMode {
+    if (!sameColumn || current === 'smart') return 'descending';
+    if (current === 'descending') return 'ascending';
+    return 'smart';
+}
+
+export function sortMappingsBySmartRank(
+    mappings: Mapping[],
+    rankById: Readonly<Record<number, number>>,
+): Mapping[] {
+    return [...mappings].sort((left, right) => {
+        const rankDifference = (rankById[left.id] ?? Number.MAX_SAFE_INTEGER)
+            - (rankById[right.id] ?? Number.MAX_SAFE_INTEGER);
+        return rankDifference || left.raw_column.localeCompare(right.raw_column);
     });
 }

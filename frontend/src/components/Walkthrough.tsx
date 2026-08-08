@@ -60,7 +60,7 @@ const SEEN_KEY = 'mh_tour_seen_v4';
 /** A little "app window" frame so each preview reads like a screenshot. */
 function Frame({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
       <div className="flex items-center gap-1.5 border-b border-slate-100 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-800/60">
         <span className="h-2 w-2 rounded-full bg-rose-300" />
         <span className="h-2 w-2 rounded-full bg-amber-300" />
@@ -84,8 +84,8 @@ function PipelineMock() {
     <div className="flex flex-wrap items-center justify-center gap-1.5">
       {steps.map((s, i) => (
         <div key={s.label} className="flex items-center gap-1.5">
-          <div className="flex flex-col items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-            <s.icon className="h-4 w-4 text-primary-600" />
+          <div className="flex flex-col items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
+            <s.icon className="h-4 w-4 text-primary-600 dark:text-primary-400" />
             <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300">{s.label}</span>
           </div>
           {i < steps.length - 1 && <ArrowRight className="h-3 w-3 text-slate-300" />}
@@ -98,12 +98,12 @@ function PipelineMock() {
 function UploadMock() {
   return (
     <div className="space-y-3">
-      <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-5 text-center">
+      <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-5 text-center dark:border-slate-700 dark:bg-slate-800/60">
         <Upload className="mx-auto h-6 w-6 text-slate-400" />
         <p className="mt-1 text-xs text-slate-500">Drop a study CSV / TSV</p>
       </div>
       <div className="flex items-center justify-between">
-        <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300">
+        <span className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
           Target: GDC <ChevronDown className="h-3 w-3 text-slate-400" />
         </span>
         <span className="rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-semibold text-white">
@@ -130,7 +130,7 @@ function EngineMock() {
           >
             {n}
           </span>
-          <div className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5">
+          <div className="flex flex-1 items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 dark:border-slate-700 dark:bg-slate-800">
             <span className="font-semibold text-slate-800 dark:text-slate-200">{label}</span>
             <span className="truncate text-[10px] text-slate-400">{desc}</span>
           </div>
@@ -150,15 +150,15 @@ function BatchMock() {
     ['site_of_tumor', '95%'],
   ];
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-200 text-xs">
+    <div className="overflow-hidden rounded-lg border border-slate-200 text-xs dark:border-slate-700">
       {/* Batch action bar */}
-      <div className="flex items-center justify-between bg-primary-50 px-3 py-1.5">
-        <span className="flex items-center gap-1.5 font-semibold text-primary-700">
+      <div className="flex items-center justify-between bg-primary-50 px-3 py-1.5 dark:bg-primary-500/10">
+        <span className="flex items-center gap-1.5 font-semibold text-primary-700 dark:text-primary-300">
           <CheckCheck className="h-3.5 w-3.5" />3 selected
         </span>
         <span className="flex items-center gap-1">
           <span className="rounded bg-primary-600 px-2 py-0.5 text-[10px] font-semibold text-white">Accept</span>
-          <span className="rounded border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500">
+          <span className="rounded border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
             Reject
           </span>
         </span>
@@ -168,13 +168,13 @@ function BatchMock() {
         {group.map(([col, conf]) => (
           <div
             key={col}
-            className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-t border-slate-100 bg-primary-50/30 px-3 py-1.5"
+            className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-t border-slate-100 bg-primary-50/30 px-3 py-1.5 dark:border-slate-800 dark:bg-primary-500/5"
           >
             <span className="grid h-4 w-4 place-items-center rounded bg-primary-600 text-white">
               <Check className="h-2.5 w-2.5" />
             </span>
             <span className="flex items-center gap-1 truncate text-slate-700 dark:text-slate-300">
-              <code className="rounded bg-slate-100 px-1 text-[11px]">{col}</code>
+              <code className="rounded bg-slate-100 px-1 text-[11px] dark:bg-slate-800">{col}</code>
               <ArrowRight className="h-3 w-3 shrink-0 text-slate-300" />primary_site
             </span>
             <span className="text-[10px] font-semibold text-emerald-600">{conf}</span>
@@ -182,15 +182,15 @@ function BatchMock() {
         ))}
       </div>
       {/* A single, ungrouped row still supports per-row edit */}
-      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-t border-slate-100 px-3 py-1.5">
+      <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2 border-t border-slate-100 px-3 py-1.5 dark:border-slate-800">
         <span className="h-4 w-4 rounded border border-slate-300" />
         <span className="flex items-center gap-1 truncate text-slate-700 dark:text-slate-300">
-          <code className="rounded bg-slate-100 px-1 text-[11px]">MSI_status</code>
+          <code className="rounded bg-slate-100 px-1 text-[11px] dark:bg-slate-800">MSI_status</code>
           <ArrowRight className="h-3 w-3 shrink-0 text-slate-300" />msi_status
         </span>
         <span className="flex items-center gap-1.5">
           <span className="text-[10px] font-semibold text-emerald-600">96%</span>
-          <span className="grid h-4 w-4 place-items-center rounded bg-slate-100 text-slate-500">
+          <span className="grid h-4 w-4 place-items-center rounded bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
             <Pencil className="h-2.5 w-2.5" />
           </span>
         </span>
@@ -202,7 +202,7 @@ function BatchMock() {
 function LearnMock() {
   return (
     <div className="space-y-2.5 text-xs">
-      <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2">
+      <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800">
         <span className="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
           <Wand2 className="h-3.5 w-3.5 text-primary-600" />Learning is always on
         </span>
@@ -210,13 +210,13 @@ function LearnMock() {
           <span className="ml-auto h-3 w-3 rounded-full bg-white" />
         </span>
       </div>
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 px-3 py-2">
-        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Your next study</p>
+      <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 px-3 py-2 dark:border-emerald-500/25 dark:bg-emerald-500/10">
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Your next study</p>
         <div className="flex items-center gap-1.5">
-          <code className="rounded bg-white px-1 text-[11px] text-slate-700 dark:text-slate-300">tumor_site</code>
+          <code className="rounded bg-white px-1 text-[11px] text-slate-700 dark:bg-slate-800 dark:text-slate-300">tumor_site</code>
           <ArrowRight className="h-3 w-3 shrink-0 text-slate-300" />
           <span className="font-semibold text-slate-800 dark:text-slate-200">primary_site</span>
-          <span className="ml-auto flex items-center gap-1 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+          <span className="ml-auto flex items-center gap-1 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
             <Check className="h-2.5 w-2.5" />auto-filled
           </span>
         </div>
@@ -238,21 +238,21 @@ function OntologyMock() {
       {rows.map(([raw, term, code]) => (
         <div
           key={raw}
-          className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2"
+          className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-700"
         >
           <div className="flex min-w-0 items-center gap-1.5">
             <span className="truncate text-slate-500">{raw}</span>
             <ArrowRight className="h-3 w-3 shrink-0 text-slate-300" />
             <span className="font-semibold text-slate-800 dark:text-slate-200">{term}</span>
-            <span className="shrink-0 rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">
+            <span className="shrink-0 rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">
               {code}
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            <span className="grid h-5 w-5 place-items-center rounded bg-emerald-50 text-emerald-600">
+            <span className="grid h-5 w-5 place-items-center rounded bg-emerald-50 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
               <Check className="h-3 w-3" />
             </span>
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-slate-800 dark:text-slate-400">
               Override
             </span>
           </div>
@@ -266,10 +266,10 @@ function QualityMock() {
   return (
     <div className="flex items-center gap-4">
       <div
-        className="relative grid h-20 w-20 shrink-0 place-items-center rounded-full"
-        style={{ background: 'conic-gradient(#2563eb 66%, #e2e8f0 0)' }}
+        className="relative grid h-20 w-20 shrink-0 place-items-center rounded-full [--quality-track:#e2e8f0] dark:[--quality-track:#334155]"
+        style={{ background: 'conic-gradient(#2563eb 66%, var(--quality-track) 0)' }}
       >
-        <div className="grid h-14 w-14 place-items-center rounded-full bg-white">
+        <div className="grid h-14 w-14 place-items-center rounded-full bg-white dark:bg-slate-900">
           <span className="text-sm font-bold text-slate-900 dark:text-slate-100">66%</span>
         </div>
       </div>
@@ -305,9 +305,9 @@ function ExportMock() {
       {items.map((it) => (
         <div
           key={it.label}
-          className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5"
+          className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 dark:border-slate-700 dark:bg-slate-800"
         >
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary-600">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary-600 dark:bg-primary-500/15 dark:text-primary-400">
             <it.icon className="h-3.5 w-3.5" />
           </span>
           <p className="flex-1 truncate text-xs font-semibold text-slate-800 dark:text-slate-200">{it.label}</p>
@@ -334,7 +334,7 @@ interface Slide {
 const FEATURE_SLIDES: Slide[] = [
   {
     icon: <Sparkles className="h-5 w-5" />,
-    tone: 'bg-primary-50 text-primary-700',
+    tone: 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300',
     title: 'What MetaHarmonizer does',
     action: 'Turns a messy study spreadsheet into standardized, cBioPortal-ready data — in five steps.',
     visual: (
@@ -345,7 +345,7 @@ const FEATURE_SLIDES: Slide[] = [
   },
   {
     icon: <Upload className="h-5 w-5" />,
-    tone: 'bg-teal-50 text-teal-700',
+    tone: 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300',
     title: 'Upload & harmonize',
     action: 'Drop a study, pick a target standard (GDC, cBioPortal, cMD…) — mapping runs automatically.',
     visual: (
@@ -356,7 +356,7 @@ const FEATURE_SLIDES: Slide[] = [
   },
   {
     icon: <Layers className="h-5 w-5" />,
-    tone: 'bg-indigo-50 text-indigo-700',
+    tone: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300',
     title: 'How the engine maps',
     action: 'A 4-stage cascade — cheap dictionary matches first, AI embeddings and an LLM only for the hard ones.',
     visual: (
@@ -367,7 +367,7 @@ const FEATURE_SLIDES: Slide[] = [
   },
   {
     icon: <CheckCheck className="h-5 w-5" />,
-    tone: 'bg-violet-50 text-violet-700',
+    tone: 'bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300',
     title: 'Review & accept in batches',
     action: 'Accept, reject, or edit any match — and since look-alike columns are grouped, clear a whole group at once.',
     visual: (
@@ -378,7 +378,7 @@ const FEATURE_SLIDES: Slide[] = [
   },
   {
     icon: <Wand2 className="h-5 w-5" />,
-    tone: 'bg-amber-50 text-amber-700',
+    tone: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
     title: 'It learns your decisions',
     action: 'Your accept and edit decisions are remembered automatically, so the same columns are pre-filled on your next study — no repeating yourself.',
     visual: (
@@ -389,7 +389,7 @@ const FEATURE_SLIDES: Slide[] = [
   },
   {
     icon: <Microscope className="h-5 w-5" />,
-    tone: 'bg-rose-50 text-rose-600',
+    tone: 'bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300',
     title: 'Confirm ontology codes',
     action: 'Each value resolves to a real code — NCIt for disease, UBERON for body site — to accept or override.',
     visual: (
@@ -400,7 +400,7 @@ const FEATURE_SLIDES: Slide[] = [
   },
   {
     icon: <BarChart3 className="h-5 w-5" />,
-    tone: 'bg-sky-50 text-sky-700',
+    tone: 'bg-sky-50 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
     title: 'Track quality',
     action: 'See coverage, confidence, and match-stage mix at a glance before you ship a study.',
     visual: (
@@ -411,7 +411,7 @@ const FEATURE_SLIDES: Slide[] = [
   },
   {
     icon: <Download className="h-5 w-5" />,
-    tone: 'bg-emerald-50 text-emerald-700',
+    tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
     title: 'Export in any format',
     action: 'Harmonized CSV, cBioPortal files, a JSON audit report, or a labeled dataset to retrain the engine.',
     visual: (
@@ -479,7 +479,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     if (isGuest) {
       return {
         icon: <Rocket className="h-5 w-5" />,
-        tone: 'bg-primary-50 text-primary-700',
+        tone: 'bg-primary-50 text-primary-700 dark:bg-primary-500/15 dark:text-primary-300',
         title: 'Ready to try it for real?',
         action: 'Create an account with any email to start curating — trusted-domain emails are approved instantly.',
         visual: (
@@ -497,7 +497,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     if (user?.role === 'admin') {
       return {
         icon: <ShieldCheck className="h-5 w-5" />,
-        tone: 'bg-amber-50 text-amber-700',
+        tone: 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
         title: "You're an administrator",
         action: 'Approve pending accounts and admin requests from the Admin console — plus everything a curator can do.',
         visual: (
@@ -514,7 +514,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }
     return {
       icon: <Rocket className="h-5 w-5" />,
-      tone: 'bg-emerald-50 text-emerald-700',
+      tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
       title: "You're all set",
       action: 'Head to Upload to harmonize your first study — the workflow follows the steps above.',
       visual: (
@@ -563,7 +563,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
           so finishing as a guest — which clears both — closes it cleanly. */}
       {open && slide && (isGuest || !!user) && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
-          <div className="w-[min(34rem,100%)] animate-pop-in rounded-3xl border border-slate-200 bg-white p-6 shadow-pop motion-reduce:animate-none dark:border-slate-800 dark:bg-slate-900">
+          <div className="w-[min(34rem,100%)] animate-pop-in rounded-3xl border border-slate-200 bg-white p-6 shadow-pop motion-reduce:animate-none dark:border-slate-800 dark:bg-slate-900 dark:shadow-none">
             {/* Header: icon + title + the one-line curator action. */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-center gap-3">

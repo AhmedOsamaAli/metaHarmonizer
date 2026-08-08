@@ -92,7 +92,7 @@ export default function CompleteStudyButton({
               <button
                 onClick={() => setOpen(false)}
                 disabled={complete.isPending}
-                className="ml-auto rounded-lg p-1 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                className="ml-auto rounded-lg p-1 text-slate-400 hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-700"
                 aria-label="Cancel"
               >
                 <X className="h-4 w-4" />

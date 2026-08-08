@@ -38,7 +38,7 @@ export default function ForgotPasswordPage() {
     >
       {done ? (
         <div className="space-y-4 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 dark:bg-emerald-500/15">
             <MailCheck className="h-7 w-7 text-emerald-600" />
           </div>
           <p className="text-sm text-slate-600 dark:text-slate-300">{done}</p>
