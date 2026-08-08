@@ -43,6 +43,7 @@ import { ApiError } from '../api/http';
 import type { Mapping } from '../api/types';
 import {
   defaultMappingStatusFilter,
+  sortMappings,
   type MappingStatusFilter,
 } from '../lib/mappingFilters';
 
@@ -228,29 +229,7 @@ export default function MappingReview() {
           (m.curator_field || m.matched_field || '').toLowerCase().includes(q),
       );
     }
-    result.sort((a, b) => {
-      let av: any = a[sortKey];
-      let bv: any = b[sortKey];
-      if (av === null) av = sortKey === 'confidence_score' ? -1 : '';
-      if (bv === null) bv = sortKey === 'confidence_score' ? -1 : '';
-      if (typeof av === 'string') return sortAsc ? av.localeCompare(bv) : bv.localeCompare(av);
-      return sortAsc ? av - bv : bv - av;
-    });
-    // Smart review order (G7): follow the server's active-learning queue order —
-    // riskiest group first, look-alikes adjacent (batchable), and groups whose
-    // pattern the curator has already accepted nudged down (feedback re-rank).
-    // Rows not in the queue (already reviewed) sink to the bottom.
-    if (smartOrder && Object.keys(groupInfo).length > 0) {
-      result.sort((a, b) => {
-        const ga = groupInfo[a.id];
-        const gb = groupInfo[b.id];
-        if (!ga && !gb) return 0;
-        if (!ga) return 1;
-        if (!gb) return -1;
-        return ga.rank - gb.rank; // authoritative server ordering
-      });
-    }
-    return result;
+    return sortMappings(result, sortKey, sortAsc);
   }, [mappings, filterStage, filterStatus, sortKey, sortAsc, search, smartOrder, groupInfo]);
 
   // Per-stage counts for the distribution bar (full study, not the filtered view).
@@ -367,7 +346,6 @@ export default function MappingReview() {
       if (selectedId) {
         const fresh = await getStudyMappings(selectedId);
         setMappings(fresh);
-        setFilterStatus(action);
       }
     } catch {
       showToast('Batch update failed', 'error');

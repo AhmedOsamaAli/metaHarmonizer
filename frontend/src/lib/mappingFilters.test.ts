@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Mapping } from '../api/types';
-import { defaultMappingStatusFilter } from './mappingFilters';
+import { defaultMappingStatusFilter, sortMappings } from './mappingFilters';
 
 const mapping = (id: number, status: Mapping['status']): Mapping => ({
     id,
@@ -34,5 +34,45 @@ describe('defaultMappingStatusFilter', () => {
 
     it('honors an explicit deep-link filter', () => {
         expect(defaultMappingStatusFilter([mapping(1, 'accepted')], 'pending')).toBe('pending');
+    });
+});
+
+describe('sortMappings', () => {
+    const sortable = (
+        id: number,
+        rawColumn: string,
+        confidence: number | null,
+        stage: Mapping['stage'],
+    ): Mapping => ({
+        ...mapping(id, 'pending'),
+        raw_column: rawColumn,
+        confidence_score: confidence,
+        stage,
+    });
+
+    const rows = [
+        sortable(1, 'beta', 0.8, 'stage3'),
+        sortable(2, 'alpha', 0.2, 'stage1'),
+        sortable(3, 'gamma', null, null),
+        sortable(4, 'delta', 0.5, 'stage2'),
+    ];
+
+    it('sorts confidence in either direction and keeps missing values last', () => {
+        expect(sortMappings(rows, 'confidence_score', false).map((row) => row.id)).toEqual([1, 4, 2, 3]);
+        expect(sortMappings(rows, 'confidence_score', true).map((row) => row.id)).toEqual([2, 4, 1, 3]);
+    });
+
+    it('uses the harmonization stage order instead of lexical ordering', () => {
+        expect(sortMappings(rows, 'stage', true).map((row) => row.id)).toEqual([2, 4, 1, 3]);
+        expect(sortMappings(rows, 'stage', false).map((row) => row.id)).toEqual([1, 4, 2, 3]);
+    });
+
+    it('sorts raw columns deterministically', () => {
+        expect(sortMappings(rows, 'raw_column', true).map((row) => row.raw_column)).toEqual([
+            'alpha',
+            'beta',
+            'delta',
+            'gamma',
+        ]);
     });
 });
