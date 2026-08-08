@@ -105,6 +105,45 @@ the host and allow inbound TCP 80/443.
 - **Upgrades:** `git pull && docker compose up -d --build` (migrations re-run).
 - **Scale throughput:** `docker compose up -d --scale worker=N`.
 
+### Application rollback
+
+Use an exact tested Git revision, not a moving branch name. The rollback command
+builds that revision, republishes the SPA, recreates API/worker/Caddy, waits for
+API and worker health, and performs an authenticated login smoke test. If any
+validation fails after switching revisions, it attempts to restore the revision
+that was running when the command started.
+
+```bash
+git fetch --all --tags --prune
+ROLLBACK_DRY_RUN=1 \
+ROLLBACK_BASE_URL=https://harmonize.example.org \
+ROLLBACK_SMOKE_EMAIL=rollback-check@example.org \
+ROLLBACK_SMOKE_PASSWORD='<temporary-or-dedicated-password>' \
+  ./scripts/rollback_revision.sh <previous-tested-commit>
+```
+
+Run once with `ROLLBACK_DRY_RUN=1` to verify the target and live migration are
+compatible without switching revisions. Remove it to execute the rollback.
+
+The command records the prior revision in `.git/metaharmonizer-previous-revision`
+and leaves the repository detached at the rollback revision. Return to normal
+deployment with `git switch main && git pull --ff-only`.
+
+Rollback never downgrades PostgreSQL automatically. It proceeds only when the
+target revision contains the live Alembic head. If the target predates the live
+schema, the command aborts before changing source or containers. For that case:
+
+1. Create and verify an encrypted backup.
+2. Review every intervening migration downgrade for data loss.
+3. Stop application writes.
+4. Run the explicit Alembic downgrade from the newer source revision.
+5. Run the application rollback and repeat health, login, and critical workflow checks.
+
+Additive schema changes may be backward-compatible, but the presence check is
+deliberately stricter: rollback evidence must establish compatibility rather
+than infer it. Never use `git reset --hard`, delete persistent volumes, or
+restore a production database merely to roll back application code.
+
 ## 9. Encrypted PostgreSQL backups to S3-compatible storage
 
 Backups use a dedicated S3-compatible bucket and credentials, separate from
