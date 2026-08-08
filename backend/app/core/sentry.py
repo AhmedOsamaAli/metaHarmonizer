@@ -12,10 +12,73 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
+from typing import Any
 
 from app.core.settings import settings
 
 logger = logging.getLogger("app.sentry")
+
+_FILTERED = "[Filtered]"
+_SENSITIVE_KEYS = {
+    "authorization",
+    "cookie",
+    "cookies",
+    "email",
+    "file_name",
+    "filename",
+    "medical_record_number",
+    "mrn",
+    "password",
+    "patient_id",
+    "raw_value",
+    "recipient",
+    "sample_id",
+    "secret",
+    "set_cookie",
+    "subject_id",
+    "token",
+    "upload_name",
+    "user_email",
+}
+_SENSITIVE_SUFFIXES = ("_api_key", "_password", "_secret", "_token")
+
+
+def _normalise_key(key: object) -> str:
+    return str(key).strip().lower().replace("-", "_").replace(" ", "_")
+
+
+def _is_sensitive_key(key: object) -> bool:
+    normalised = _normalise_key(key)
+    return normalised in _SENSITIVE_KEYS or normalised.endswith(_SENSITIVE_SUFFIXES)
+
+
+def _scrub_value(value: Any, path: tuple[str, ...] = ()) -> Any:
+    if path and path[-1] == "data" and "request" in path:
+        return _FILTERED
+    if path and path[-1] in {"formatted", "message"}:
+        return _FILTERED
+    if len(path) >= 3 and path[-1] == "value" and "exception" in path:
+        return _FILTERED
+
+    if isinstance(value, dict):
+        return {
+            key: (
+                _FILTERED
+                if _is_sensitive_key(key) and not (_normalise_key(key) == "filename" and "stacktrace" in path)
+                else _scrub_value(item, path + (_normalise_key(key),))
+            )
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        return [_scrub_value(item, path) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_scrub_value(item, path) for item in value)
+    return value
+
+
+def scrub_sentry_event(event: dict[str, Any], _hint: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Remove credentials and user-supplied metadata before Sentry transport."""
+    return _scrub_value(event)
 
 
 def _git_short_sha() -> str | None:
@@ -50,6 +113,7 @@ def init_sentry() -> bool:
         release=_git_short_sha(),
         traces_sample_rate=0.0,  # errors only by default; tracing opt-in later
         send_default_pii=False,
+        before_send=scrub_sentry_event,
     )
     logger.info("Sentry initialised.")
     return True
