@@ -270,6 +270,28 @@ class LearnedDecision(Base, TimestampMixin):
     )
 
 
+class LearnedDecisionDismissal(Base, TimestampMixin):
+    __tablename__ = "learned_decision_dismissals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    candidate_key: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    kind: Mapped[str] = mapped_column(String(10), nullable=False)
+    source_key: Mapped[str] = mapped_column(Text, nullable=False)
+    decision: Mapped[str] = mapped_column(String(10), nullable=False)
+    target_field: Mapped[str | None] = mapped_column(Text)
+    target_term: Mapped[str | None] = mapped_column(Text)
+    target_id: Mapped[str | None] = mapped_column(String(100))
+    dismissed_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+    __table_args__ = (
+        Index("ix_learned_dismissals_source", "kind", "source_key"),
+        CheckConstraint("kind in ('schema','ontology')", name="learned_dismissal_kind_valid"),
+        CheckConstraint("decision in ('accept','reject')", name="learned_dismissal_decision_valid"),
+    )
+
+
 class EngineProposal(Base, TimestampMixin):
     __tablename__ = "engine_proposals"
 

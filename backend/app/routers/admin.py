@@ -14,6 +14,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
@@ -535,6 +536,11 @@ class PromoteRequest(BaseModel):
     target_id: str | None = None
 
 
+class ReviewLearnedRequest(BaseModel):
+    action: Literal["promote", "dismiss"]
+    candidates: list[PromoteRequest]
+
+
 @router.get("/learned-decisions/candidates")
 async def learned_promotion_candidates(
     min_support: int = 1,
@@ -570,3 +576,32 @@ async def promote_learned_decision(
     )
     await db.commit()
     return {"promoted": row}
+
+
+@router.post("/learned-decisions/review")
+async def review_learned_decisions(
+    body: ReviewLearnedRequest,
+    admin: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    if not body.candidates or len(body.candidates) > 100:
+        raise HTTPException(status_code=422, detail="Select between 1 and 100 candidates.")
+
+    reviewed = []
+    for candidate in body.candidates:
+        if candidate.kind not in ("schema", "ontology") or candidate.decision not in ("accept", "reject"):
+            raise HTTPException(status_code=422, detail="Invalid kind or decision.")
+        values = candidate.model_dump()
+        if body.action == "promote":
+            row = await ld_repo.promote(db, admin_id=admin.id, **values)
+        else:
+            row = await ld_repo.dismiss(db, admin_id=admin.id, **values)
+        reviewed.append(row)
+        await audit_repo.add_audit_entry(
+            db, study_id=None, action=f"kb_{body.action}",
+            new_value=f"{candidate.kind}:{candidate.source_key}:{candidate.decision}",
+            actor_id=admin.id, curator=actor_label(admin),
+        )
+
+    await db.commit()
+    return {"action": body.action, "count": len(reviewed), "reviewed": reviewed}

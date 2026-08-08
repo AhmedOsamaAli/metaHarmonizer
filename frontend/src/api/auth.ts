@@ -258,6 +258,7 @@ export async function adminDiffSchemaVersions(
 
 // ── Learned-decision KB (ADR-0002) promotion queue ───────────────────────────
 export interface LearnedCandidate {
+    candidate_key: string;
     kind: 'schema' | 'ontology';
     source_key: string;
     decision: 'accept' | 'reject';
@@ -274,18 +275,24 @@ export async function adminListLearnedCandidates(
     return apiFetch(`/admin/learned-decisions/candidates?min_support=${minSupport}`);
 }
 
-export async function adminPromoteLearned(c: {
-    kind: string;
-    source_key: string;
-    decision: string;
-    target_field?: string | null;
-    target_term?: string | null;
-    target_id?: string | null;
-}): Promise<{ promoted: unknown }> {
-    return apiFetch('/admin/learned-decisions/promote', {
+export async function adminReviewLearned(
+    action: 'promote' | 'dismiss',
+    candidates: LearnedCandidate[],
+): Promise<{ action: 'promote' | 'dismiss'; count: number }> {
+    return apiFetch('/admin/learned-decisions/review', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(c),
+        body: JSON.stringify({
+            action,
+            candidates: candidates.map((candidate) => ({
+                kind: candidate.kind,
+                source_key: candidate.source_key,
+                decision: candidate.decision,
+                target_field: candidate.target_field,
+                target_term: candidate.target_term,
+                target_id: candidate.target_id,
+            })),
+        }),
     });
 }
 

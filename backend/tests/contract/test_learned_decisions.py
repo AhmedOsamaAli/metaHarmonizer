@@ -112,6 +112,31 @@ async def test_personal_overrides_shared(kb_db):
         assert hit[key]["target_id"] == "UBERON:0000160"
 
 
+async def test_dismissal_hides_only_the_exact_candidate(kb_db):
+    async with kb_db() as s:
+        alice = await _mk_user(s, f"dal_{uuid.uuid4().hex[:6]}@example.com")
+        bob = await _mk_user(s, f"dbo_{uuid.uuid4().hex[:6]}@example.com")
+        admin_id = await _mk_user(s, f"dad_{uuid.uuid4().hex[:6]}@example.com")
+        key = ld_repo.schema_key(f"Diagnosis {uuid.uuid4().hex[:6]}")
+
+        await ld_repo.record_personal(
+            s, owner_id=alice, kind="schema", source_key=key,
+            decision="accept", target_field="DIAGNOSIS",
+        )
+        await ld_repo.record_personal(
+            s, owner_id=bob, kind="schema", source_key=key,
+            decision="accept", target_field="DISEASE",
+        )
+        await ld_repo.dismiss(
+            s, kind="schema", source_key=key, decision="accept",
+            admin_id=admin_id, target_field="DIAGNOSIS",
+        )
+        await s.commit()
+
+        candidates = [c for c in await ld_repo.promotion_candidates(s) if c["source_key"] == key]
+        assert [candidate["target_field"] for candidate in candidates] == ["DISEASE"]
+
+
 async def test_apply_learned_decisions_prefills_pending(kb_db):
     async with kb_db() as s:
         alice = await _mk_user(s, f"ap_{uuid.uuid4().hex[:6]}@example.com")

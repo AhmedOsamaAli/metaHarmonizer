@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2, Download, RefreshCw, Network, Info } from 'lucide-react';
+import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2, Download, RefreshCw, Network, Info, CircleX } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
@@ -25,7 +25,7 @@ import {
   adminUploadSchemaVersion,
   adminDiffSchemaVersions,
   adminListLearnedCandidates,
-  adminPromoteLearned,
+  adminReviewLearned,
   adminGetAliases,
   adminUploadAliases,
   adminSchemaFields,
@@ -822,29 +822,54 @@ function SchemaVersionsCard() {
 // it applies for every curator. Idempotent, so concurrent admins are safe.
 function LearnedDecisionsCard() {
   const qc = useQueryClient();
+  const [decisionTab, setDecisionTab] = useState<'accept' | 'reject'>('accept');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const candidates = useQuery({
     queryKey: ['admin', 'learned-candidates'],
     queryFn: () => adminListLearnedCandidates(1),
   });
 
-  const promoteM = useMutation({
-    mutationFn: (c: LearnedCandidate) =>
-      adminPromoteLearned({
-        kind: c.kind,
-        source_key: c.source_key,
-        decision: c.decision,
-        target_field: c.target_field,
-        target_term: c.target_term,
-        target_id: c.target_id,
-      }),
-    onSuccess: () => {
+  const reviewM = useMutation({
+    mutationFn: ({ action, items }: { action: 'promote' | 'dismiss'; items: LearnedCandidate[] }) =>
+      adminReviewLearned(action, items),
+    onSuccess: (result) => {
+      setSelected(new Set());
       qc.invalidateQueries({ queryKey: ['admin', 'learned-candidates'] });
-      toast.success('Promoted to the shared knowledge base');
+      toast.success(
+        result.action === 'promote'
+          ? `${result.count} decision${result.count === 1 ? '' : 's'} promoted to the shared knowledge base`
+          : `${result.count} candidate${result.count === 1 ? '' : 's'} dismissed from the promotion queue`,
+      );
     },
-    onError: (e: any) => toast.error(e?.message ?? 'Could not promote decision'),
+    onError: (e: any) => toast.error(e?.message ?? 'Could not review learned decisions'),
   });
 
-  const rows = candidates.data?.candidates ?? [];
+  const allRows = candidates.data?.candidates ?? [];
+  const rows = allRows.filter((candidate) => candidate.decision === decisionTab);
+  const selectedRows = rows.filter((candidate) => selected.has(candidate.candidate_key));
+  const allVisibleSelected = rows.length > 0 && rows.every((candidate) => selected.has(candidate.candidate_key));
+
+  const changeTab = (tab: 'accept' | 'reject') => {
+    setDecisionTab(tab);
+    setSelected(new Set());
+  };
+
+  const toggleCandidate = (key: string) => {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleAllVisible = () => {
+    setSelected(allVisibleSelected ? new Set() : new Set(rows.map((candidate) => candidate.candidate_key)));
+  };
+
+  const review = (action: 'promote' | 'dismiss', items: LearnedCandidate[]) => {
+    if (items.length) reviewM.mutate({ action, items });
+  };
 
   return (
     <Card>
@@ -868,17 +893,89 @@ function LearnedDecisionsCard() {
       <CardBody>
         {candidates.isLoading ? (
           <LoadingBlock />
-        ) : rows.length === 0 ? (
+        ) : allRows.length === 0 ? (
           <EmptyState
             icon={<BrainCircuit className="h-6 w-6" />}
             title="Nothing to promote yet"
             description="Personal decisions curators choose to remember will appear here with agreement analytics."
           />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <SegmentedControl
+                value={decisionTab}
+                onChange={changeTab}
+                size="sm"
+                segments={[
+                  {
+                    value: 'accept',
+                    label: 'Accepted mappings',
+                    count: allRows.filter((candidate) => candidate.decision === 'accept').length,
+                    icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+                    tone: 'emerald',
+                  },
+                  {
+                    value: 'reject',
+                    label: 'Rejected mappings',
+                    count: allRows.filter((candidate) => candidate.decision === 'reject').length,
+                    icon: <CircleX className="h-3.5 w-3.5" />,
+                    tone: 'rose',
+                  },
+                ]}
+              />
+              <p className="max-w-xl text-xs text-slate-500 dark:text-slate-400">
+                {decisionTab === 'accept'
+                  ? 'Curators accepted the displayed target. Promote to reuse that target for everyone.'
+                  : 'Curators rejected the automatic proposal. Promote to automatically reject that source for everyone.'}
+              </p>
+            </div>
+
+            {selectedRows.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary-200 bg-primary-50/70 px-3 py-2 dark:border-primary-500/25 dark:bg-primary-500/10">
+                <span className="mr-auto text-xs font-semibold text-primary-800 dark:text-primary-200">
+                  {selectedRows.length} selected
+                </span>
+                <Button
+                  size="sm"
+                  loading={reviewM.isPending && reviewM.variables?.action === 'promote'}
+                  disabled={reviewM.isPending}
+                  icon={<CheckCheck className="h-3.5 w-3.5" />}
+                  onClick={() => review('promote', selectedRows)}
+                >
+                  Promote selected
+                </Button>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  loading={reviewM.isPending && reviewM.variables?.action === 'dismiss'}
+                  disabled={reviewM.isPending}
+                  icon={<X className="h-3.5 w-3.5" />}
+                  onClick={() => review('dismiss', selectedRows)}
+                >
+                  Dismiss selected
+                </Button>
+              </div>
+            )}
+
+            {rows.length === 0 ? (
+              <EmptyState
+                icon={decisionTab === 'accept' ? <CheckCircle2 className="h-6 w-6" /> : <CircleX className="h-6 w-6" />}
+                title={`No ${decisionTab === 'accept' ? 'accepted' : 'rejected'} decisions waiting`}
+                description="Switch tabs to review the other decision type."
+              />
+            ) : <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400 dark:border-slate-800">
+                  <th className="w-10 px-2 py-2">
+                    <input
+                      type="checkbox"
+                      className="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleAllVisible}
+                      aria-label={`Select all ${decisionTab === 'accept' ? 'accepted' : 'rejected'} decisions`}
+                    />
+                  </th>
                   <th className="px-2 py-2">
                     <LearnedHeader label="Kind" help="Schema means a column-to-field mapping. Ontology means a raw value-to-standard-term mapping." />
                   </th>
@@ -886,7 +983,7 @@ function LearnedDecisionsCard() {
                     <LearnedHeader label="Source" help="The normalized column name, or field and raw value, that this learned decision applies to." />
                   </th>
                   <th className="px-2 py-2">
-                    <LearnedHeader label="Decision → target" help="The identical decision these curators made. Accept uses the displayed target; reject means this source should not use the proposed automatic mapping." />
+                    <LearnedHeader label="Target / effect" help="For accepted decisions, the field or ontology term to reuse. For rejected decisions, the automatic proposal that curators declined." />
                   </th>
                   <th className="px-2 py-2 text-center">
                     <LearnedHeader label="Curators" help="Number of distinct curators who made this exact same decision." centered />
@@ -899,36 +996,66 @@ function LearnedDecisionsCard() {
               </thead>
               <tbody>
                 {rows.map((c) => (
-                  <tr key={`${c.kind}:${c.source_key}`} className="border-b border-slate-50 dark:border-slate-800/60">
+                  <tr key={c.candidate_key} className={`border-b border-slate-50 dark:border-slate-800/60 ${selected.has(c.candidate_key) ? 'bg-primary-50/60 dark:bg-primary-500/10' : ''}`}>
+                    <td className="px-2 py-2">
+                      <input
+                        type="checkbox"
+                        className="checkbox"
+                        checked={selected.has(c.candidate_key)}
+                        onChange={() => toggleCandidate(c.candidate_key)}
+                        aria-label={`Select ${c.source_key}`}
+                      />
+                    </td>
                     <td className="px-2 py-2">
                       <Badge tone={c.kind === 'schema' ? 'primary' : 'slate'}>{c.kind}</Badge>
                     </td>
                     <td className="px-2 py-2 font-mono text-xs text-slate-600 dark:text-slate-300">{c.source_key}</td>
                     <td className="px-2 py-2 text-slate-700 dark:text-slate-300">
-                      {c.decision === 'reject'
-                        ? c.kind === 'schema'
-                          ? 'Reject automatic field mapping'
-                          : 'Reject automatic ontology term'
-                        : `accept → ${c.target_field ?? c.target_term ?? ''}${
-                            c.target_id ? ` (${c.target_id})` : ''
-                          }`}
+                      <span className="flex items-center gap-2">
+                        <Badge tone={c.decision === 'accept' ? 'green' : 'rose'}>
+                          {c.decision === 'accept' ? 'Accepted' : 'Rejected'}
+                        </Badge>
+                        <span>
+                          {c.decision === 'reject'
+                            ? c.kind === 'schema'
+                              ? 'Automatic field mapping'
+                              : 'Automatic ontology term'
+                            : `${c.target_field ?? c.target_term ?? ''}${c.target_id ? ` (${c.target_id})` : ''}`}
+                        </span>
+                      </span>
                     </td>
                     <td className="px-2 py-2 text-center font-semibold text-slate-700 dark:text-slate-300">{c.curators}</td>
                     <td className="px-2 py-2 text-center text-slate-600 dark:text-slate-300">{c.support}</td>
                     <td className="px-2 py-2 text-right">
+                      <div className="inline-flex items-center gap-1.5">
                       <Button
                         size="sm"
-                        loading={promoteM.isPending && promoteM.variables?.source_key === c.source_key}
-                        onClick={() => promoteM.mutate(c)}
+                        loading={reviewM.isPending && reviewM.variables?.action === 'promote' && reviewM.variables.items.some((item) => item.candidate_key === c.candidate_key)}
+                        disabled={reviewM.isPending}
+                        onClick={() => review('promote', [c])}
                         icon={<CheckCheck className="h-3.5 w-3.5" />}
                       >
                         Promote
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-rose-600 hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/15"
+                        loading={reviewM.isPending && reviewM.variables?.action === 'dismiss' && reviewM.variables.items.some((item) => item.candidate_key === c.candidate_key)}
+                        disabled={reviewM.isPending}
+                        onClick={() => review('dismiss', [c])}
+                        icon={<X className="h-3.5 w-3.5" />}
+                        title="Dismiss this candidate without promoting it"
+                      >
+                        Dismiss
+                      </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>}
           </div>
         )}
       </CardBody>

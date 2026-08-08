@@ -11,6 +11,8 @@ Only this module (plus the services/routers that call it) touches the
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from typing import Any
 
@@ -18,7 +20,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import LearnedDecision
+from app.db.models import LearnedDecision, LearnedDecisionDismissal
 
 # Normalization shared by the writer and the reader so keys match across studies:
 # lowercase, trim, and collapse any run of whitespace/punctuation/underscore to a
@@ -56,6 +58,21 @@ def ontology_key(field_name: str, raw_value: str) -> str:
     values like ER+ / ER- can't share a learned-decision key.
     """
     return f"{normalize(field_name)}::{normalize_value(raw_value)}"
+
+
+def candidate_key(
+    *,
+    kind: str,
+    source_key: str,
+    decision: str,
+    target_field: str | None = None,
+    target_term: str | None = None,
+    target_id: str | None = None,
+) -> str:
+    payload = [kind, source_key, decision, target_field, target_term, target_id]
+    return hashlib.sha256(
+        json.dumps(payload, ensure_ascii=True, separators=(",", ":")).encode()
+    ).hexdigest()
 
 
 async def record_personal(
@@ -189,11 +206,22 @@ async def promotion_candidates(db: AsyncSession, *, min_support: int = 1) -> lis
             )
         ).all()
     }
+    dismissed = set(
+        (await db.execute(select(LearnedDecisionDismissal.candidate_key))).scalars()
+    )
     out = []
     for r in (await db.execute(q)).all():
         if (r.kind, r.source_key) in shared:
             continue
+        key = candidate_key(
+            kind=r.kind, source_key=r.source_key, decision=r.decision,
+            target_field=r.target_field, target_term=r.target_term,
+            target_id=r.target_id,
+        )
+        if key in dismissed:
+            continue
         out.append({
+            "candidate_key": key,
             "kind": r.kind, "source_key": r.source_key, "decision": r.decision,
             "target_field": r.target_field, "target_term": r.target_term,
             "target_id": r.target_id, "curators": int(r.curators),
@@ -234,6 +262,34 @@ async def promote(
     ).returning(LearnedDecision.id)
     new_id = (await db.execute(stmt)).scalar_one()
     return {"id": new_id, "scope": "shared", "kind": kind, "source_key": source_key}
+
+
+async def dismiss(
+    db: AsyncSession,
+    *,
+    kind: str,
+    source_key: str,
+    decision: str,
+    admin_id: int,
+    target_field: str | None = None,
+    target_term: str | None = None,
+    target_id: str | None = None,
+) -> dict[str, Any]:
+    key = candidate_key(
+        kind=kind, source_key=source_key, decision=decision,
+        target_field=target_field, target_term=target_term, target_id=target_id,
+    )
+    stmt = pg_insert(LearnedDecisionDismissal).values(
+        candidate_key=key, kind=kind, source_key=source_key, decision=decision,
+        target_field=target_field, target_term=target_term, target_id=target_id,
+        dismissed_by=admin_id,
+    )
+    stmt = stmt.on_conflict_do_update(
+        index_elements=["candidate_key"],
+        set_={"dismissed_by": admin_id, "updated_at": func.now()},
+    ).returning(LearnedDecisionDismissal.id)
+    dismissal_id = (await db.execute(stmt)).scalar_one()
+    return {"id": dismissal_id, "candidate_key": key, "kind": kind, "source_key": source_key}
 
 
 def _to_dict(r: LearnedDecision) -> dict[str, Any]:
