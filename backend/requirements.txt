@@ -15,7 +15,7 @@ google-genai>=1.0.0
 sqlalchemy[asyncio]==2.0.35
 asyncpg==0.29.0
 alembic==1.13.3
-redis==5.0.8
+redis==8.1.0
 # Job queue for the harmonize pipeline (Sprint 4).
 arq==0.26.3
 
