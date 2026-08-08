@@ -31,6 +31,7 @@ export default function FileUploader({ onFileSelected, accept = '.csv,.tsv,.txt'
       if (file) {
         onFileSelected(file);
       }
+      e.target.value = '';
     },
     [onFileSelected],
   );
