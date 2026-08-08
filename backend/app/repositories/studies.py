@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.settings import settings
@@ -21,6 +21,7 @@ from app.db.models import Study
 # and globally by the nightly retention cron (so abandoned accounts' studies
 # don't accumulate). Completed studies are exempt. 0 disables the sweep.
 IDLE_STUDY_DAYS = settings.retention_idle_study_days
+_ACTIVE_STATUSES = ("pending", "queued", "processing")
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -41,6 +42,18 @@ def _to_dict(s: Study) -> dict:
         "schema_version_id": s.schema_version_id,
         "ontology_snapshot_id": s.ontology_snapshot_id,
     }
+
+
+async def lock_and_count_active_for_owner(db: AsyncSession, owner_id: int) -> int:
+    await db.execute(
+        text("SELECT pg_advisory_xact_lock(:namespace, :owner_id)"),
+        {"namespace": 0x4D48, "owner_id": owner_id},
+    )
+    stmt = select(func.count()).select_from(Study).where(
+        Study.owner_id == owner_id,
+        Study.status.in_(_ACTIVE_STATUSES),
+    )
+    return int(await db.scalar(stmt) or 0)
 
 
 async def create_study(
@@ -72,11 +85,6 @@ async def create_study(
     await db.flush()
     await db.refresh(study)
     return _to_dict(study)
-
-
-# A study is "active" (work in flight) until it reaches review; only then is a
-# fresh upload of the same file treated as a deliberate new run.
-_ACTIVE_STATUSES = ("pending", "queued", "processing")
 
 
 async def find_active_by_content(

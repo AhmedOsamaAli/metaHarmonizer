@@ -27,6 +27,7 @@ from app.core.jobs import (
     notify_user,
     publish_progress,
 )
+from app.core.settings import settings
 from app.core.storage import get_storage
 from app.db.session import SessionLocal
 from app.engine_adapter import get_engine
@@ -39,6 +40,20 @@ from app.repositories import studies as studies_repo
 from app.services import engine_proposal_cache as proposal_cache
 
 logger = logging.getLogger("app.jobs")
+
+
+class RetryableJobError(RuntimeError):
+    def __init__(self, message: str, attempt: int):
+        super().__init__(message)
+        self.attempt = attempt
+
+
+class PermanentJobError(RuntimeError):
+    pass
+
+
+def retry_delay_sec(attempt: int) -> int:
+    return settings.job_retry_delay_sec * (2 ** (attempt - 1))
 
 # Stage weights for a smooth progress bar (parse, schema, ontology, finalize).
 _STAGES = [
@@ -105,7 +120,18 @@ def _run_pipeline(
     via async repositories (a worker thread can't use the async session)."""
     sep = "\t" if suffix in (".tsv", ".txt") else ","
     with get_storage().local(file_path) as local_csv:
+        max_bytes = settings.max_upload_mb * 1024 * 1024
+        size = local_csv.stat().st_size
+        if size > max_bytes:
+            raise PermanentJobError(
+                f"Stored upload is {size} bytes, exceeding the {max_bytes}-byte limit."
+            )
         raw_df = pd.read_csv(local_csv, sep=sep, low_memory=False)
+        if settings.max_upload_rows and len(raw_df) > settings.max_upload_rows:
+            raise PermanentJobError(
+                f"Stored upload has {len(raw_df)} rows, exceeding the "
+                f"{settings.max_upload_rows}-row limit."
+            )
 
         scope = {c.strip() for c in (ontology_columns or []) if c and c.strip()}
 
@@ -161,14 +187,23 @@ async def run_harmonize(
     ontology_columns: list[str] | None = None,
     target_schema: str | None = None,
 ) -> None:
-    """Execute one harmonize job end-to-end. Never raises — terminal state is
-    recorded in job_runs and broadcast on the bus."""
+    """Execute one harmonize attempt and raise when another attempt is due."""
     async with SessionLocal() as session:
         job = await jobs_repo.get_job(session, job_id)
         if job is None:
             logger.warning("run_harmonize: job %s not found", job_id)
             return
         await jobs_repo.mark_running(session, job)
+        attempt = job.attempt
+        if attempt > 1:
+            from sqlalchemy import delete
+
+            from app.db.models import Mapping, OntologyMapping
+
+            await session.execute(delete(Mapping).where(Mapping.study_id == study_id))
+            await session.execute(
+                delete(OntologyMapping).where(OntologyMapping.study_id == study_id)
+            )
         await session.commit()
 
     try:
@@ -350,31 +385,48 @@ async def run_harmonize(
              "message": "Harmonization cancelled."},
         )
 
-    except Exception as exc:  # noqa: BLE001 — terminal failure is recorded, not raised
+    except Exception as exc:
         logger.exception("harmonize job %s failed", job_id)
-        await _set_status(study_id, "failed")
+        exhausted = isinstance(exc, PermanentJobError) or attempt >= _max_attempts()
+        await _set_status(study_id, "failed" if exhausted else "queued")
         async with SessionLocal() as session:
             job = await jobs_repo.get_job(session, job_id)
             if job:
-                exhausted = job.attempt >= _max_attempts()
-                await jobs_repo.mark_failed(
-                    session,
-                    job,
-                    error_code="ENGINE_ERROR",
-                    error_message=str(exc),
-                    dead_letter=exhausted,
-                )
+                if exhausted:
+                    await jobs_repo.mark_failed(
+                        session,
+                        job,
+                        error_code="ENGINE_ERROR",
+                        error_message=str(exc),
+                        dead_letter=True,
+                    )
+                else:
+                    await jobs_repo.mark_retrying(
+                        session,
+                        job,
+                        error_code="ENGINE_ERROR",
+                        error_message=str(exc),
+                    )
                 await session.commit()
         await publish_progress(
             study_id,
-            {"type": "failed", "stage": "done", "state": "failed", "pct": 0,
-             "message": "Harmonization failed. Please try again."},
+            {
+                "type": "failed" if exhausted else "retrying",
+                "stage": "done",
+                "state": "failed" if exhausted else "queued",
+                "pct": 0,
+                "message": (
+                    "Harmonization failed. Please try again."
+                    if exhausted
+                    else f"Harmonization attempt {attempt} failed; retrying shortly."
+                ),
+            },
         )
+        if not exhausted:
+            raise RetryableJobError(str(exc), attempt) from exc
 
 
 def _max_attempts() -> int:
-    from app.core.settings import settings
-
     return settings.job_max_attempts
 
 

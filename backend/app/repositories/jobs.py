@@ -44,6 +44,20 @@ async def mark_running(db: AsyncSession, job: JobRun) -> None:
     await db.flush()
 
 
+async def mark_retrying(
+    db: AsyncSession,
+    job: JobRun,
+    *,
+    error_code: str,
+    error_message: str,
+) -> None:
+    job.state = "queued"
+    job.error_code = error_code
+    job.error_message = error_message[:2000]
+    job.finished_at = None
+    await db.flush()
+
+
 async def mark_succeeded(db: AsyncSession, job: JobRun) -> None:
     job.state = "succeeded"
     job.finished_at = datetime.now(timezone.utc)

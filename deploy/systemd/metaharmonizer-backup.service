@@ -1,0 +1,13 @@
+[Unit]
+Description=MetaHarmonizer encrypted PostgreSQL backup to Cloudflare R2
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/metaHarmonizer
+ExecStart=/usr/bin/docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm -v /home/ubuntu/.config/metaharmonizer/backup.key:/run/secrets/metaharmonizer-backup.key:ro api python -m scripts.backup_postgres backup
+
+[Install]
+WantedBy=multi-user.target

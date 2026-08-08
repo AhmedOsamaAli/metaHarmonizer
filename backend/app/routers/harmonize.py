@@ -184,6 +184,10 @@ async def harmonize_study(
 
     owner_id = getattr(user, "id", None)
 
+    active_jobs = None
+    if owner_id and settings.job_max_active_per_user > 0:
+        active_jobs = await studies_repo.lock_and_count_active_for_owner(db_session, owner_id)
+
     # Idempotency fast path: if this owner is already harmonizing an identical
     # file, return that in-flight job instead of doing the work twice.
     dup = await studies_repo.find_active_by_content(
@@ -192,6 +196,17 @@ async def harmonize_study(
     if dup is not None:
         save_path.unlink(missing_ok=True)
         return await _accepted_for_existing(db_session, dup)
+
+    if active_jobs is not None and active_jobs >= settings.job_max_active_per_user:
+        save_path.unlink(missing_ok=True)
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                f"You already have {active_jobs} active harmonization jobs. "
+                "Wait for one to finish before submitting another."
+            ),
+            headers={"Retry-After": "30"},
+        )
 
     study_name = Path(file.filename).stem
     file_key = f"{study_id}{suffix}"

@@ -16,19 +16,27 @@ from __future__ import annotations
 
 import logging
 
-from arq import cron
+from arq import Retry, cron
 from arq.connections import RedisSettings
 
 from app.core.settings import settings
 from app.workers.retention import run_retention
-from app.workers.tasks import nightly_labeled_export, run_harmonize
+from app.workers.tasks import (
+    RetryableJobError,
+    nightly_labeled_export,
+    retry_delay_sec,
+    run_harmonize,
+)
 
 logger = logging.getLogger("app.worker")
 
 
 async def harmonize_job(ctx, **kwargs) -> None:
     """arq entry point — delegates to the shared task implementation."""
-    await run_harmonize(**kwargs)
+    try:
+        await run_harmonize(**kwargs)
+    except RetryableJobError as exc:
+        raise Retry(defer=retry_delay_sec(exc.attempt)) from exc
 
 
 async def nightly_labeled_export_job(ctx) -> None:

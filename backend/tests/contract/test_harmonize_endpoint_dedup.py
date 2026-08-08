@@ -116,3 +116,33 @@ async def test_harmonize_double_submit_is_deduped(env):
         assert count == 1
         await s.execute(sa.delete(Study).where(Study.id == sid1))
         await s.commit()
+
+
+async def test_harmonize_enforces_per_user_quota_but_allows_dedup(env, monkeypatch):
+    make_client, domain = env
+    monkeypatch.setattr(
+        settings_mod.settings, "job_max_active_per_user", 1, raising=False
+    )
+
+    async with make_client() as c:
+        user = await register_and_login(c, f"quota@{domain}")
+        headers = {"Authorization": f"Bearer {user['access_token']}"}
+        first = {
+            "files": {"file": ("first.csv", b"SEX\nMale\n", "text/csv")},
+            "data": {"mode": "schema"},
+        }
+        distinct = {
+            "files": {"file": ("second.csv", b"SEX\nFemale\n", "text/csv")},
+            "data": {"mode": "schema"},
+        }
+
+        created = await c.post("/api/v1/harmonize", headers=headers, **first)
+        assert created.status_code == 202, created.text
+
+        duplicate = await c.post("/api/v1/harmonize", headers=headers, **first)
+        assert duplicate.status_code == 202, duplicate.text
+        assert duplicate.json()["study_id"] == created.json()["study_id"]
+
+        rejected = await c.post("/api/v1/harmonize", headers=headers, **distinct)
+        assert rejected.status_code == 429, rejected.text
+        assert rejected.headers["Retry-After"] == "30"

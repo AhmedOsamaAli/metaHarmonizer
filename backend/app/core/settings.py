@@ -62,9 +62,11 @@ class Settings(BaseSettings):
     job_soft_timeout_sec: int = 300   # 5 min — graceful
     job_hard_timeout_sec: int = 900   # 15 min — worker killed
     job_max_attempts: int = 3
+    job_retry_delay_sec: int = 30
     # Backpressure: refuse new jobs (503 + Retry-After) once this many are
     # pending, so a burst can't grow the queue unbounded / OOM Redis.
     job_max_queue_depth: int = 200
+    job_max_active_per_user: int = 3
     max_inline_jobs: int = 8          # inline-mode concurrency cap
     ws_ticket_ttl_sec: int = 30       # one-time WS auth nonce lifetime
 

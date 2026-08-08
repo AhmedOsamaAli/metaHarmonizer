@@ -1,0 +1,11 @@
+[Unit]
+Description=Run MetaHarmonizer PostgreSQL backup daily
+
+[Timer]
+OnCalendar=*-*-* 02:00:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+Unit=metaharmonizer-backup.service
+
+[Install]
+WantedBy=timers.target

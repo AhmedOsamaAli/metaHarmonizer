@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, AlertCircle, FileSpreadsheet, ArrowRight, Sparkles, Table2, Upload, Maximize2, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, FileSpreadsheet, ArrowRight, Sparkles, Table2, Upload, Maximize2, X, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import FileUploader from '../components/FileUploader';
 import JobsPanel from '../components/JobsPanel';
@@ -149,6 +149,13 @@ export default function UploadPage() {
             Preview only — sign in as a curator to upload and harmonize your own study.
           </p>
         )}
+        <div className="mt-3 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" />
+          <span>
+            <span className="font-semibold">De-identified data only.</span>{' '}
+            Do not upload protected health information (PHI) or directly identifiable patient data.
+          </span>
+        </div>
       </div>
 
       {/* Live + failed harmonization runs (replaces the old floating tray). */}

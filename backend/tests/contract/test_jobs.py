@@ -103,6 +103,22 @@ async def test_job_failure_dead_letters_after_retries(env):
         assert dl is not None and dl.error_code == "ENGINE_ERROR"
 
 
+async def test_job_retry_returns_to_queue(env):
+    from app.repositories import jobs as jobs_repo
+
+    study_id = f"jobtest_{uuid.uuid4().hex[:8]}"
+    async with db_session.SessionLocal() as s:
+        job = await jobs_repo.create_job(s, study_id=study_id, kind="harmonize")
+        await jobs_repo.mark_running(s, job)
+        await jobs_repo.mark_retrying(
+            s, job, error_code="ENGINE_ERROR", error_message="transient"
+        )
+        await s.commit()
+        assert job.state == "queued"
+        assert job.attempt == 1
+        assert job.finished_at is None
+
+
 async def test_latest_for_study(env):
     from app.repositories import jobs as jobs_repo
 
@@ -112,6 +128,61 @@ async def test_latest_for_study(env):
         await s.commit()
         latest = await jobs_repo.latest_for_study(s, study_id)
         assert latest is not None and latest.study_id == study_id
+
+
+async def test_active_job_count_is_owner_scoped(env):
+    from app.db.models import Study
+    from app.repositories import studies as studies_repo
+
+    make_client, domain = env
+    async with make_client() as c:
+        first = await register_and_login(c, f"quota1@{domain}")
+        second = await register_and_login(c, f"quota2@{domain}")
+
+    prefix = f"jobtest_{uuid.uuid4().hex[:8]}"
+    async with db_session.SessionLocal() as s:
+        s.add_all(
+            [
+                Study(
+                    id=f"{prefix}_queued",
+                    name="queued",
+                    status="queued",
+                    owner_id=first["user"]["id"],
+                ),
+                Study(
+                    id=f"{prefix}_review",
+                    name="review",
+                    status="review",
+                    owner_id=first["user"]["id"],
+                ),
+                Study(
+                    id=f"{prefix}_other",
+                    name="other",
+                    status="processing",
+                    owner_id=second["user"]["id"],
+                ),
+            ]
+        )
+        await s.commit()
+        count = await studies_repo.lock_and_count_active_for_owner(
+            s, first["user"]["id"]
+        )
+        assert count == 1
+
+
+async def test_arq_worker_uses_exponential_retry_delay(monkeypatch):
+    from arq import Retry
+    from app.workers import arq_worker
+
+    async def fail(**_kwargs):
+        raise arq_worker.RetryableJobError("transient", attempt=2)
+
+    monkeypatch.setattr(arq_worker, "run_harmonize", fail)
+    monkeypatch.setattr(arq_worker.settings, "job_retry_delay_sec", 30, raising=False)
+
+    with pytest.raises(Retry) as exc:
+        await arq_worker.harmonize_job({})
+    assert exc.value.defer_score == 60_000
 
 
 # ── cancel flags ──────────────────────────────────────────────────────────────

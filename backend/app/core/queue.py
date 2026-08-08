@@ -84,7 +84,21 @@ async def enqueue_harmonize(
         await pool.enqueue_job("harmonize_job", **kwargs)
         return
 
-    # Inline: background task in this process (engine work is threaded inside).
-    task = asyncio.create_task(run_harmonize(**kwargs))
+    # Inline: preserve the same bounded retry semantics as the arq worker.
+    task = asyncio.create_task(_run_inline_with_retries(kwargs))
     _inline_tasks.add(task)
     task.add_done_callback(_inline_tasks.discard)
+
+
+async def _run_inline_with_retries(kwargs: dict) -> None:
+    from app.workers.tasks import RetryableJobError, retry_delay_sec
+
+    for _ in range(settings.job_max_attempts):
+        try:
+            await run_harmonize(**kwargs)
+            return
+        except RetryableJobError as exc:
+            if exc.attempt >= settings.job_max_attempts:
+                raise
+            await asyncio.sleep(retry_delay_sec(exc.attempt))
+    raise RuntimeError("inline harmonization retry limit exhausted")

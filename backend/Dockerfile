@@ -10,9 +10,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# System deps: build tools for any wheels that need them, curl for healthchecks.
+# System deps: build tools for wheels, curl for healthchecks, and PostgreSQL
+# client tools for encrypted backup/restore operations.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential curl \
+    && apt-get install -y --no-install-recommends build-essential curl postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python deps first (better layer caching). The vendored engine wheel
