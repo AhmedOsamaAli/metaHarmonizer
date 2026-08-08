@@ -7,27 +7,23 @@ verified **curator** unless ``--role admin`` is passed.
 
 Usage (from ``backend/`` with the venv active and ``.env`` pointing at the DB)::
 
-    python -m scripts.seed_account --email you@example.com
+    SEED_EMAIL=you@example.com SEED_PASSWORD='S3cret!' python -m scripts.seed_account
     python -m scripts.seed_account --email you@example.com --password "S3cret!" --role admin
 
-If ``--password`` is omitted a strong random one is generated and printed once.
+Credentials are never printed. Supply the password through ``SEED_PASSWORD`` or
+``--password``; prefer the environment variable so it is not exposed in the
+process argument list.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import secrets
-import string
+import os
 
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.repositories import users as users_repo
-
-
-def _random_password(length: int = 16) -> str:
-    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
-    return "".join(secrets.choice(alphabet) for _ in range(length))
 
 
 async def seed(email: str, password: str, name: str | None, role: str | None) -> None:
@@ -53,21 +49,25 @@ async def seed(email: str, password: str, name: str | None, role: str | None) ->
 
         print("Account created:")
         print(f"  email    : {email}")
-        print(f"  password : {password}")
         print(f"  role     : {final_role}")
         print(f"  verified : yes")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed a dashboard account.")
-    parser.add_argument("--email", required=True)
-    parser.add_argument("--password", default=None)
+    parser.add_argument("--email", default=os.getenv("SEED_EMAIL"))
+    parser.add_argument("--password", default=os.getenv("SEED_PASSWORD"))
     parser.add_argument("--name", default=None)
-    parser.add_argument("--role", default=None, choices=["admin", "curator"])
+    parser.add_argument(
+        "--role", default=os.getenv("SEED_ROLE"), choices=["admin", "curator"]
+    )
     args = parser.parse_args()
+    if not args.email:
+        parser.error("set SEED_EMAIL or pass --email")
+    if not args.password:
+        parser.error("set SEED_PASSWORD or pass --password")
 
-    password = args.password or _random_password()
-    asyncio.run(seed(args.email, password, args.name, args.role))
+    asyncio.run(seed(args.email, args.password, args.name, args.role))
 
 
 if __name__ == "__main__":

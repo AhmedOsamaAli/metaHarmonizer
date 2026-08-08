@@ -3,8 +3,8 @@ Transactional email (verification + password reset) via Resend.
 
 Sending is best-effort and isolated here so routers don't touch HTTP/email
 details. When ``RESEND_API_KEY`` is set, mail goes out through Resend's REST
-API. When it's unset, we fall back to logging the link — convenient for local
-development, and never used in production (set the key there).
+API. When it is unset, delivery is skipped and only a token-free status message
+is logged. Local development can use the bootstrap/seed account without email.
 """
 
 from __future__ import annotations
@@ -20,11 +20,14 @@ logger = logging.getLogger("app.email")
 RESEND_ENDPOINT = "https://api.resend.com/emails"
 
 
-async def _send(to: str, subject: str, html: str, *, text_fallback: str) -> None:
-    """Send one email via Resend, or log it when no API key is configured."""
+async def _send(to: str, subject: str, html: str) -> None:
+    """Send one email via Resend, or log a token-free status message."""
     if not settings.resend_api_key:
-        # No key: log the link so the flow stays testable in local dev.
-        logger.warning("email (no RESEND_API_KEY) -> %s | %s\n%s", to, subject, text_fallback)
+        logger.warning(
+            "Email delivery skipped because RESEND_API_KEY is not configured "
+            "(subject=%s)",
+            subject,
+        )
         return
 
     payload = {
@@ -39,7 +42,7 @@ async def _send(to: str, subject: str, html: str, *, text_fallback: str) -> None
             resp = await client.post(RESEND_ENDPOINT, json=payload, headers=headers)
             resp.raise_for_status()
     except Exception:  # noqa: BLE001 — delivery failure must not break the request
-        logger.exception("Resend delivery failed for %s", to)
+        logger.exception("Resend delivery failed")
 
 
 def _button(href: str, label: str) -> str:
@@ -68,7 +71,6 @@ async def send_verification_email(*, to: str, name: str | None, token: str) -> N
         to,
         "Confirm your MetaHarmonizer email",
         html,
-        text_fallback=f"Verify your email: {link}",
     )
 
 
@@ -91,7 +93,6 @@ async def send_password_reset_email(*, to: str, name: str | None, token: str) ->
         to,
         "Reset your MetaHarmonizer password",
         html,
-        text_fallback=f"Reset your password: {link}",
     )
 
 
@@ -115,7 +116,6 @@ async def send_admin_new_signup_email(
         to,
         "MetaHarmonizer \u2014 a new account needs approval",
         html,
-        text_fallback=f"{who} needs approval: {link}",
     )
 
 
@@ -136,7 +136,6 @@ async def send_account_approved_email(*, to: str, name: str | None) -> None:
         to,
         "Your MetaHarmonizer account is approved",
         html,
-        text_fallback=f"Your account is approved. Sign in: {link}",
     )
 
 
@@ -156,5 +155,4 @@ async def send_account_rejected_email(*, to: str, name: str | None) -> None:
         to,
         "About your MetaHarmonizer account",
         html,
-        text_fallback="Your MetaHarmonizer account request was declined.",
     )

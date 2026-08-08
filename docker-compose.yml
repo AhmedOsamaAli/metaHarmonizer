@@ -243,7 +243,10 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
-    command: ["sh", "-c", "python -m scripts.seed_account --email ${SEED_EMAIL:-admin@example.com} --password ${SEED_PASSWORD:-ChangeMe!2026} --role ${SEED_ROLE:-admin}"]
+      SEED_EMAIL: ${SEED_EMAIL:-admin@example.com}
+      SEED_PASSWORD: ${SEED_PASSWORD:-ChangeMe!2026}
+      SEED_ROLE: ${SEED_ROLE:-admin}
+    command: ["python", "-m", "scripts.seed_account"]
     depends_on:
       postgres:
         condition: service_healthy

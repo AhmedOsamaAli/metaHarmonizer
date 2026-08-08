@@ -38,7 +38,7 @@ Edit `.env` — at minimum set these for production:
 | `ALLOWED_EMAIL_DOMAINS`                   | your org's email domain(s), comma-separated                                           |
 | `CORS_ORIGINS` / `APP_BASE_URL`           | your public URL (e.g. `https://harmonize.example.org`)                                |
 | `HF_HUB_OFFLINE` / `TRANSFORMERS_OFFLINE` | `1` (load models from the seeded cache)                                               |
-| `RESEND_API_KEY`                          | (optional) for verification / reset emails; without it, links are logged              |
+| `RESEND_API_KEY`                          | for verification/reset email; without it, delivery is skipped without logging tokens  |
 
 The container DSNs for Postgres/Redis are set by compose — you do **not** edit
 `DATABASE_URL`/`REDIS_URL` for the Docker path.

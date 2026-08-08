@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     allowed_email_domains: str = ""  # comma-separated; "*" auto-approves every verified email
     resend_api_key: str | None = None
     # Email sending (verification + password reset). When resend_api_key is unset
-    # in a non-production env, links are logged instead of sent (dev convenience).
+    # In a non-production environment, delivery is skipped when this is unset.
     email_from: str = "MetaHarmonizer <onboarding@resend.dev>"
     app_base_url: str = "http://localhost:5173"
     email_verify_ttl_min: int = 24 * 60  # 24h

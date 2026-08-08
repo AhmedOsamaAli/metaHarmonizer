@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import io
 import re
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -38,6 +39,11 @@ SCHEMA_STORE = Path(__file__).resolve().parent.parent.parent / "data" / "schema"
 # engine adapter when constructing the schema mapper.
 ALIAS_STORE = Path(__file__).resolve().parent.parent.parent / "data" / "schema" / "aliases"
 ALIAS_FILE = ALIAS_STORE / "current.alias.csv"
+
+
+def _new_schema_upload_path() -> Path:
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    return SCHEMA_STORE / f"curated_{stamp}_{uuid.uuid4().hex}.csv"
 
 
 @router.get("/users", response_model=list[UserOut])
@@ -273,8 +279,7 @@ async def upload_schema_version(
         )
 
     SCHEMA_STORE.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
-    save_path = SCHEMA_STORE / f"curated_{target_schema}_{label}_{stamp}.csv"
+    save_path = _new_schema_upload_path()
     with open(save_path, "wb") as f:
         while chunk := await file.read(1024 * 1024):
             f.write(chunk)
