@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2, Download, RefreshCw, Network, Info, CircleX } from 'lucide-react';
+import { Shield, Users, LogOut, Ban, CheckCircle2, ShieldCheck, X, MailWarning, Layers, Upload, CheckCheck, GitCompare, BrainCircuit, Search, Plus, Trash2, Download, RefreshCw, Network, Info, CircleX, Globe2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardHeader, CardBody } from '../components/ui/Card';
@@ -25,7 +25,9 @@ import {
   adminUploadSchemaVersion,
   adminDiffSchemaVersions,
   adminListLearnedCandidates,
+  adminListSharedLearned,
   adminReviewLearned,
+  adminUnpromoteLearned,
   adminGetAliases,
   adminUploadAliases,
   adminSchemaFields,
@@ -35,7 +37,7 @@ import {
   adminExportAliases,
 } from '../api/auth';
 import { listEngineTargetSchemas } from '../api/client';
-import type { SchemaDiff, LearnedCandidate, AliasEntry } from '../api/auth';
+import type { SchemaDiff, LearnedCandidate, SharedLearnedDecision, AliasEntry } from '../api/auth';
 import type { Role, User } from '../api/types';
 import {
   approveFederationImport,
@@ -822,11 +824,15 @@ function SchemaVersionsCard() {
 // it applies for every curator. Idempotent, so concurrent admins are safe.
 function LearnedDecisionsCard() {
   const qc = useQueryClient();
-  const [decisionTab, setDecisionTab] = useState<'accept' | 'reject'>('accept');
+  const [decisionTab, setDecisionTab] = useState<'accept' | 'reject' | 'promoted'>('accept');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const candidates = useQuery({
     queryKey: ['admin', 'learned-candidates'],
     queryFn: () => adminListLearnedCandidates(1),
+  });
+  const shared = useQuery({
+    queryKey: ['admin', 'learned-shared'],
+    queryFn: adminListSharedLearned,
   });
 
   const reviewM = useMutation({
@@ -835,6 +841,7 @@ function LearnedDecisionsCard() {
     onSuccess: (result) => {
       setSelected(new Set());
       qc.invalidateQueries({ queryKey: ['admin', 'learned-candidates'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'learned-shared'] });
       toast.success(
         result.action === 'promote'
           ? `${result.count} decision${result.count === 1 ? '' : 's'} promoted to the shared knowledge base`
@@ -844,12 +851,28 @@ function LearnedDecisionsCard() {
     onError: (e: any) => toast.error(e?.message ?? 'Could not review learned decisions'),
   });
 
-  const allRows = candidates.data?.candidates ?? [];
-  const rows = allRows.filter((candidate) => candidate.decision === decisionTab);
-  const selectedRows = rows.filter((candidate) => selected.has(candidate.candidate_key));
-  const allVisibleSelected = rows.length > 0 && rows.every((candidate) => selected.has(candidate.candidate_key));
+  const unpromoteM = useMutation({
+    mutationFn: (items: SharedLearnedDecision[]) => adminUnpromoteLearned(items.map((item) => item.id)),
+    onSuccess: (result) => {
+      setSelected(new Set());
+      qc.invalidateQueries({ queryKey: ['admin', 'learned-candidates'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'learned-shared'] });
+      toast.success(`${result.count} global decision${result.count === 1 ? '' : 's'} stopped`);
+    },
+    onError: (e: any) => toast.error(e?.message ?? 'Could not stop sharing decisions'),
+  });
 
-  const changeTab = (tab: 'accept' | 'reject') => {
+  const allRows = candidates.data?.candidates ?? [];
+  const sharedRows = shared.data?.shared ?? [];
+  const rows = decisionTab === 'promoted' ? [] : allRows.filter((candidate) => candidate.decision === decisionTab);
+  const selectedRows = rows.filter((candidate) => selected.has(candidate.candidate_key));
+  const selectedShared = sharedRows.filter((item) => selected.has(`shared:${item.id}`));
+  const visibleKeys = decisionTab === 'promoted'
+    ? sharedRows.map((item) => `shared:${item.id}`)
+    : rows.map((candidate) => candidate.candidate_key);
+  const allVisibleSelected = visibleKeys.length > 0 && visibleKeys.every((key) => selected.has(key));
+
+  const changeTab = (tab: 'accept' | 'reject' | 'promoted') => {
     setDecisionTab(tab);
     setSelected(new Set());
   };
@@ -864,7 +887,7 @@ function LearnedDecisionsCard() {
   };
 
   const toggleAllVisible = () => {
-    setSelected(allVisibleSelected ? new Set() : new Set(rows.map((candidate) => candidate.candidate_key)));
+    setSelected(allVisibleSelected ? new Set() : new Set(visibleKeys));
   };
 
   const review = (action: 'promote' | 'dismiss', items: LearnedCandidate[]) => {
@@ -876,24 +899,24 @@ function LearnedDecisionsCard() {
       <CardHeader
         icon={<BrainCircuit className="h-4 w-4" />}
         title="Learned decisions — promotion queue"
-        description="Repeated personal decisions grouped for review. Promote one only when it should become the default for every curator's future studies."
+        description="Review personal decision patterns and manage which rules apply globally to future studies."
         action={
           <button
             type="button"
-            onClick={() => candidates.refetch()}
-            disabled={candidates.isFetching}
+            onClick={() => { candidates.refetch(); shared.refetch(); }}
+            disabled={candidates.isFetching || shared.isFetching}
             className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             title="Refresh the queue and agreement stats (another admin may have promoted something)"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${candidates.isFetching ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${candidates.isFetching || shared.isFetching ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         }
       />
       <CardBody>
-        {candidates.isLoading ? (
+        {candidates.isLoading || shared.isLoading ? (
           <LoadingBlock />
-        ) : allRows.length === 0 ? (
+        ) : allRows.length === 0 && sharedRows.length === 0 ? (
           <EmptyState
             icon={<BrainCircuit className="h-6 w-6" />}
             title="Nothing to promote yet"
@@ -921,16 +944,25 @@ function LearnedDecisionsCard() {
                     icon: <CircleX className="h-3.5 w-3.5" />,
                     tone: 'rose',
                   },
+                  {
+                    value: 'promoted',
+                    label: 'Promoted globally',
+                    count: sharedRows.length,
+                    icon: <Globe2 className="h-3.5 w-3.5" />,
+                    tone: 'amber',
+                  },
                 ]}
               />
               <p className="max-w-xl text-xs text-slate-500 dark:text-slate-400">
                 {decisionTab === 'accept'
                   ? 'Curators accepted the displayed target. Promote to reuse that target for everyone.'
-                  : 'Curators rejected the automatic proposal. Promote to automatically reject that source for everyone.'}
+                  : decisionTab === 'reject'
+                    ? 'Curators rejected the automatic proposal. Promote to automatically reject that source for everyone.'
+                    : 'These rules apply globally to future studies. Stop sharing to return a rule to the review queue without changing existing studies.'}
               </p>
             </div>
 
-            {selectedRows.length > 0 && (
+            {decisionTab !== 'promoted' && selectedRows.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary-200 bg-primary-50/70 px-3 py-2 dark:border-primary-500/25 dark:bg-primary-500/10">
                 <span className="mr-auto text-xs font-semibold text-primary-800 dark:text-primary-200">
                   {selectedRows.length} selected
@@ -957,7 +989,42 @@ function LearnedDecisionsCard() {
               </div>
             )}
 
-            {rows.length === 0 ? (
+            {decisionTab === 'promoted' && selectedShared.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 dark:border-amber-500/25 dark:bg-amber-500/10">
+                <span className="mr-auto text-xs font-semibold text-amber-800 dark:text-amber-200">
+                  {selectedShared.length} selected
+                </span>
+                <Button
+                  size="sm"
+                  variant="danger"
+                  loading={unpromoteM.isPending}
+                  icon={<RotateCcw className="h-3.5 w-3.5" />}
+                  onClick={() => unpromoteM.mutate(selectedShared)}
+                >
+                  Stop sharing selected
+                </Button>
+              </div>
+            )}
+
+            {decisionTab === 'promoted' ? (
+              sharedRows.length === 0 ? (
+                <EmptyState
+                  icon={<Globe2 className="h-6 w-6" />}
+                  title="No globally promoted decisions"
+                  description="Promoted decisions will appear here and can be reverted later."
+                />
+              ) : (
+                <SharedLearnedTable
+                  rows={sharedRows}
+                  selected={selected}
+                  allSelected={allVisibleSelected}
+                  busy={unpromoteM.isPending}
+                  onToggle={toggleCandidate}
+                  onToggleAll={toggleAllVisible}
+                  onUnpromote={(items) => unpromoteM.mutate(items)}
+                />
+              )
+            ) : rows.length === 0 ? (
               <EmptyState
                 icon={decisionTab === 'accept' ? <CheckCircle2 className="h-6 w-6" /> : <CircleX className="h-6 w-6" />}
                 title={`No ${decisionTab === 'accept' ? 'accepted' : 'rejected'} decisions waiting`}
@@ -983,7 +1050,10 @@ function LearnedDecisionsCard() {
                     <LearnedHeader label="Source" help="The normalized column name, or field and raw value, that this learned decision applies to." />
                   </th>
                   <th className="px-2 py-2">
-                    <LearnedHeader label="Target / effect" help="For accepted decisions, the field or ontology term to reuse. For rejected decisions, the automatic proposal that curators declined." />
+                    <LearnedHeader
+                      label="Effect / target"
+                      help="The decision effect first, followed by the field or ontology target when the decision was accepted."
+                    />
                   </th>
                   <th className="px-2 py-2 text-center">
                     <LearnedHeader label="Curators" help="Number of distinct curators who made this exact same decision." centered />
@@ -1015,13 +1085,9 @@ function LearnedDecisionsCard() {
                         <Badge tone={c.decision === 'accept' ? 'green' : 'rose'}>
                           {c.decision === 'accept' ? 'Accepted' : 'Rejected'}
                         </Badge>
-                        <span>
-                          {c.decision === 'reject'
-                            ? c.kind === 'schema'
-                              ? 'Automatic field mapping'
-                              : 'Automatic ontology term'
-                            : `${c.target_field ?? c.target_term ?? ''}${c.target_id ? ` (${c.target_id})` : ''}`}
-                        </span>
+                        {c.decision === 'accept' && (
+                          <span>{`${c.target_field ?? c.target_term ?? ''}${c.target_id ? ` (${c.target_id})` : ''}`}</span>
+                        )}
                       </span>
                     </td>
                     <td className="px-2 py-2 text-center font-semibold text-slate-700 dark:text-slate-300">{c.curators}</td>
@@ -1060,6 +1126,107 @@ function LearnedDecisionsCard() {
         )}
       </CardBody>
     </Card>
+  );
+}
+
+function SharedLearnedTable({
+  rows,
+  selected,
+  allSelected,
+  busy,
+  onToggle,
+  onToggleAll,
+  onUnpromote,
+}: {
+  rows: SharedLearnedDecision[];
+  selected: Set<string>;
+  allSelected: boolean;
+  busy: boolean;
+  onToggle: (key: string) => void;
+  onToggleAll: () => void;
+  onUnpromote: (items: SharedLearnedDecision[]) => void;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-slate-100 text-left text-xs uppercase tracking-wide text-slate-400 dark:border-slate-800">
+            <th className="w-10 px-2 py-2">
+              <input
+                type="checkbox"
+                className="checkbox"
+                checked={allSelected}
+                onChange={onToggleAll}
+                aria-label="Select all globally promoted decisions"
+              />
+            </th>
+            <th className="px-2 py-2">
+              <LearnedHeader label="Kind" help="Schema means a column-to-field mapping. Ontology means a raw value-to-standard-term mapping." />
+            </th>
+            <th className="px-2 py-2">
+              <LearnedHeader label="Source" help="The normalized source this global rule matches on future studies." />
+            </th>
+            <th className="px-2 py-2">
+              <LearnedHeader label="Effect / target" help="The global decision effect first, followed by its field or ontology target when accepted." />
+            </th>
+            <th className="px-2 py-2">
+              <LearnedHeader label="Promoted" help="When this decision most recently became a global rule." />
+            </th>
+            <th className="px-2 py-2 text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const selectionKey = `shared:${row.id}`;
+            return (
+              <tr
+                key={row.id}
+                className={`border-b border-slate-50 dark:border-slate-800/60 ${selected.has(selectionKey) ? 'bg-amber-50/60 dark:bg-amber-500/10' : ''}`}
+              >
+                <td className="px-2 py-2">
+                  <input
+                    type="checkbox"
+                    className="checkbox"
+                    checked={selected.has(selectionKey)}
+                    onChange={() => onToggle(selectionKey)}
+                    aria-label={`Select ${row.source_key}`}
+                  />
+                </td>
+                <td className="px-2 py-2">
+                  <Badge tone={row.kind === 'schema' ? 'primary' : 'slate'}>{row.kind}</Badge>
+                </td>
+                <td className="px-2 py-2 font-mono text-xs text-slate-600 dark:text-slate-300">{row.source_key}</td>
+                <td className="px-2 py-2 text-slate-700 dark:text-slate-300">
+                  <span className="flex items-center gap-2">
+                    <Badge tone={row.decision === 'accept' ? 'green' : 'rose'}>
+                      {row.decision === 'accept' ? 'Accepted' : 'Rejected'}
+                    </Badge>
+                    {row.decision === 'accept' && (
+                      <span>{`${row.target_field ?? row.target_term ?? ''}${row.target_id ? ` (${row.target_id})` : ''}`}</span>
+                    )}
+                  </span>
+                </td>
+                <td className="px-2 py-2 text-xs text-slate-500 dark:text-slate-400">
+                  {new Date(row.updated_at).toLocaleDateString()}
+                </td>
+                <td className="px-2 py-2 text-right">
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    loading={busy}
+                    icon={<RotateCcw className="h-3.5 w-3.5" />}
+                    onClick={() => onUnpromote([row])}
+                    title="Stop applying this rule globally to future studies"
+                  >
+                    Stop sharing
+                  </Button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

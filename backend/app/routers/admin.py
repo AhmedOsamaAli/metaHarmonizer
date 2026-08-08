@@ -541,6 +541,10 @@ class ReviewLearnedRequest(BaseModel):
     candidates: list[PromoteRequest]
 
 
+class UnpromoteLearnedRequest(BaseModel):
+    ids: list[int]
+
+
 @router.get("/learned-decisions/candidates")
 async def learned_promotion_candidates(
     min_support: int = 1,
@@ -551,6 +555,15 @@ async def learned_promotion_candidates(
     curators, total support), excluding entries already promoted to shared."""
     candidates = await ld_repo.promotion_candidates(db, min_support=min_support)
     return {"count": len(candidates), "candidates": candidates}
+
+
+@router.get("/learned-decisions/shared")
+async def shared_learned_decisions(
+    _admin: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    shared = await ld_repo.list_shared(db)
+    return {"count": len(shared), "shared": shared}
 
 
 @router.post("/learned-decisions/promote")
@@ -605,3 +618,24 @@ async def review_learned_decisions(
 
     await db.commit()
     return {"action": body.action, "count": len(reviewed), "reviewed": reviewed}
+
+
+@router.post("/learned-decisions/unpromote")
+async def unpromote_learned_decisions(
+    body: UnpromoteLearnedRequest,
+    admin: User = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    ids = list(dict.fromkeys(body.ids))
+    if not ids or len(ids) > 100:
+        raise HTTPException(status_code=422, detail="Select between 1 and 100 promoted decisions.")
+
+    removed = await ld_repo.unpromote(db, ids)
+    for row in removed:
+        await audit_repo.add_audit_entry(
+            db, study_id=None, action="kb_unpromote",
+            new_value=f"{row['kind']}:{row['source_key']}",
+            actor_id=admin.id, curator=actor_label(admin),
+        )
+    await db.commit()
+    return {"count": len(removed), "unpromoted": removed}

@@ -269,10 +269,27 @@ export interface LearnedCandidate {
     support: number;
 }
 
+export interface SharedLearnedDecision {
+    id: number;
+    scope: 'shared';
+    kind: 'schema' | 'ontology';
+    source_key: string;
+    decision: 'accept' | 'reject';
+    target_field: string | null;
+    target_term: string | null;
+    target_id: string | null;
+    promoted_by: number | null;
+    updated_at: string;
+}
+
 export async function adminListLearnedCandidates(
     minSupport = 1,
 ): Promise<{ count: number; candidates: LearnedCandidate[] }> {
     return apiFetch(`/admin/learned-decisions/candidates?min_support=${minSupport}`);
+}
+
+export async function adminListSharedLearned(): Promise<{ count: number; shared: SharedLearnedDecision[] }> {
+    return apiFetch('/admin/learned-decisions/shared');
 }
 
 export async function adminReviewLearned(
@@ -293,6 +310,14 @@ export async function adminReviewLearned(
                 target_id: candidate.target_id,
             })),
         }),
+    });
+}
+
+export async function adminUnpromoteLearned(ids: number[]): Promise<{ count: number }> {
+    return apiFetch('/admin/learned-decisions/unpromote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
     });
 }
 

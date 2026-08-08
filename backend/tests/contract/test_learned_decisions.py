@@ -112,6 +112,33 @@ async def test_personal_overrides_shared(kb_db):
         assert hit[key]["target_id"] == "UBERON:0000160"
 
 
+async def test_unpromote_removes_only_shared_rule(kb_db):
+    async with kb_db() as s:
+        alice = await _mk_user(s, f"ual_{uuid.uuid4().hex[:6]}@example.com")
+        bob = await _mk_user(s, f"ubo_{uuid.uuid4().hex[:6]}@example.com")
+        admin_id = await _mk_user(s, f"uad_{uuid.uuid4().hex[:6]}@example.com")
+        key = ld_repo.schema_key(f"Treatment {uuid.uuid4().hex[:6]}")
+
+        await ld_repo.record_personal(
+            s, owner_id=alice, kind="schema", source_key=key,
+            decision="accept", target_field="TREATMENT",
+        )
+        promoted = await ld_repo.promote(
+            s, kind="schema", source_key=key, decision="accept",
+            admin_id=admin_id, target_field="TREATMENT",
+        )
+        await s.commit()
+
+        assert key in await ld_repo.lookup_batch(s, kind="schema", keys=[key], owner_id=bob)
+        removed = await ld_repo.unpromote(s, [promoted["id"], alice])
+        await s.commit()
+
+        assert [row["id"] for row in removed] == [promoted["id"]]
+        assert key not in await ld_repo.lookup_batch(s, kind="schema", keys=[key], owner_id=bob)
+        assert key in await ld_repo.lookup_batch(s, kind="schema", keys=[key], owner_id=alice)
+        assert any(row["source_key"] == key for row in await ld_repo.promotion_candidates(s))
+
+
 async def test_dismissal_hides_only_the_exact_candidate(kb_db):
     async with kb_db() as s:
         alice = await _mk_user(s, f"dal_{uuid.uuid4().hex[:6]}@example.com")

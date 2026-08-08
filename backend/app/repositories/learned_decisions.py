@@ -16,7 +16,7 @@ import json
 import re
 from typing import Any
 
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -175,6 +175,46 @@ async def list_for_owner(db: AsyncSession, owner_id: int) -> list[dict[str, Any]
         )
     ).scalars().all()
     return [_to_dict(r) for r in rows]
+
+
+async def list_shared(db: AsyncSession) -> list[dict[str, Any]]:
+    rows = (
+        await db.execute(
+            select(LearnedDecision)
+            .where(LearnedDecision.scope == "shared")
+            .order_by(LearnedDecision.updated_at.desc())
+        )
+    ).scalars().all()
+    return [
+        {
+            **_to_dict(row),
+            "promoted_by": row.promoted_by,
+            "updated_at": row.updated_at.isoformat(),
+        }
+        for row in rows
+    ]
+
+
+async def unpromote(db: AsyncSession, ids: list[int]) -> list[dict[str, Any]]:
+    rows = (
+        await db.execute(
+            select(LearnedDecision).where(
+                LearnedDecision.id.in_(ids),
+                LearnedDecision.scope == "shared",
+            )
+        )
+    ).scalars().all()
+    if rows:
+        await db.execute(
+            delete(LearnedDecision).where(
+                LearnedDecision.id.in_([row.id for row in rows]),
+                LearnedDecision.scope == "shared",
+            )
+        )
+    return [
+        {"id": row.id, "kind": row.kind, "source_key": row.source_key}
+        for row in rows
+    ]
 
 
 async def promotion_candidates(db: AsyncSession, *, min_support: int = 1) -> list[dict[str, Any]]:
