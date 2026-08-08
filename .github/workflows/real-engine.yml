@@ -1,4 +1,4 @@
-name: real-engine
+name: Real Engine Regression
 
 # Exercises the ACTUAL upstream metaharmonizer engine (not the mock) on a tiny
 # input, so drift between our adapter and the real engine's output contract is
@@ -20,6 +20,7 @@ concurrency:
 
 jobs:
   schema:
+    name: Real Schema Mapping
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:

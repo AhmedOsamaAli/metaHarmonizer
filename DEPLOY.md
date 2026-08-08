@@ -1,8 +1,17 @@
 # Self-hosting MetaHarmonizer
 
-A step-by-step runbook to stand up a production instance with Docker Compose.
-Target: a curator team self-hosts on one VM. The stack is **Postgres + Redis +
-API + arq worker + Caddy (serving the built SPA)**.
+A provider-neutral runbook to stand up a production instance with Docker
+Compose on any Linux VM or compatible container host. The stack is **Postgres +
+Redis + API + arq worker + Caddy (serving the built SPA)**. Cloud-specific VM,
+DNS, firewall, secret-manager, scheduler, and backup-storage setup stays outside
+the application boundary.
+
+All production commands below use both Compose files so the development override
+is never loaded accidentally:
+
+```bash
+export COMPOSE_FILE=docker-compose.yml:docker-compose.prod.yml
+```
 
 ## 1. Requirements
 
@@ -81,8 +90,10 @@ harmonization to confirm the engine loads offline.
 
 ## 7. TLS / domain
 
-Edit the `Caddyfile` to your domain; Caddy provisions and renews certificates
-automatically. Set `APP_BASE_URL=https://...` and `COOKIE_SECURE=true` in `.env`.
+Set `DOMAIN`, `ACME_EMAIL`, `APP_BASE_URL=https://...`, and
+`COOKIE_SECURE=true` in `.env`. `Caddyfile.prod` provisions and renews
+certificates automatically. Point the chosen DNS provider's A/AAAA records at
+the host and allow inbound TCP 80/443.
 
 ## 8. Operations
 
@@ -94,12 +105,14 @@ automatically. Set `APP_BASE_URL=https://...` and `COOKIE_SECURE=true` in `.env`
 - **Upgrades:** `git pull && docker compose up -d --build` (migrations re-run).
 - **Scale throughput:** `docker compose up -d --scale worker=N`.
 
-## 10. Encrypted PostgreSQL backups to R2
+## 9. Encrypted PostgreSQL backups to S3-compatible storage
 
-Backups use a dedicated Cloudflare R2 bucket and credentials, separate from
-application object storage. Dumps are encrypted on the VM with AES-256-GCM
-before upload. The default retention policy keeps the newest 7 daily, 4 weekly,
-and 12 monthly restore points.
+Backups use a dedicated S3-compatible bucket and credentials, separate from
+application object storage. Cloudflare R2 is the current target, but AWS S3,
+MinIO, and compatible institutional storage use the same endpoint/bucket/key
+interface. Dumps are encrypted on the host with AES-256-GCM before upload. The
+default retention policy keeps the newest 7 daily, 4 weekly, and 12 monthly
+restore points.
 
 Generate the host-only encryption key once:
 
@@ -121,9 +134,10 @@ docker compose run --rm \
   api python -m scripts.backup_postgres backup
 ```
 
-Install `deploy/systemd/metaharmonizer-backup.service` and `.timer`, adjusting
-`WorkingDirectory` and the key-file host path. Enable only after the manual
-backup succeeds:
+Schedule the same one-shot backup command with the host's scheduler only after
+the manual backup and clean restore drill succeed. The repository provides an
+optional systemd adapter for Linux VMs; adjust `User`, `WorkingDirectory`, and
+the key-file host path before installation:
 
 ```bash
 sudo cp deploy/systemd/metaharmonizer-backup.* /etc/systemd/system/
@@ -145,7 +159,11 @@ docker compose run --rm \
 Then point a temporary API container at that database and run `/healthz` plus
 the production audit. Never use `--allow-production` during a restore drill.
 
-## 9. cBioPortal validation gate
+For Kubernetes, Nomad, or a managed scheduler, run the same Compose/API command
+as a scheduled job and mount the encryption key from that platform's secret
+store. The backup format and restore CLI are platform-independent.
+
+## 10. cBioPortal validation gate
 
 Before loading a study into cBioPortal, the export runs the LinkML vocabulary
 gate. To also run cBioPortal's own `validateData.py`, point the integration test

@@ -1,0 +1,45 @@
+# Production Readiness Roadmap
+
+This is the current provider-neutral closure plan for moving from public beta to an institution-operated service. A gap stays here until its evidence is linked from the verification response.
+
+## Engineering work requiring no external credentials
+
+| Priority | Work | Completion evidence |
+| --- | --- | --- |
+| P0 | Generate CycloneDX SBOMs for API and web images in CI and retain them with each release | Downloadable SBOM artifacts; package counts validated |
+| P0 | Document and exercise application rollback, including database compatibility rules | Timed staging rollback record with health and login checks |
+| P0 | Document rotation for JWT, database, email, backup, TLS-contact, SSH, and federation credentials | Runbook reviewed; non-production rotation drill passes |
+| P1 | Add a Sentry `before_send` scrubber and synthetic sensitive-data tests | Tests prove filenames, emails, identifiers, and values are redacted |
+| P1 | Add a versioned mapping benchmark and fail KB refresh on accuracy regression | Before/after benchmark artifact and enforced threshold |
+| P1 | Establish capacity limits with concurrent upload/job/ML load tests | Published safe concurrency, jobs/day, memory, latency, and disk thresholds |
+| P1 | Add coverage reporting and an agreed minimum gate | CI coverage artifact and enforced threshold |
+| P2 | Add intentional `robots.txt`/sitemap behavior and link the beta when approved | Public indexing behavior matches the selected policy |
+| P2 | Publish a standalone curator manual | Versioned guide covering upload, review, quality, export, and support |
+
+## Work requiring service credentials or owner decisions
+
+| Priority | Work | Needed input | Completion evidence |
+| --- | --- | --- | --- |
+| P0 | Activate encrypted off-host backups and perform a clean restore drill | S3-compatible bucket, endpoint, access-key ID, secret key | Scheduled backup, retained object, clean restore, application verification |
+| P0 | Configure operational alerts | Alert destination and accountable on-call recipients; optional Sentry/Grafana credentials | Delivered test alerts for health, 5xx, queue depth, failed jobs, disk, and stale backup |
+| P0 | Complete ownership and recovery inventory | Oracle/cloud, registrar/DNS, GitHub, Resend, SSH, database, recovery and 2FA owners | Two authorized administrators and tested recovery path per service |
+| P1 | Run authenticated browser journey in hosted CI | Dedicated non-production E2E account | Playwright journey passes without personal credentials |
+| P1 | Decide registration/indexing/GA policy | Institution-approved public-access policy | Configuration and documentation match the decision |
+| P1 | Independent curator usability exercise | Curator not involved in development | Completed task record, feedback, and resolved blocking issues |
+| P1 | Confirm cost and migration decision | Billing-console evidence and institutional hosting requirements | Signed continue/migrate decision with target budget and owner |
+
+## External/upstream constraints
+
+- The pinned Python base currently has high/critical Debian advisories for which no fixed package version exists. CI blocks every fixable high/critical OS finding and Dependabot tracks base digest updates.
+- Public React Router 6 has no compatible release resolving all reported moderate advisories. Dynamic navigation is constrained by an application-level internal-path guard; a Router 7 migration remains a separately tested major upgrade.
+
+## Portability rule
+
+Application behavior is defined by Dockerfiles, Compose files, environment variables, health checks, and one-shot operational commands. Provider-specific concerns are adapters only:
+
+- DNS may be hosted by any provider.
+- Caddy handles ACME-compatible public TLS.
+- Backups target any S3-compatible object store.
+- Backup scheduling may use systemd, cron, Kubernetes CronJob, Nomad, or a managed scheduler.
+- Secrets may come from a mode-0600 environment file or the target platform's secret manager.
+- A migration transfers PostgreSQL, persistent object/upload data, the KB/model bundle, configuration, and DNS; it does not require application code changes.

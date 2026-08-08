@@ -1,4 +1,4 @@
-name: deploy-smoke
+name: Container Deployment Smoke
 
 # Verifies the self-host deployment shape (U15): the docker-compose stack
 # builds, boots, runs migrations, and serves an authenticated request — the
@@ -27,6 +27,7 @@ on:
 
 jobs:
   compose-smoke:
+    name: Build, Scan, and Runtime Smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

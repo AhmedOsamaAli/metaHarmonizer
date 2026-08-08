@@ -1,4 +1,4 @@
-name: engine-boundary
+name: Engine Adapter Contract
 
 # Enforces the engine-adapter import boundary in CI.
 # See backend/app/engine_adapter/README.md
@@ -14,6 +14,7 @@ on:
 
 jobs:
   boundary:
+    name: Import Boundary
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -24,6 +25,7 @@ jobs:
         run: python scripts/check_engine_boundary.py
 
   mock-smoke:
+    name: Mock Engine Smoke
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5

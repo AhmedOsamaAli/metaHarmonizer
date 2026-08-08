@@ -1,4 +1,4 @@
-name: Refresh KB bundle
+name: Knowledge Base Refresh
 
 # Rebuilds the offline KB + embedding-model bundle from the *current* source
 # ontologies and republishes it as the `kb-latest` release asset. The engine KB

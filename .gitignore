@@ -91,6 +91,9 @@ backend/data/schema/aliases/
 
 # Internal architecture docs (not shipped)
 docs/
+!docs/
+docs/*
+!docs/readiness-roadmap.md
 
 
 # Local KB build output (large; built offline, distributed via the export CLI)

@@ -1,4 +1,4 @@
-name: engine-bump
+name: Engine Upgrade
 
 # Fetch a new upstream engine version, build + vendor its wheel, verify it works
 # against our adapter contract AND the real engine, then open a PR. This is the
@@ -30,6 +30,7 @@ concurrency:
 
 jobs:
   bump:
+    name: Build and Verify Engine Upgrade
     runs-on: ubuntu-latest
     timeout-minutes: 60
     services:

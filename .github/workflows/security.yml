@@ -1,4 +1,4 @@
-name: security
+name: Security Gates
 
 on:
   push:
@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   secrets:
+    name: Secret Scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -37,6 +38,7 @@ jobs:
           /tmp/gitleaks/gitleaks git . --log-opts="--all" --redact=100 --no-banner
 
   python-dependencies:
+    name: Python Dependency Audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -48,6 +50,7 @@ jobs:
           python -m pip_audit --vulnerability-service osv --requirement .audit-requirements.txt
 
   node-dependencies:
+    name: Node Dependency Audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -62,6 +65,7 @@ jobs:
         run: npm audit --audit-level=high
 
   configuration:
+    name: Deployment Configuration Scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -80,6 +84,7 @@ jobs:
           /tmp/trivy/trivy config --severity HIGH,CRITICAL --exit-code 1 --quiet .
 
   codeql:
+    name: CodeQL (${{ matrix.language }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
