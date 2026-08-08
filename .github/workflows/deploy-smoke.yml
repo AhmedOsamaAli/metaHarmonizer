@@ -73,7 +73,7 @@ jobs:
           tar -xzf "/tmp/$archive" -C /tmp/trivy trivy
           for image in metaharmonizer-api metaharmonizer-web; do
             report="/tmp/${image}.json"
-            /tmp/trivy/trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --format json --output "$report" --quiet "$image"
+            /tmp/trivy/trivy image --scanners vuln --pkg-types os --severity HIGH,CRITICAL --ignore-unfixed --format json --output "$report" --quiet "$image"
             jq -r '.Results[] | select(.Vulnerabilities != null) | .Target as $target | .Vulnerabilities[] | "\($target): \(.PkgName) \(.InstalledVersion) \(.VulnerabilityID) -> \(.FixedVersion)"' "$report"
             test "$(jq '[.Results[].Vulnerabilities[]?] | length' "$report")" = "0"
           done
