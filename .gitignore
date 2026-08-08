@@ -95,6 +95,8 @@ docs/
 docs/*
 !docs/readiness-roadmap.md
 !docs/rollback-drill-2026-08-09.md
+!docs/credential-rotation.md
+!docs/credential-rotation-drill-2026-08-09.md
 
 
 # Local KB build output (large; built offline, distributed via the export CLI)

@@ -8,7 +8,7 @@ This is the current provider-neutral closure plan for moving from public beta to
 | --- | --- | --- |
 | P0 | ✅ Generate CycloneDX SBOMs for API and web images in CI and retain them with each release | Hosted run `31279555556` uploaded both CycloneDX 1.7 files for 90 days and passed the full image/runtime smoke; downloaded artifact counts: API 273, web 15; `v*` releases retain both permanently |
 | P0 | ✅ Document and exercise application rollback, including database compatibility rules | `docs/rollback-drill-2026-08-09.md`: 42-second exact-revision rollback, migration guard, health checks, authenticated login, automatic recovery, and verified roll-forward |
-| P0 | Document rotation for JWT, database, email, backup, TLS-contact, SSH, and federation credentials | Runbook reviewed; non-production rotation drill passes |
+| P0 | ✅ Document rotation for JWT, database, email, backup, TLS-contact, SSH, and federation credentials | `docs/credential-rotation.md` and dated drill evidence cover all credential classes; JWT/backup/federation tests, disposable PostgreSQL rotation, Caddy validation, and SSH overlap passed; provider-owner acceptance remains separately tracked |
 | P1 | Add a Sentry `before_send` scrubber and synthetic sensitive-data tests | Tests prove filenames, emails, identifiers, and values are redacted |
 | P1 | Add a versioned mapping benchmark and fail KB refresh on accuracy regression | Before/after benchmark artifact and enforced threshold |
 | P1 | Establish capacity limits with concurrent upload/job/ML load tests | Published safe concurrency, jobs/day, memory, latency, and disk thresholds |
