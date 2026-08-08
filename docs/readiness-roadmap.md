@@ -43,3 +43,11 @@ Application behavior is defined by Dockerfiles, Compose files, environment varia
 - Backup scheduling may use systemd, cron, Kubernetes CronJob, Nomad, or a managed scheduler.
 - Secrets may come from a mode-0600 environment file or the target platform's secret manager.
 - A migration transfers PostgreSQL, persistent object/upload data, the KB/model bundle, configuration, and DNS; it does not require application code changes.
+
+## Dependency update policy
+
+- Dependabot creates one grouped patch/minor PR per ecosystem each week.
+- Patch/minor PRs receive the `automerge` label and queue for squash merge only after every protected CI and security check passes on the latest `main`.
+- Merged branches are deleted automatically.
+- Major upgrades are not opened automatically. They are added to the engineering roadmap, tested deliberately (including migration notes and real-engine/browser coverage where relevant), and merged manually.
+- Failed or superseded automation PRs are closed rather than accumulated or merged with partial checks.
