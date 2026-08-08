@@ -12,6 +12,7 @@ name: Container Deployment Smoke
 on:
   push:
     branches: [main]
+    tags: ["v*"]
     paths:
       - "docker-compose.yml"
       - "backend/**"
@@ -19,6 +20,9 @@ on:
       - ".github/workflows/deploy-smoke.yml"
   pull_request:
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   compose-smoke:
@@ -55,7 +59,7 @@ jobs:
       - name: Build application images
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build api web
 
-      - name: Scan application images
+      - name: Install Trivy
         env:
           TRIVY_VERSION: "0.73.0"
         run: |
@@ -67,6 +71,33 @@ jobs:
           grep " $archive$" /tmp/trivy-checksums.txt | sed 's|  |  /tmp/|' | sha256sum --check --strict
           mkdir /tmp/trivy
           tar -xzf "/tmp/$archive" -C /tmp/trivy trivy
+
+      - name: Generate CycloneDX SBOMs
+        run: |
+          set -euo pipefail
+          for image in metaharmonizer-api metaharmonizer-web; do
+            output="${image}.cdx.json"
+            /tmp/trivy/trivy image --format cyclonedx --output "$output" --quiet "$image"
+            component_count=$(jq '.components | length' "$output")
+            echo "$image: $component_count components"
+            case "$image" in
+              metaharmonizer-api) minimum=250 ;;
+              metaharmonizer-web) minimum=10 ;;
+            esac
+            test "$component_count" -ge "$minimum"
+          done
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cyclonedx-sboms-${{ github.sha }}
+          path: metaharmonizer-*.cdx.json
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Scan application images
+        run: |
+          set -euo pipefail
           for image in metaharmonizer-api metaharmonizer-web; do
             report="/tmp/${image}.json"
             /tmp/trivy/trivy image --scanners vuln --pkg-types os --severity HIGH,CRITICAL --ignore-unfixed --format json --output "$report" --quiet "$image"
@@ -118,3 +149,28 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
+
+  publish-release-sboms:
+    name: Publish Release SBOMs
+    if: github.ref_type == 'tag'
+    needs: compose-smoke
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download validated SBOM artifacts
+        uses: actions/download-artifact@v5
+        with:
+          name: cyclonedx-sboms-${{ github.sha }}
+
+      - name: Attach SBOMs to tagged release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release view "${{ github.ref_name }}" >/dev/null 2>&1 || \
+            gh release create "${{ github.ref_name }}" --verify-tag --generate-notes
+          gh release upload "${{ github.ref_name }}" \
+            metaharmonizer-api.cdx.json \
+            metaharmonizer-web.cdx.json \
+            --clobber

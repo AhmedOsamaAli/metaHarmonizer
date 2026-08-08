@@ -6,7 +6,7 @@ This is the current provider-neutral closure plan for moving from public beta to
 
 | Priority | Work | Completion evidence |
 | --- | --- | --- |
-| P0 | Generate CycloneDX SBOMs for API and web images in CI and retain them with each release | Downloadable SBOM artifacts; package counts validated |
+| P0 | ✅ Generate CycloneDX SBOMs for API and web images in CI and retain them with each release | `deploy-smoke.yml` uploads both validated SBOMs for 90 days on every image build and attaches them permanently to `v*` releases; observed counts: API 291, web 15 |
 | P0 | Document and exercise application rollback, including database compatibility rules | Timed staging rollback record with health and login checks |
 | P0 | Document rotation for JWT, database, email, backup, TLS-contact, SSH, and federation credentials | Runbook reviewed; non-production rotation drill passes |
 | P1 | Add a Sentry `before_send` scrubber and synthetic sensitive-data tests | Tests prove filenames, emails, identifiers, and values are redacted |
