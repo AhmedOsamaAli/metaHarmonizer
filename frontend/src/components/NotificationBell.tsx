@@ -16,6 +16,7 @@ import {
     type AppNotification,
     type NotificationKind,
 } from '../context/NotificationsContext';
+import { safeInternalPath } from '../lib/navigation';
 
 const KIND_ICON: Record<NotificationKind, ReactNode> = {
     job_done: <CircleCheck className="h-4 w-4 text-emerald-500" />,
@@ -52,7 +53,7 @@ export default function NotificationBell() {
     };
 
     const openNotification = (n: AppNotification) => {
-        if (n.href) navigate(n.href);
+        if (n.href) navigate(safeInternalPath(n.href));
     };
 
     return (

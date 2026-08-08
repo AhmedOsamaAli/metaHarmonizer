@@ -8,12 +8,13 @@ import Input from '../components/ui/Input';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../api/http';
 import { resendVerification } from '../api/auth';
+import { safeInternalPath } from '../lib/navigation';
 
 export default function LoginPage() {
   const { login, startGuestPreview } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: string } | null)?.from ?? '/';
+  const from = safeInternalPath((location.state as { from?: string } | null)?.from);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

@@ -54,7 +54,7 @@ async def client(database_url, monkeypatch):
     created: list[str] = []
 
     async def _make_client():
-        return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+        return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="https://test")
 
     yield _make_client, domain, db_session.SessionLocal
 

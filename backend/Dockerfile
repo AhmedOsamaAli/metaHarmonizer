@@ -20,7 +20,8 @@ RUN apt-get update \
 # is referenced from requirements.txt, so copy it before installing.
 COPY requirements.txt ./
 COPY vendor/ ./vendor/
-RUN pip install -r requirements.txt
+RUN python -m pip install pip==26.2.1 \
+    && pip install -r requirements.txt
 
 # App code (bind-mounted over this in dev via compose, but copied so the
 # image is runnable standalone too).

@@ -14,7 +14,13 @@ def test_short_jwt_secret_rejected_in_jwt_mode():
 
 
 def test_short_jwt_secret_allowed_when_auth_disabled():
-    s = Settings(_env_file=None, auth_mode="none", jwt_secret="short")
+    s = Settings(
+        _env_file=None,
+        auth_mode="none",
+        jwt_secret="short",
+        app_base_url="http://localhost:5173",
+        cookie_secure=False,
+    )
     assert s.auth_mode == "none"
 
 

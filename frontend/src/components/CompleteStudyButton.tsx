@@ -5,6 +5,7 @@ import { CircleCheck, AlertTriangle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCompleteStudy } from '../hooks/queries';
 import { useJobs } from '../context/JobsContext';
+import { safeInternalPath } from '../lib/navigation';
 
 interface Props {
   studyId: string;
@@ -41,7 +42,7 @@ export default function CompleteStudyButton({
         dismiss(studyId);
         setOpen(false);
         toast.success('Study completed');
-        if (redirectTo) navigate(redirectTo);
+        if (redirectTo) navigate(safeInternalPath(redirectTo));
       },
       onError: () => toast.error('Could not complete study'),
     });
