@@ -29,7 +29,7 @@ jobs:
   compose-smoke:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # Minimal env the api/worker/seed services read via `env_file: .env`.
       - name: Write .env

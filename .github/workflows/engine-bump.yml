@@ -55,9 +55,9 @@ jobs:
       JWT_SECRET: test-secret-key-at-least-32-bytes-long!!
       UPSTREAM: https://github.com/shbrief/MetaHarmonizer.git
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
