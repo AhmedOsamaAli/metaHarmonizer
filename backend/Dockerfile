@@ -1,6 +1,27 @@
 # MetaHarmonizer backend — dev image.
 # Single image used for both the API (uvicorn) and the arq worker; the
 # docker-compose `command` selects which one runs.
+FROM python:3.12-slim@sha256:229a2c5bfa27522db7815ea81f9bed70af17ccb9de9fc7ad142b1877b5830d36 AS builder
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    HOME=/home/app
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python deps first (better layer caching). The vendored engine wheel
+# is referenced from requirements.txt, so copy it before installing.
+COPY requirements.txt ./
+COPY vendor/ ./vendor/
+RUN python -m pip install pip==26.2.1 \
+    && pip install -r requirements.txt
+
 FROM python:3.12-slim@sha256:229a2c5bfa27522db7815ea81f9bed70af17ccb9de9fc7ad142b1877b5830d36
 
 ENV PYTHONUNBUFFERED=1 \
@@ -11,18 +32,11 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# System deps: build tools for wheels, curl for healthchecks, and PostgreSQL
-# client tools for encrypted backup/restore operations.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential curl postgresql-client \
+    && apt-get install -y --no-install-recommends curl postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python deps first (better layer caching). The vendored engine wheel
-# is referenced from requirements.txt, so copy it before installing.
-COPY requirements.txt ./
-COPY vendor/ ./vendor/
-RUN python -m pip install pip==26.2.1 \
-    && pip install -r requirements.txt
+COPY --from=builder /usr/local /usr/local
 
 # App code (bind-mounted over this in dev via compose, but copied so the
 # image is runnable standalone too).
