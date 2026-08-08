@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import logging
 from types import SimpleNamespace
 
@@ -86,7 +85,7 @@ def test_schema_upload_path_is_generated_inside_store(monkeypatch, tmp_path):
 @pytest.mark.asyncio
 async def test_hibp_sends_only_sha1_prefix(monkeypatch):
     password = "correct horse battery staple"
-    digest = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()
+    digest = "ABF7AAD6438836DBE526AA231ABDE2D0EEF74D42"
     requested: list[tuple[str, dict[str, str]]] = []
 
     class Response:
