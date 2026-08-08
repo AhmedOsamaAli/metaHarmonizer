@@ -71,8 +71,12 @@ jobs:
           grep " $archive$" /tmp/trivy-checksums.txt | sed 's|  |  /tmp/|' | sha256sum --check --strict
           mkdir /tmp/trivy
           tar -xzf "/tmp/$archive" -C /tmp/trivy trivy
-          /tmp/trivy/trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --quiet metaharmonizer-api
-          /tmp/trivy/trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --quiet metaharmonizer-web
+          for image in metaharmonizer-api metaharmonizer-web; do
+            report="/tmp/${image}.json"
+            /tmp/trivy/trivy image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --format json --output "$report" --quiet "$image"
+            jq -r '.Results[] | select(.Vulnerabilities != null) | .Target as $target | .Vulnerabilities[] | "\($target): \(.PkgName) \(.InstalledVersion) \(.VulnerabilityID) -> \(.FixedVersion)"' "$report"
+            test "$(jq '[.Results[].Vulnerabilities[]?] | length' "$report")" = "0"
+          done
 
       - name: Start stack
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d postgres redis api worker caddy
