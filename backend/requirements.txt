@@ -61,4 +61,4 @@ httpx==0.28.1
 # deps due to a libomp collision with torch on macOS). The ontology path
 # (OntoMapEngine → FAISS RAG) needs it. pip wheels work on Linux/Windows; on
 # macOS install from conda-forge instead (conda install -c conda-forge faiss-cpu).
-faiss-cpu>=1.11.0
+faiss-cpu>=1.15.0
