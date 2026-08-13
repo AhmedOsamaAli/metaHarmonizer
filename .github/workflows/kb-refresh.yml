@@ -19,11 +19,17 @@ name: Knowledge Base Refresh
 # run has been validated end-to-end.
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      reuse_run_id:
+        description: "Prior KB refresh run whose pre-graft checkpoint should be reused"
+        required: false
+        type: string
   # schedule:
   #   - cron: "0 3 1 */3 *"   # quarterly — enable after validating a manual run
 
 permissions:
+  actions: read         # download a pre-graft checkpoint on finalize-only retries
   contents: write        # upload the release asset + push the sha-bump branch
   pull-requests: write   # open the sha-bump PR
 
@@ -86,11 +92,41 @@ jobs:
             --summary-json "${{ runner.temp }}/kb-benchmark/before-summary.json"
 
       - name: Build the KB (fetch ontologies + build FAISS indexes)
+        if: inputs.reuse_run_id == ''
         working-directory: backend
         # NOTE: HF_HUB_OFFLINE is intentionally unset here so the embedding
         # models download during the build; the bundle then ships them for
         # offline runtime use.
         run: python -m scripts.build_kb
+
+      - name: Package pre-graft checkpoint
+        if: inputs.reuse_run_id == ''
+        working-directory: backend
+        run: python -m scripts.package_kb -o "${{ runner.temp }}/kb-base-bundle.tar.gz"
+
+      - name: Upload pre-graft checkpoint
+        if: inputs.reuse_run_id == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: kb-base-${{ github.run_id }}
+          path: ${{ runner.temp }}/kb-base-bundle.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Restore a prior pre-graft checkpoint
+        if: inputs.reuse_run_id != ''
+        working-directory: backend
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REUSE_RUN_ID: ${{ inputs.reuse_run_id }}
+        run: |
+          mkdir -p "${{ runner.temp }}/kb-base"
+          gh run download "$REUSE_RUN_ID" \
+            --name "kb-base-$REUSE_RUN_ID" \
+            --dir "${{ runner.temp }}/kb-base"
+          python -m scripts.seed_kb \
+            "${{ runner.temp }}/kb-base/kb-base-bundle.tar.gz" --force
 
       - name: Graft EFO + warmed schema cache forward (not rebuildable)
         working-directory: backend
