@@ -54,9 +54,9 @@ def _copy_efo_tables(old_db: Path, new_db: Path) -> None:
             )
         ]
         for t in tables:
-            con.execute(f'DROP TABLE IF EXISTS "{t}"')
-            con.execute(f'CREATE TABLE "{t}" AS SELECT * FROM old."{t}"')
-            n = con.execute(f'SELECT count(*) FROM "{t}"').fetchone()[0]
+            con.execute(f'DROP TABLE IF EXISTS main."{t}"')
+            con.execute(f'CREATE TABLE main."{t}" AS SELECT * FROM old."{t}"')
+            n = con.execute(f'SELECT count(*) FROM main."{t}"').fetchone()[0]
             print(f"[graft] EFO table {t}: {n} row(s)")
         con.commit()
         if not tables:
