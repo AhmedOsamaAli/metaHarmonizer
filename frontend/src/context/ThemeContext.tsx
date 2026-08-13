@@ -17,8 +17,7 @@ function getInitialTheme(): Theme {
   } catch {
     /* ignore */
   }
-  // Dark by default when the user hasn't explicitly chosen a theme.
-  return 'dark';
+  return 'light';
 }
 
 /** App-wide light/dark theme. Persists to localStorage and toggles the `dark`

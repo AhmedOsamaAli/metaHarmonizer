@@ -10,11 +10,11 @@ import { ThemeProvider } from './context/ThemeContext';
 import { TourProvider } from './components/Walkthrough';
 import './index.css';
 
-// Apply the saved/system theme before first paint. Bundled (served from 'self'),
+// Apply the saved theme before first paint. Bundled (served from 'self'),
 // so it satisfies the CSP that blocks inline <script> in index.html.
 try {
   const saved = localStorage.getItem('theme');
-  const dark = saved ? saved === 'dark' : true; // dark by default
+  const dark = saved === 'dark';
   document.documentElement.classList.toggle('dark', dark);
 } catch {
   /* ignore */
