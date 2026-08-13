@@ -1,4 +1,4 @@
-"""Ontology-mapping evaluation harness (Sehyun's om_benchmark_* sets).
+r"""Ontology-mapping evaluation harness (Sehyun's om_benchmark_* sets).
 
 Runs the REAL ``OntoMapEngine`` over a benchmark's ``query`` column and scores
 its top match against the ground-truth ``ref_match`` / ``ref_match_id``.
@@ -23,6 +23,9 @@ directly (scripts/ is outside the app import boundary).
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -79,7 +82,42 @@ def _load_corpus_codes(category: str, source: str) -> dict[str, str]:
     return out
 
 
+def build_summary(
+    *,
+    benchmark: Path,
+    category: str,
+    source: str,
+    query_count: int,
+    predicted_count: int,
+    label_hits: int,
+    id_hits: int,
+    elapsed_seconds: float,
+) -> dict[str, object]:
+    denominator = query_count or 1
+    return {
+        "schema_version": 1,
+        "benchmark_id": benchmark.stem,
+        "benchmark_sha256": hashlib.sha256(benchmark.read_bytes()).hexdigest(),
+        "category": category,
+        "ontology_source": source,
+        "bundle_sha256": os.getenv("BENCHMARK_BUNDLE_SHA256", ""),
+        "query_count": query_count,
+        "predicted_count": predicted_count,
+        "label_hits": label_hits,
+        "id_hits": id_hits,
+        "match_rate": round(predicted_count / denominator, 6),
+        "label_hit_rate": round(label_hits / denominator, 6),
+        "id_hit_rate": round(id_hits / denominator, 6),
+        "elapsed_seconds": round(elapsed_seconds, 3),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, OSError):
+            pass
     ap = argparse.ArgumentParser(description="Evaluate ontology mapping against a benchmark CSV.")
     ap.add_argument("--benchmark", required=True, type=Path, help="CSV with query,ref_match,ref_match_id.")
     ap.add_argument("--category", default="disease", help="OntoMapEngine corpus category (default: disease).")
@@ -91,6 +129,8 @@ def main(argv: list[str] | None = None) -> int:
                          "(measure stage-1+2 only). Use when the concept table isn't available "
                          "offline, e.g. the EFO merged corpus whose codes aren't OLS-fetchable.")
     ap.add_argument("--out", type=Path, default=None, help="Optional per-row results CSV.")
+    ap.add_argument("--summary-json", type=Path, default=None,
+                    help="Optional machine-readable aggregate metrics JSON.")
     args = ap.parse_args(argv)
 
     if not args.benchmark.exists():
@@ -174,6 +214,21 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  produced a match  : {predicted}/{len(rows)} ({predicted / n:.1%})")
     print(f"  LABEL match (top-1): {label_hits}/{len(rows)} ({label_hits / n:.1%})")
     print(f"  id match (same-ontology only): {idmatch}/{len(rows)} ({idmatch / n:.1%})")
+
+    summary = build_summary(
+        benchmark=args.benchmark,
+        category=args.category,
+        source=args.source,
+        query_count=len(rows),
+        predicted_count=predicted,
+        label_hits=label_hits,
+        id_hits=idmatch,
+        elapsed_seconds=elapsed,
+    )
+    if args.summary_json:
+        args.summary_json.parent.mkdir(parents=True, exist_ok=True)
+        args.summary_json.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+        print(f"[eval] summary -> {args.summary_json}")
 
     if args.out:
         pd.DataFrame(rows).to_csv(args.out, index=False)

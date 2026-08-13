@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "ncit_disease_efo_v1",
+  "benchmark_sha256": "9af90656363d5edef9ef45bcd9c018ed53d4f6cc4d68e90289b3eccba2d987ae",
+  "minimum_queries": 200,
+  "metrics": {
+    "match_rate": {
+      "minimum": 0.99,
+      "max_absolute_drop": 0.01
+    },
+    "label_hit_rate": {
+      "minimum": 0.29,
+      "max_absolute_drop": 0.02
+    }
+  }
+}

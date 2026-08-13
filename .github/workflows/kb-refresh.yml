@@ -54,19 +54,43 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build the KB (fetch ontologies + build FAISS indexes)
-        working-directory: backend
-        # NOTE: HF_HUB_OFFLINE is intentionally unset here so the embedding
-        # models download during the build; the bundle then ships them for
-        # offline runtime use.
-        run: python -m scripts.build_kb
-
       - name: Fetch the current published bundle (source of EFO + warmed cache)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p /tmp/cur
           gh release download kb-latest -p kb_offline_bundle.tar.gz -D /tmp/cur
+
+      - name: Identify the current published bundle
+        id: current_sha
+        run: |
+          SHA=$(sha256sum /tmp/cur/kb_offline_bundle.tar.gz | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Benchmark the current published bundle
+        working-directory: backend
+        env:
+          KNOWLEDGE_DB_DIR: ${{ runner.temp }}/kb-before/knowledge
+          METAHARMONIZER_DATA_DIR: ${{ runner.temp }}/kb-before/data
+          HF_HOME: ${{ runner.temp }}/kb-before/huggingface
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+          BENCHMARK_BUNDLE_SHA256: ${{ steps.current_sha.outputs.sha256 }}
+        run: |
+          mkdir -p "${{ runner.temp }}/kb-benchmark"
+          python -m scripts.seed_kb /tmp/cur/kb_offline_bundle.tar.gz --force
+          python -m scripts.eval_ontology \
+            --benchmark benchmarks/ontology/ncit_disease_efo_v1.csv \
+            --category disease --source ncit --limit 0 \
+            --out "${{ runner.temp }}/kb-benchmark/before-rows.csv" \
+            --summary-json "${{ runner.temp }}/kb-benchmark/before-summary.json"
+
+      - name: Build the KB (fetch ontologies + build FAISS indexes)
+        working-directory: backend
+        # NOTE: HF_HUB_OFFLINE is intentionally unset here so the embedding
+        # models download during the build; the bundle then ships them for
+        # offline runtime use.
+        run: python -m scripts.build_kb
 
       - name: Graft EFO + warmed schema cache forward (not rebuildable)
         working-directory: backend
@@ -91,6 +115,37 @@ jobs:
             echo "- size: ${SIZE} bytes"
             echo "- sha256: \`${SHA}\`"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Benchmark the candidate bundle
+        working-directory: backend
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+          BENCHMARK_BUNDLE_SHA256: ${{ steps.sha.outputs.sha256 }}
+        run: |
+          python -m scripts.eval_ontology \
+            --benchmark benchmarks/ontology/ncit_disease_efo_v1.csv \
+            --category disease --source ncit --limit 0 \
+            --out "${{ runner.temp }}/kb-benchmark/after-rows.csv" \
+            --summary-json "${{ runner.temp }}/kb-benchmark/after-summary.json"
+
+      - name: Enforce mapping accuracy regression gate
+        working-directory: backend
+        run: |
+          python -m scripts.check_benchmark_regression \
+            --policy benchmarks/ontology/ncit_disease_efo_v1.policy.json \
+            --before "${{ runner.temp }}/kb-benchmark/before-summary.json" \
+            --after "${{ runner.temp }}/kb-benchmark/after-summary.json" \
+            --report "${{ runner.temp }}/kb-benchmark/comparison.json"
+
+      - name: Upload before and after benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kb-accuracy-${{ github.run_id }}
+          path: ${{ runner.temp }}/kb-benchmark
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Republish to the kb-latest release
         env:
