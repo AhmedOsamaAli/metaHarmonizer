@@ -23,6 +23,18 @@ curator/admin login.
 > accuracy benchmarking (`scripts/run_benchmarks.ps1`), wrong for measuring API
 > throughput.
 
+Use the isolated profile rather than an existing dev or production database:
+
+```powershell
+$env:CAPACITY_TEST_JWT_SECRET = '<random value of at least 32 bytes>'
+docker compose -p mh-capacity -f docker-compose.yml -f docker-compose.loadtest.yml `
+  up -d --no-build postgres redis volume-init api worker
+```
+
+It exposes only the test API on `http://localhost:18000`, uses separate named
+volumes, forces the mock engine, and raises the per-user rate limit so a shared
+load-test token measures API capacity rather than the normal abuse-control cap.
+
 ## Profiles
 
 | Profile             | What it does                                              | Typical use            |
@@ -42,11 +54,13 @@ the read path rather than Argon2 password hashing.
 
 ```powershell
 # convenience wrapper (PowerShell)
-./load/run.ps1 -Suite smoke -BaseUrl http://localhost:8000 -Email admin@example.com -Password 'ChangeMe!2026'
+$env:LOAD_TEST_PASSWORD = '<load-test password>'
+./load/run.ps1 -Suite smoke -BaseUrl http://localhost:8000 -Email admin@example.com
 ./load/run.ps1 -Suite load  -Vus 50 -Hold 5m
 ./load/run.ps1 -Suite stress -Vus 25
 ./load/run.ps1 -Suite soak  -Vus 20            # add -e SOAK=2h via k6 directly for longer
 ./load/run.ps1 -Suite harmonize -Rate 5 -Duration 2m
+./load/run.ps1 -Suite soak -Vus 20 -Hold 30m -SummaryExport results/soak.json
 
 # or call k6 directly
 k6 run load/k6/load.js -e BASE_URL=http://localhost:8000 -e EMAIL=admin@example.com -e PASSWORD='ChangeMe!2026' -e VUS=50 -e HOLD=5m
@@ -63,6 +77,9 @@ k6 run load/k6/load.js -e BASE_URL=http://localhost:8000 -e EMAIL=admin@example.
 | `THINK`                   | `1`                     | seconds between iterations per VU        |
 | `SOAK`                    | `30m`                   | soak hold duration                       |
 | `RATE` / `DURATION`       | `2` / `1m`              | harmonize submits per second + run length|
+
+`-Hold` controls both the load hold and soak hold. Use `-SummaryExport` for a
+compact, durable k6 summary; `-Out json=...` records the much larger time series.
 
 ## SLOs (thresholds)
 

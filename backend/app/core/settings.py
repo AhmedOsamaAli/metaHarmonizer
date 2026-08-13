@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     job_hard_timeout_sec: int = 900   # 15 min — worker killed
     job_max_attempts: int = 3
     job_retry_delay_sec: int = 30
+    # Measured safe real-ML concurrency per worker process. Scale worker
+    # containers horizontally when more throughput is needed.
+    worker_max_jobs: int = 2
     # Backpressure: refuse new jobs (503 + Retry-After) once this many are
     # pending, so a burst can't grow the queue unbounded / OOM Redis.
     job_max_queue_depth: int = 200

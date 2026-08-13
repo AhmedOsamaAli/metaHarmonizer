@@ -70,7 +70,7 @@ class WorkerSettings:
         cron(retention_job, hour=3, minute=30, run_at_startup=False),
     ]
     on_startup = _startup
-    max_jobs = 4                         # concurrent jobs per worker process
+    max_jobs = settings.worker_max_jobs
     job_timeout = settings.job_hard_timeout_sec
     max_tries = settings.job_max_attempts
     retry_jobs = True

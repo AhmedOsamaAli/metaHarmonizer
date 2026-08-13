@@ -8,8 +8,14 @@
 // engine, not the API accept path.
 import http from 'k6/http';
 import { check } from 'k6';
+import { Counter } from 'k6/metrics';
 import { BASE_URL } from './lib/config.js';
 import { login } from './lib/flow.js';
+
+const accepted = new Counter('harmonize_accepted');
+const userBackpressure = new Counter('harmonize_user_backpressure');
+const queueBackpressure = new Counter('harmonize_queue_backpressure');
+const unexpected = new Counter('harmonize_unexpected');
 
 export const options = {
   scenarios: {
@@ -38,9 +44,17 @@ export default function (data) {
   const res = http.post(
     `${BASE_URL}/api/v1/harmonize`,
     { file: http.file(csv, `load_${uniq}.csv`, 'text/csv'), mode: 'schema' },
-    { headers: { Authorization: `Bearer ${data.token}` }, tags: { name: 'harmonize' } },
+    {
+      headers: { Authorization: `Bearer ${data.token}` },
+      tags: { name: 'harmonize' },
+      responseCallback: http.expectedStatuses(202, 429, 503),
+    },
   );
+  if (res.status === 202) accepted.add(1);
+  else if (res.status === 429) userBackpressure.add(1);
+  else if (res.status === 503) queueBackpressure.add(1);
+  else unexpected.add(1);
   check(res, {
-    'accepted / deduped / backpressure': (r) => [202, 409, 503].includes(r.status),
+    'accepted or backpressure': (r) => [202, 429, 503].includes(r.status),
   });
 }

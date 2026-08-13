@@ -1,0 +1,40 @@
+# Isolated capacity-test overrides. Use with a distinct Compose project name:
+# docker compose -p mh-capacity -f docker-compose.yml -f docker-compose.loadtest.yml up -d --no-build postgres redis volume-init api worker
+services:
+  api:
+    image: metaharmonizer-api:latest
+    environment:
+      AUTH_MODE: jwt
+      ENGINE_IMPL: mock
+      JOB_MODE: queue
+      RATE_LIMIT_AUTH: "100000"
+      RATE_LIMIT_ANON: "100000"
+      ALLOWED_EMAIL_DOMAINS: "*"
+      JWT_SECRET: ${CAPACITY_TEST_JWT_SECRET:?set CAPACITY_TEST_JWT_SECRET}
+    ports:
+      - "18000:8000"
+    volumes:
+      - ./backend:/app
+    command: ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+
+  worker:
+    image: metaharmonizer-api:latest
+    environment:
+      AUTH_MODE: jwt
+      ENGINE_IMPL: mock
+      JOB_MODE: queue
+      JWT_SECRET: ${CAPACITY_TEST_JWT_SECRET:?set CAPACITY_TEST_JWT_SECRET}
+    volumes:
+      - ./backend:/app
+
+  caddy:
+    profiles: ["disabled-in-capacity-tests"]
+
+  caddy-volume-init:
+    profiles: ["disabled-in-capacity-tests"]
+
+  web:
+    profiles: ["disabled-in-capacity-tests"]
+
+  web-volume-init:
+    profiles: ["disabled-in-capacity-tests"]

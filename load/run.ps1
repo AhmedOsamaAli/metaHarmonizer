@@ -17,18 +17,21 @@ param(
   [string]$Suite = 'smoke',
   [string]$BaseUrl = 'http://localhost:8000',
   [string]$Email = 'admin@example.com',
-  [string]$Password = 'ChangeMe!2026',
   [int]$Vus = 25,
   [string]$Hold = '2m',
   [int]$Rate = 2,
   [string]$Duration = '1m',
-  [string]$Out = ''
+  [string]$Out = '',
+  [string]$SummaryExport = ''
 )
 $ErrorActionPreference = 'Stop'
 
 if (-not (Get-Command k6 -ErrorAction SilentlyContinue)) {
   Write-Error "k6 not found. Install with: winget install k6 --source winget  (or https://k6.io/docs/get-started/installation/)"
   exit 127
+}
+if (-not $env:LOAD_TEST_PASSWORD) {
+  throw 'Set LOAD_TEST_PASSWORD before running a load profile.'
 }
 
 if ($Suite -eq 'harmonize') { $Suite = 'harmonize_submit' }
@@ -39,13 +42,15 @@ $k6Args = @(
   'run', $script,
   '-e', "BASE_URL=$BaseUrl",
   '-e', "EMAIL=$Email",
-  '-e', "PASSWORD=$Password",
+  '-e', "PASSWORD=$env:LOAD_TEST_PASSWORD",
   '-e', "VUS=$Vus",
   '-e', "HOLD=$Hold",
+  '-e', "SOAK=$Hold",
   '-e', "RATE=$Rate",
   '-e', "DURATION=$Duration"
 )
 if ($Out) { $k6Args += @('--out', $Out) }
+if ($SummaryExport) { $k6Args += @('--summary-export', $SummaryExport) }
 
-Write-Host "k6 $($k6Args -join ' ')" -ForegroundColor Cyan
+Write-Host "k6 run $script (BASE_URL=$BaseUrl, EMAIL=$Email, credentials redacted)" -ForegroundColor Cyan
 & k6 @k6Args
