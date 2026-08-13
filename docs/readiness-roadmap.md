@@ -14,7 +14,7 @@ This is the current provider-neutral closure plan for moving from public beta to
 | P1 | ✅ Establish capacity limits with concurrent upload/job/ML load tests | `docs/capacity-report-2026-08-13.md`: isolated mock API ladder and write-load tests plus real-engine 1/2/4-concurrency probes; safe limits: 20 active read VUs, 2 accepted submissions/s without shedding, 2 concurrent ML jobs/worker, planning ceiling 2,700 representative jobs/day, and 70%/85% disk warning/stop thresholds |
 | P1 | ✅ Add coverage reporting and an agreed minimum gate | Measured baselines: backend 63.21% over all `app/`; frontend 5.16% lines/statements, 23.43% functions, 57.81% branches over all `src/`. Hosted run `31712299291` enforced backend 60% and frontend 5%/5%/20%/50%; all protected checks passed and retained backend XML/HTML (535,546 bytes) plus frontend LCOV/JSON/HTML (365,664 bytes) artifacts for 30 days. |
 | P2 | Add intentional `robots.txt`/sitemap behavior and link the beta when approved | Public indexing behavior matches the selected policy |
-| P2 | Publish a standalone curator manual | Versioned guide covering upload, review, quality, export, and support |
+| P2 | ✅ Publish a standalone curator manual | `docs/curator-guide.md` covers de-identified upload, run modes, schema and ontology decisions, smart/batch review, quality readiness, exports, completion, troubleshooting, and privacy-safe support. Independent usability remains separately tracked below. |
 
 ## Work requiring service credentials or owner decisions
 

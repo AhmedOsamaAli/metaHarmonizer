@@ -56,6 +56,8 @@ Open **http://localhost:8080** and register — the **first** account becomes th
 
 Skip-login, the optional Stage-4 LLM, native dev setup, and troubleshooting are all in **[SETUP.md](SETUP.md)**. Interactive API reference (OpenAPI/Swagger): `http://localhost:8000/docs`.
 
+Curators: follow the standalone **[upload, review, quality, and export guide](docs/curator-guide.md)**.
+
 ## Configuration
 
 `.env.example` is the annotated catalogue. Key variables:
