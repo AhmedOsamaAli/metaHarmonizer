@@ -51,6 +51,7 @@ services:
     restart: "no"
 
   api:
+    image: metaharmonizer-api
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -96,9 +97,9 @@ services:
       start_period: 40s
 
   worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    # API and worker run the same application image; only their commands differ.
+    # A single tag prevents code drift and avoids duplicating the large ML image.
+    image: metaharmonizer-api
     restart: unless-stopped
     env_file: .env
     environment:
