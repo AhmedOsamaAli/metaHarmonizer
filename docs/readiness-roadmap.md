@@ -12,7 +12,7 @@ This is the current provider-neutral closure plan for moving from public beta to
 | P1 | ✅ Add a Sentry `before_send` scrubber and synthetic sensitive-data tests | `backend/tests/unit/test_sentry.py` proves request bodies, credentials, filenames, emails, patient/sample identifiers, raw values, exception messages, and breadcrumbs are filtered while operational tags and stack source locations remain; full backend suite: 213 passed, 7 skipped |
 | P1 | Add a versioned mapping benchmark and fail KB refresh on accuracy regression | Before/after benchmark artifact and enforced threshold |
 | P1 | ✅ Establish capacity limits with concurrent upload/job/ML load tests | `docs/capacity-report-2026-08-13.md`: isolated mock API ladder and write-load tests plus real-engine 1/2/4-concurrency probes; safe limits: 20 active read VUs, 2 accepted submissions/s without shedding, 2 concurrent ML jobs/worker, planning ceiling 2,700 representative jobs/day, and 70%/85% disk warning/stop thresholds |
-| P1 | Add coverage reporting and an agreed minimum gate | CI coverage artifact and enforced threshold |
+| P1 | ✅ Add coverage reporting and an agreed minimum gate | Measured baselines: backend 63.21% over all `app/`; frontend 5.16% lines/statements, 23.43% functions, 57.81% branches over all `src/`. CI enforces backend 60% and frontend 5%/5%/20%/50%, retaining backend XML/HTML and frontend LCOV/JSON/HTML artifacts for 30 days. |
 | P2 | Add intentional `robots.txt`/sitemap behavior and link the beta when approved | Public indexing behavior matches the selected policy |
 | P2 | Publish a standalone curator manual | Versioned guide covering upload, review, quality, export, and support |
 

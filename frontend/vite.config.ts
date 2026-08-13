@@ -7,6 +7,19 @@ export default defineConfig({
     test: {
         environment: 'node',
         include: ['src/**/*.{test,spec}.{ts,tsx}'],
+        coverage: {
+            provider: 'v8',
+            reporter: ['text', 'json-summary', 'lcov'],
+            reportsDirectory: 'coverage',
+            include: ['src/**/*.{ts,tsx}'],
+            exclude: ['src/**/*.{test,spec}.{ts,tsx}', 'src/**/*.d.ts'],
+            thresholds: {
+                lines: 5,
+                statements: 5,
+                functions: 20,
+                branches: 50,
+            },
+        },
     },
     server: {
         port: 5173,

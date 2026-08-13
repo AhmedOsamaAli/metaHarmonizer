@@ -66,6 +66,10 @@ backend/data/schema_mapping_eval/*_s[0-9]_*_manual_*.csv
 
 # Test artifacts
 .playwright-mcp/
+.coverage
+coverage.xml
+htmlcov/
+frontend/coverage/
 
 # Personal / local-only documents
 GSoC_Proposal.md

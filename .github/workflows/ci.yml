@@ -57,7 +57,23 @@ jobs:
         run: alembic upgrade head
       - name: Run tests
         working-directory: backend
-        run: pytest -q
+        run: >-
+          pytest -q
+          --cov=app
+          --cov-fail-under=60
+          --cov-report=term
+          --cov-report=xml:coverage.xml
+          --cov-report=html:htmlcov
+      - name: Upload backend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-${{ github.sha }}
+          path: |
+            backend/coverage.xml
+            backend/htmlcov
+          if-no-files-found: warn
+          retention-days: 30
 
   frontend:
     name: Frontend Build and Tests
@@ -77,4 +93,12 @@ jobs:
         run: npm run build
       - name: Unit tests
         working-directory: frontend
-        run: npm test --if-present
+        run: npm test --if-present -- --coverage
+      - name: Upload frontend coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-${{ github.sha }}
+          path: frontend/coverage
+          if-no-files-found: warn
+          retention-days: 30
