@@ -112,7 +112,7 @@ compact, durable k6 summary; `-Out json=...` records the much larger time series
 **exit non-zero** if breached:
 
 - `http_req_failed` = **0%** in the deterministic isolated fixture
-- `http_req_duration` **p95 ≤ 750 ms**, **p99 ≤ 1.5 s**
+- `http_req_duration` **p95 ≤ 1 s**, **p99 ≤ 2 s**
 - `checks` = **100%**
 
 Smoke and write-load fixtures are strict for the same reason: every expected

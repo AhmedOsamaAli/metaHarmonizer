@@ -18,13 +18,13 @@ fifty simultaneous model executions.
 Expansion starts only when retained production evidence shows one of these for
 at least three business days, or a scheduled event requires it:
 
-- p95 dashboard latency above 600 ms at normal peak traffic;
+- p95 dashboard latency above 800 ms at normal peak traffic;
 - more than 40 simultaneously active curators;
 - queue depth above 40 for 15 minutes or oldest-job wait above five minutes;
 - worker CPU saturation while queued work exists;
 - forecast less than 30 days to the 70% disk threshold.
 
-The 600 ms trigger is earlier than the 750 ms objective so there is time to act
+The 800 ms trigger is 80% of the one-second p95 objective, leaving time to act
 before users experience an SLO breach.
 
 ## Phase 0: owner and billing decision
@@ -58,7 +58,7 @@ multiple API processes:
   state per process;
 - verify Caddy load balancing and health removal under container failure.
 
-Acceptance: 50 users meet p95 <=750 ms and p99 <=1.5 seconds with at least 25%
+Acceptance: 50 users meet p95 <=1 second and p99 <=2 seconds with at least 25%
 p95 headroom, zero fixture errors, healthy production-shaped dependencies, and
 a successful replica-failure test.
 

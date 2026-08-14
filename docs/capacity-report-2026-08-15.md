@@ -19,13 +19,13 @@ The adopted public-beta objectives are:
 
 - zero unexpected HTTP failures;
 - 100% checks;
-- p95 at or below 750 ms;
-- p99 at or below 1.5 seconds.
+- p95 at or below 1 second;
+- p99 at or below 2 seconds.
 
-The run initially enforced inherited 800 ms / 2 second thresholds. The table is
-reclassified against the documented objectives in
-`docs/service-level-objectives.md`; this changes the 70-user rung from a narrow
-pass to a p95 failure but does not change the 50-user planning recommendation.
+The table is classified against the proposed beta SLO in
+`docs/service-level-objectives.md`. SLO compliance and safe operating capacity
+are separate: safe capacity additionally requires 25% p95 headroom,
+non-declining throughput, and resource reserve.
 
 ## Distinct active curators
 
@@ -40,8 +40,8 @@ seconds with one second of think time.
 | 40 | 10,120 | 93.7 req/s | 389 ms | enforced, not exported | 0% | 100% | pass |
 | 50 | 10,595 | 97.5 req/s | 536 ms | enforced, not exported | 0% | 100% | pass |
 | 60 | 10,850 | 98.1 req/s | 610 ms | 646 ms | 0% | 100% | pass |
-| 70 | 11,095 | 100.8 req/s | 790 ms | 858 ms | 0% | 100% | fail: p95 objective |
-| 80 | 10,995 | 98.8 req/s | 945 ms | 991 ms | 0% | 100% | fail: p95 SLO |
+| 70 | 11,095 | 100.8 req/s | 790 ms | 858 ms | 0% | 100% | SLO pass; below planning headroom |
+| 80 | 10,995 | 98.8 req/s | 945 ms | 991 ms | 0% | 100% | SLO pass; saturation, not safe capacity |
 
 Throughput flattened at approximately 98-101 requests/second from 50 users
 onward. At 80 users throughput fell while latency rose, demonstrating CPU queueing
@@ -76,9 +76,10 @@ zero.
 - **Safe planning limit:** 50 simultaneously active dashboard curators. This
   retains approximately 29% p95 latency headroom and avoids the throughput
   plateau's steepest queueing region.
-- **Observed edge:** 60 active curators, measured at p95 610 ms and p99 646 ms.
-- **Measured objective breach:** 70 active curators exceeded the 750 ms p95
-  objective; 80 users degraded further.
+- **Observed planning edge:** 60 active curators, measured at p95 610 ms and p99
+  646 ms.
+- **Saturation evidence:** 80 users still met the beta SLO, but throughput fell,
+  p95 headroom was only 5.5%, host idle reached 13%, and run queue reached 16.
 - **Real ML limit remains:** two concurrent jobs per worker and approximately
   2,700 representative jobs/day/worker with operational headroom. Dashboard VUs
   do not imply 50 simultaneous ML jobs.

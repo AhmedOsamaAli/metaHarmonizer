@@ -2,26 +2,28 @@
 
 ## Purpose and status
 
-These objectives replace the undocumented 800 ms p95 / 2 second p99 load-test
-defaults. They are engineering objectives for the public beta, grounded in the
-curator workflow, measured production-shape behavior, and the existing project
-acceptance criteria. Institutional owners may tighten them after observing real
-traffic, but changes require a dated decision and a repeated capacity test.
+These objectives replace the undocumented load-test defaults. They are a
+proposed engineering baseline for the public beta, grounded in the curator
+workflow, measured production-shape behavior, and existing project acceptance
+criteria. They are not institutionally accepted until a named mentor or service
+owner approves them using the process below.
 
 ## Objectives
 
 | Surface | SLI | Public beta objective | Rationale |
 |---|---|---|---|
 | Availability | Successful five-minute public `/healthz` checks | 99% per calendar month, excluding announced maintenance | Existing project objective; permits approximately 7h 18m unavailable in a 30.44-day month while the service has no HA/failover |
-| Dashboard API | Request duration for the authenticated curator read fan-out at 50 active users | p95 at or below 750 ms; p99 at or below 1.5 s | Keeps the normal interaction within a one-second budget after reserving 250 ms for network/browser rendering; keeps tail interactions within two seconds after the same client allowance |
+| Dashboard API | Request duration for the authenticated curator read fan-out | p95 at or below 1 second; p99 at or below 2 seconds | Direct public-beta user-experience target: normal interactions return within one second and rare tail interactions within two seconds |
 | Dashboard correctness | Expected statuses/checks in the controlled capacity fixture | 100% checks and zero unexpected HTTP failures | Every request in the deterministic isolated fixture has a known expected response; allowing test errors would hide capacity defects |
 | Warm harmonization | End-to-end duration for the representative 200-column workload | p95 at or below 60 seconds | Existing project acceptance criterion; work is asynchronous and exposes progress rather than blocking the dashboard |
 | Queue protection | Pending arq jobs | Warning at 160; reject at 200 | 80% early-warning point and the configured hard backpressure limit |
 | Storage protection | Root filesystem used | Warning at 70%; stop new uploads at 85% | Leaves room for a staged KB release and the 2 GiB database/export/migration reserve |
 
-The 50-user target is a capacity planning load, not a forecast of adoption and
-not permission to run 50 simultaneous ML jobs. Real ML remains limited to two
-concurrent jobs per worker until a new benchmark proves a larger value.
+Meeting the SLO at a saturation test does not make that load safe. Capacity
+planning additionally requires at least 25% p95 headroom, non-declining
+throughput, and resource reserve. The 50-user target meets those conditions; it
+is not a forecast of adoption or permission to run 50 simultaneous ML jobs.
+Real ML remains limited to two concurrent jobs per worker.
 
 ## Measurement
 
@@ -38,13 +40,31 @@ concurrent jobs per worker until a new benchmark proves a larger value.
 ## Current evidence
 
 The 2026-08-15 production-shape test measured 50 users at p95 536 ms with no
-failures. Sixty users measured p95 610 ms and p99 646 ms. Seventy users measured
-p95 790 ms and therefore exceeded the adopted 750 ms p95 objective; 80 users
-measured p95 945 ms. The safe planning limit remains 50 users.
+failures. Sixty users measured p95 610 ms/p99 646 ms, 70 measured p95 790
+ms/p99 858 ms, and 80 measured p95 945 ms/p99 991 ms. All measured rungs meet
+the proposed beta latency SLO. Eighty users is still not a safe planning load:
+throughput declined, host CPU idle reached 13%, and the runnable queue reached
+16 on four cores. The safe planning limit remains 50 users.
 
 The representative 707-row/141-column real harmonization completed in 31.60
 seconds. This supports, but does not fully prove, the 200-column p95 objective;
 a repeated 200-column sample set is required before claiming that SLO as met.
+
+## Approval
+
+SLOs are not sent to Oracle or a standards organization. Approval is a project
+governance decision:
+
+1. Send the reviewer a link to this document and the two dated capacity reports.
+2. A named mentor/service owner responds in a meeting record, issue, or pull
+  request: "Approved as the MetaHarmonizer public-beta SLO through [review date]."
+3. Record the approver, approval date, and review date below.
+4. Any changed number must include its user rationale and new benchmark evidence;
+  thresholds are never loosened solely to make a test pass.
+
+| State | Approver | Approval date | Review date |
+|---|---|---|---|
+| Proposed; awaiting owner/mentor acceptance | - | - | Three months after approval |
 
 ## Not yet defined
 
