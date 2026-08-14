@@ -205,9 +205,7 @@ services:
   # bundle carries the engine KB *and* the corpus CSVs the ontology engine loads
   # at runtime, so a fresh instance never re-downloads ontologies from NCI/OLS.
   kb-import:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: metaharmonizer-api
     profiles: ["kb"]
     environment:
       # Match the api/worker data root so seed_kb installs the corpus where they
@@ -259,8 +257,11 @@ volumes:
   pg_data:
   redis_data:
   engine_cache:
+    name: ${ENGINE_CACHE_VOLUME:-metaharmonizer_engine_cache}
   corpus_data:
+    name: ${CORPUS_DATA_VOLUME:-metaharmonizer_corpus_data}
   hf_cache:
+    name: ${HF_CACHE_VOLUME:-metaharmonizer_hf_cache}
   web_dist:
   uploads:
   schema_versions:

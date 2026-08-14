@@ -1,0 +1,10 @@
+[Unit]
+Description=MetaHarmonizer verified KB bundle update
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/metaHarmonizer
+ExecStart=/home/ubuntu/metaHarmonizer/scripts/deploy_kb_bundle.sh

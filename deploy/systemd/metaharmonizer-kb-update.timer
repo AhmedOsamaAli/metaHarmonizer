@@ -1,0 +1,11 @@
+[Unit]
+Description=Check hourly for a verified MetaHarmonizer KB update
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=300
+Unit=metaharmonizer-kb-update.service
+
+[Install]
+WantedBy=timers.target

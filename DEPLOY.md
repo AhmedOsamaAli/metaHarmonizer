@@ -105,6 +105,38 @@ the host and allow inbound TCP 80/443.
 - **Upgrades:** `git pull && docker compose up -d --build` (migrations re-run).
 - **Scale throughput:** `docker compose up -d --scale worker=N`.
 
+### Automatic KB rollout
+
+After the hosted KB refresh passes its superset and accuracy gates, it publishes
+`kb_offline_bundle.tar.gz` and `kb_offline_bundle.sha256` to `kb-latest`.
+Production can poll that release hourly without storing an SSH key in GitHub:
+
+```bash
+sudo cp deploy/systemd/metaharmonizer-kb-update.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now metaharmonizer-kb-update.timer
+systemctl list-timers metaharmonizer-kb-update.timer
+```
+
+The updater downloads and verifies the published checksum, seeds SHA-specific
+staging volumes, runs an offline KB probe, switches API/worker to those volumes,
+waits for health, verifies the current ontology snapshot SHA, and restores the
+previous volumes automatically if validation fails. It keeps two successful KB
+volume sets by default.
+
+Check without downloading/importing the bundle:
+
+```bash
+KB_DEPLOY_DRY_RUN=1 ./scripts/deploy_kb_bundle.sh
+```
+
+Run immediately instead of waiting for the timer:
+
+```bash
+sudo systemctl start metaharmonizer-kb-update.service
+journalctl -u metaharmonizer-kb-update.service -n 100 --no-pager
+```
+
 ### Application rollback
 
 Use an exact tested Git revision, not a moving branch name. The rollback command
