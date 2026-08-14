@@ -1,0 +1,13 @@
+[Unit]
+Description=MetaHarmonizer daily production capacity report
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/metaHarmonizer
+Environment=OPS_REPO_ROOT=/home/ubuntu/metaHarmonizer
+Environment=OPS_STATE_DIR=/home/ubuntu/.local/state/metaharmonizer/operations
+EnvironmentFile=-/home/ubuntu/.config/metaharmonizer/ops-monitor.env
+ExecStart=/usr/bin/python3 /home/ubuntu/metaHarmonizer/scripts/production_report.py report

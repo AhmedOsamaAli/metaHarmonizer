@@ -137,6 +137,23 @@ sudo systemctl start metaharmonizer-kb-update.service
 journalctl -u metaharmonizer-kb-update.service -n 100 --no-pager
 ```
 
+### Production checks and growth reports
+
+Install the five-minute health/threshold check and daily capacity report:
+
+```bash
+sudo cp deploy/systemd/metaharmonizer-ops-* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now metaharmonizer-ops-check.timer
+sudo systemctl enable --now metaharmonizer-ops-report.timer
+```
+
+Reports are written under
+`~/.local/state/metaharmonizer/operations/`. Alert delivery and authenticated
+5xx monitoring use the host-only configuration described in
+`docs/production-operations.md`; the timers remain useful without provider
+credentials and explicitly report unconfigured delivery/backup dependencies.
+
 ### Application rollback
 
 Use an exact tested Git revision, not a moving branch name. The rollback command

@@ -1,0 +1,11 @@
+[Unit]
+Description=Generate MetaHarmonizer production capacity report daily
+
+[Timer]
+OnCalendar=*-*-* 04:00:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+Unit=metaharmonizer-ops-report.service
+
+[Install]
+WantedBy=timers.target

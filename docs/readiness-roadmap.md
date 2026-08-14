@@ -21,7 +21,7 @@ This is the current provider-neutral closure plan for moving from public beta to
 | Priority | Work | Needed input | Completion evidence |
 | --- | --- | --- | --- |
 | P0 | Activate encrypted off-host backups and perform a clean restore drill | S3-compatible bucket, endpoint, access-key ID, secret key | Scheduled backup, retained object, clean restore, application verification |
-| P0 | Configure operational alerts | Alert destination and accountable on-call recipients; optional Sentry/Grafana credentials | Delivered test alerts for health, 5xx, queue depth, failed jobs, disk, and stale backup |
+| P0 | Complete operational alert delivery | Local five-minute checks and daily growth reports are implemented; provide an alert webhook, dedicated metrics token, and accountable primary/secondary recipients | Delivered test alerts for health, 5xx, queue depth, failed jobs, disk, KB updater failure, and stale backup; acknowledged escalation drill |
 | P0 | Complete ownership and recovery inventory | Oracle/cloud, registrar/DNS, GitHub, Resend, SSH, database, recovery and 2FA owners | Two authorized administrators and tested recovery path per service |
 | P1 | Run authenticated browser journey in hosted CI | Dedicated non-production E2E account | Playwright journey passes without personal credentials |
 | P1 | Decide registration/indexing/GA policy | Institution-approved public-access policy | Configuration and documentation match the decision |

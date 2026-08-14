@@ -1,0 +1,11 @@
+[Unit]
+Description=Check MetaHarmonizer production every five minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=metaharmonizer-ops-check.service
+
+[Install]
+WantedBy=timers.target
