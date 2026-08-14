@@ -22,6 +22,7 @@ the engine-adapter boundary only governs ``backend/app``.
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sqlite3
 import sys
@@ -65,6 +66,28 @@ def _copy_efo_tables(old_db: Path, new_db: Path) -> None:
         con.close()
 
 
+def _hf_hub_root() -> Path:
+    if os.environ.get("HF_HOME"):
+        return Path(os.environ["HF_HOME"]) / "hub"
+    return Path.home() / ".cache" / "huggingface" / "hub"
+
+
+def _copy_hf_hub(source: Path, destination: Path) -> int:
+    if not source.exists():
+        print("[graft] WARNING: no hf_hub in source bundle")
+        return 0
+    copied = 0
+    for item in source.rglob("*"):
+        if not item.is_file():
+            continue
+        target = destination / item.relative_to(source)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(item, target)
+        copied += 1
+    print(f"[graft] schema model cache: {copied} file(s) -> {destination}")
+    return copied
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--from-bundle", required=True, help="current published bundle to graft EFO + cache from")
@@ -95,12 +118,17 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print("[graft] WARNING: no efo_phenotype_corpus.csv in source bundle")
 
-        # 2. The warmed schema cache is intentionally NOT carried forward: it
+        # 2. The schema embedding model is immutable for this bundle and is not
+        # rebuilt by build_kb (which only builds ontology corpora/indexes).
+        # Carry it forward so package_kb can produce a fully offline bundle.
+        _copy_hf_hub(tmp_path / "hf_hub", _hf_hub_root())
+
+        # 3. The warmed schema cache is intentionally NOT carried forward: it
         #    maps value -> NCiT code, and a cache hit returns the stored code
         #    without re-fetching, so a stale entry would outlive a KB refresh.
         #    The instance re-warms it fresh against the new KB at runtime.
 
-        # 3. EFO KB artifacts (FAISS index + sqlite tables) from the engine archive.
+        # 4. EFO KB artifacts (FAISS index + sqlite tables) from the engine archive.
         kb_archive = tmp_path / "kb.mhkb.tar.gz"
         if not kb_archive.exists():
             print("[graft] WARNING: no kb.mhkb.tar.gz in bundle; EFO KB not grafted")
@@ -125,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
         elif not VECTOR_DB_PATH.exists():
             print(f"[graft] WARNING: fresh KB has no {VECTOR_DB_PATH}; run build_kb first", file=sys.stderr)
 
-    print("[graft] done — EFO + schema cache grafted into the fresh KB.")
+    print("[graft] done — EFO + schema model grafted into the fresh KB.")
     return 0
 
 

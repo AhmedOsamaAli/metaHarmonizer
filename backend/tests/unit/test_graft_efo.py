@@ -3,7 +3,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from scripts.graft_efo import _copy_efo_tables
+from scripts.graft_efo import _copy_efo_tables, _copy_hf_hub
 
 
 def _rows(path: Path, table: str) -> list[tuple]:
@@ -50,3 +50,23 @@ def test_copy_efo_tables_handles_source_only_table(tmp_path: Path):
 
     assert _rows(old_db, "efo_phenotype") == [(1,)]
     assert _rows(new_db, "efo_phenotype") == [(1,)]
+
+
+def test_copy_hf_hub_preserves_model_tree(tmp_path: Path):
+    source = tmp_path / "source"
+    destination = tmp_path / "destination"
+    model = source / "models--sentence-transformers--all-MiniLM-L6-v2" / "snapshots" / "v1"
+    model.mkdir(parents=True)
+    (model / "config.json").write_text('{"model":"mini"}', encoding="utf-8")
+    (model / "model.safetensors").write_bytes(b"weights")
+
+    copied = _copy_hf_hub(source, destination)
+
+    assert copied == 2
+    copied_model = destination / model.relative_to(source)
+    assert (copied_model / "config.json").read_text(encoding="utf-8") == '{"model":"mini"}'
+    assert (copied_model / "model.safetensors").read_bytes() == b"weights"
+
+
+def test_copy_hf_hub_handles_missing_source(tmp_path: Path):
+    assert _copy_hf_hub(tmp_path / "missing", tmp_path / "destination") == 0
