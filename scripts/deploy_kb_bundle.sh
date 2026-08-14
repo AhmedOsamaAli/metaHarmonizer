@@ -121,7 +121,9 @@ printf '%s\n' "$old_engine" "$old_corpus" "$old_hf" > "$state_dir/previous-volum
 history="$state_dir/releases"
 {
   printf '%s\n' "$short_sha"
-  [[ -f "$history" ]] && cat "$history"
+  if [[ -f "$history" ]]; then
+    cat "$history"
+  fi
 } | awk 'NF && !seen[$0]++' | head -n "$keep_releases" > "$history.tmp"
 mv "$history.tmp" "$history"
 
