@@ -15,12 +15,17 @@ review queue, quality metrics, and mappings. After the test, all isolated
 containers, volumes, networks, worktree files, and secrets were removed.
 Production `/healthz` returned 200 before, throughout, and after every rung.
 
-SLOs:
+The adopted public-beta objectives are:
 
-- less than 1% failed HTTP requests;
-- more than 99% checks;
-- p95 below 800 ms;
-- p99 below 2 seconds.
+- zero unexpected HTTP failures;
+- 100% checks;
+- p95 at or below 750 ms;
+- p99 at or below 1.5 seconds.
+
+The run initially enforced inherited 800 ms / 2 second thresholds. The table is
+reclassified against the documented objectives in
+`docs/service-level-objectives.md`; this changes the 70-user rung from a narrow
+pass to a p95 failure but does not change the 50-user planning recommendation.
 
 ## Distinct active curators
 
@@ -35,7 +40,7 @@ seconds with one second of think time.
 | 40 | 10,120 | 93.7 req/s | 389 ms | enforced, not exported | 0% | 100% | pass |
 | 50 | 10,595 | 97.5 req/s | 536 ms | enforced, not exported | 0% | 100% | pass |
 | 60 | 10,850 | 98.1 req/s | 610 ms | 646 ms | 0% | 100% | pass |
-| 70 | 11,095 | 100.8 req/s | 790 ms | 858 ms | 0% | 100% | edge: 10 ms p95 margin |
+| 70 | 11,095 | 100.8 req/s | 790 ms | 858 ms | 0% | 100% | fail: p95 objective |
 | 80 | 10,995 | 98.8 req/s | 945 ms | 991 ms | 0% | 100% | fail: p95 SLO |
 
 Throughput flattened at approximately 98-101 requests/second from 50 users
@@ -69,11 +74,11 @@ zero.
 ## Operating limits
 
 - **Safe planning limit:** 50 simultaneously active dashboard curators. This
-  retains approximately 33% p95 latency headroom and avoids the throughput
+  retains approximately 29% p95 latency headroom and avoids the throughput
   plateau's steepest queueing region.
-- **Observed edge:** 70 active curators. Do not advertise this as normal capacity;
-  its p95 margin was only 10 ms.
-- **Measured failure point:** 80 active curators breached the p95 SLO.
+- **Observed edge:** 60 active curators, measured at p95 610 ms and p99 646 ms.
+- **Measured objective breach:** 70 active curators exceeded the 750 ms p95
+  objective; 80 users degraded further.
 - **Real ML limit remains:** two concurrent jobs per worker and approximately
   2,700 representative jobs/day/worker with operational headroom. Dashboard VUs
   do not imply 50 simultaneous ML jobs.

@@ -119,3 +119,7 @@ storage, activates object storage, or adopts paid monitoring/email services.
 Use the daily forecast and the measured 50-active-curator, two-job worker limit
 to trigger a documented continue/resize/migrate decision; do not infer cost
 from term count, study count, or queue submissions alone.
+
+Measured triggers and the phased API/ML expansion procedure are defined in
+`docs/scaling-plan.md`. CPU expansion comes before memory expansion; remote ML
+workers require object storage and private data-service connectivity first.

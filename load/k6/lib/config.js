@@ -13,7 +13,7 @@ export const THINK = Number(__ENV.THINK || 1); // seconds between iterations per
 // Service-level objectives. Breaching a threshold makes k6 exit non-zero, so
 // these double as a CI capacity gate.
 export const thresholds = {
-  http_req_failed: ['rate<0.01'], // < 1% of requests error
-  http_req_duration: ['p(95)<800', 'p(99)<2000'], // read latency budget (ms)
-  checks: ['rate>0.99'], // functional assertions hold
+  http_req_failed: ['rate==0'],
+  http_req_duration: ['p(95)<=750', 'p(99)<=1500'],
+  checks: ['rate==1'],
 };

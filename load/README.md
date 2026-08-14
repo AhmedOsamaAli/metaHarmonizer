@@ -108,15 +108,20 @@ compact, durable k6 summary; `-Out json=...` records the much larger time series
 
 ## SLOs (thresholds)
 
-`load` and `soak` enforce, and **exit non-zero** if breached — so they gate CI:
+`load`, `multiuser`, and `soak` enforce the public-beta dashboard objectives and
+**exit non-zero** if breached:
 
-- `http_req_failed` &lt; **1%**
-- `http_req_duration` **p95 &lt; 800 ms**, **p99 &lt; 2 s**
-- `checks` &gt; **99%**
+- `http_req_failed` = **0%** in the deterministic isolated fixture
+- `http_req_duration` **p95 ≤ 750 ms**, **p99 ≤ 1.5 s**
+- `checks` = **100%**
 
-Tune these in [k6/lib/config.js](k6/lib/config.js) to your agreed SLOs. `stress`
-uses looser limits on purpose — it's there to *find* the ceiling, and to confirm
-the app sheds load with `429`/`503` rather than `5xx`.
+Smoke and write-load fixtures are strict for the same reason: every expected
+status is known, including intentional `429`/`503` backpressure. The rationale
+and current evidence are in
+[service-level-objectives.md](../docs/service-level-objectives.md). Do not tune
+thresholds merely to make a run pass. `stress` is observational and has no
+pass/fail threshold; it locates the knee and records whether degradation is
+intentional `429`/`503` rather than unexpected `5xx`.
 
 ## Reading the output
 

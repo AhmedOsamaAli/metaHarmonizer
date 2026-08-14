@@ -19,10 +19,6 @@ export const options = {
       ],
     },
   },
-  thresholds: {
-    // Record the point where errors climb; don't hard-fail the run.
-    http_req_failed: ['rate<0.10'],
-  },
 };
 
 export function setup() {
