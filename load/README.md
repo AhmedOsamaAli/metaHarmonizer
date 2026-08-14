@@ -27,6 +27,7 @@ Use the isolated profile rather than an existing dev or production database:
 
 ```powershell
 $env:CAPACITY_TEST_JWT_SECRET = '<random value of at least 32 bytes>'
+if (-not (Test-Path .env)) { New-Item .env -ItemType File | Out-Null }
 docker compose -p mh-capacity -f docker-compose.yml -f docker-compose.loadtest.yml `
   up -d --no-build postgres redis volume-init api worker
 ```
@@ -41,6 +42,7 @@ load-test token measures API capacity rather than the normal abuse-control cap.
 | ------------------- | -------------------------------------------------------- | ---------------------- |
 | `smoke`             | 1 VU, 5 iterations — proves the flow + thresholds work   | first, and in CI       |
 | `load`              | ramp to `VUS`, hold, ramp down — steady curator traffic  | capacity vs SLO        |
+| `multiuser`         | one isolated account/token per VU and owner-scoped reads | distinct-user capacity |
 | `stress`            | ramp to 8× `VUS` — find the knee / graceful degradation  | breaking point         |
 | `soak`              | hold `VUS` for `SOAK` (default 30m) — leak detection     | memory/connection leak |
 | `harmonize_submit`  | fixed arrival-rate submits (unique files) — write path   | enqueue + backpressure |
@@ -49,6 +51,28 @@ The read profiles exercise the real curator hot path: `login` → `GET /studies`
 → per-study `review-queue` + `quality` + `mappings`, plus the `/readyz` probe.
 Login happens **once** in `setup()` and the token is reused, so results reflect
 the read path rather than Argon2 password hashing.
+
+For `multiuser`, seed accounts only into the isolated `mh-capacity` database:
+
+```powershell
+$env:LOAD_TEST_PASSWORD = '<random isolated password>'
+docker compose -p mh-capacity -f docker-compose.yml -f docker-compose.loadtest.yml `
+  exec -e CAPACITY_TEST_MODE=1 -e LOAD_TEST_PASSWORD=$env:LOAD_TEST_PASSWORD `
+  api python -m scripts.seed_load_users --count 50
+docker compose -p mh-capacity -f docker-compose.yml -f docker-compose.loadtest.yml `
+  exec -e CAPACITY_TEST_MODE=1 -e LOAD_TEST_PASSWORD=$env:LOAD_TEST_PASSWORD `
+  api python -m scripts.seed_load_studies --count 50
+
+docker run --rm --network host `
+  -e "PASSWORD=$env:LOAD_TEST_PASSWORD" `
+  -v "${PWD}/load/k6:/scripts:ro" grafana/k6:latest run `
+  -e BASE_URL=http://localhost:18000 -e VUS=50 -e USER_COUNT=50 `
+  /scripts/multiuser.js
+```
+
+Never run either seeder against production. They refuse to run unless
+`CAPACITY_TEST_MODE=1`, but the operator must also verify the Compose project
+is `mh-capacity` and uses the dedicated `mh_capacity_*` volumes.
 
 ## Run it
 
@@ -73,6 +97,7 @@ k6 run load/k6/load.js -e BASE_URL=http://localhost:8000 -e EMAIL=admin@example.
 | `BASE_URL`                | `http://localhost:8000` | API base URL                             |
 | `EMAIL` / `PASSWORD`      | seeded admin            | login credentials                        |
 | `VUS`                     | `25`                    | target virtual users                     |
+| `USER_COUNT`              | `VUS`                   | distinct accounts used by `multiuser`    |
 | `HOLD`                    | `2m`                    | hold duration at target (load)           |
 | `THINK`                   | `1`                     | seconds between iterations per VU        |
 | `SOAK`                    | `30m`                   | soak hold duration                       |
@@ -106,3 +131,10 @@ the app sheds load with `429`/`503` rather than `5xx`.
 `smoke` is safe to run in CI against the `deploy-smoke` compose stack (mock
 engine) as a fast regression gate. The heavier `load`/`stress`/`soak` profiles
 are meant to be run deliberately against a sized staging environment.
+
+Destroy every isolated resource after a deliberate capacity run:
+
+```powershell
+docker compose -p mh-capacity -f docker-compose.yml -f docker-compose.loadtest.yml `
+  down -v --remove-orphans
+```

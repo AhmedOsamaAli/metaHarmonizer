@@ -6,9 +6,13 @@ import { BASE_URL, EMAIL, PASSWORD } from './config.js';
 // so callers should log in ONCE (in setup) and reuse the token across VUs —
 // otherwise the test measures password hashing, not the app under load.
 export function login() {
+  return loginAs(EMAIL, PASSWORD);
+}
+
+export function loginAs(email, password) {
   const res = http.post(
     `${BASE_URL}/api/v1/auth/login`,
-    JSON.stringify({ email: EMAIL, password: PASSWORD }),
+    JSON.stringify({ email, password }),
     { headers: { 'Content-Type': 'application/json' }, tags: { name: 'login' } },
   );
   check(res, {

@@ -38,3 +38,11 @@ services:
 
   web-volume-init:
     profiles: ["disabled-in-capacity-tests"]
+
+volumes:
+  engine_cache:
+    name: mh_capacity_engine_cache
+  corpus_data:
+    name: mh_capacity_corpus_data
+  hf_cache:
+    name: mh_capacity_hf_cache

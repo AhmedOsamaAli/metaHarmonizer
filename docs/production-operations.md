@@ -8,7 +8,7 @@ Measured on the Oracle production host on 2026-08-15. The host has a fixed
 | Measure | Current value | Planning significance |
 |---|---:|---|
 | Root filesystem | 66.4% used, 14.8 GiB free | Below the 70% warning threshold |
-| Reclaimable Docker build cache | 11.4 GiB | Primary cleanup opportunity; not user data |
+| Reclaimable Docker build cache | 11.4 GiB (`docker system df`: 12.22 GB decimal) | Still occupies disk; primary cleanup opportunity, not user data |
 | Docker images | 9.4 GiB | Large ML runtime; API and worker share one image |
 | Current KB release volumes | 1.63 GiB | Active ontology/corpus/model snapshot |
 | Previous KB release volumes | 1.63 GiB | Retained for rollback |
@@ -22,6 +22,11 @@ The current KB refresh changed the bundle SHA but barely changed its installed
 footprint: the current three KB volumes are approximately 400 KiB larger than
 the previous release. Quarterly growth must therefore be measured from each
 release rather than inferred from ontology term count alone.
+
+`Reclaimable` means Docker may safely discard unused build cache; it does not
+mean the space has already been freed. No automatic cache prune runs in
+production. See `docs/capacity-report-2026-08-15.md` for the measured
+distinct-user breakpoint and OCI resize assessment.
 
 ## Release headroom
 
@@ -111,6 +116,6 @@ backup state becomes critical.
 The host is fixed capacity, so growth does not automatically double spend.
 Costs change only when an owner enlarges/replaces the VM, adds workers or block
 storage, activates object storage, or adopts paid monitoring/email services.
-Use the daily forecast and the measured 20-active-curator, two-job worker limit
+Use the daily forecast and the measured 50-active-curator, two-job worker limit
 to trigger a documented continue/resize/migrate decision; do not infer cost
 from term count, study count, or queue submissions alone.
