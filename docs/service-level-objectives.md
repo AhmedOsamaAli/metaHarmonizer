@@ -2,11 +2,10 @@
 
 ## Purpose and status
 
-These objectives replace the undocumented load-test defaults. They are a
-proposed engineering baseline for the public beta, grounded in the curator
-workflow, measured production-shape behavior, and existing project acceptance
-criteria. They are not institutionally accepted until a named mentor or service
-owner approves them using the process below.
+These objectives replace the undocumented load-test defaults. They are the
+project-approved engineering baseline for the public beta, grounded in the
+curator workflow, measured production-shape behavior, and existing project
+acceptance criteria. Institutional operation may add stricter requirements.
 
 ## Objectives
 
@@ -47,7 +46,7 @@ quantities and must not be substituted for one another.
 The 2026-08-15 production-shape test measured 50 users at p95 536 ms with no
 failures. Sixty users measured p95 610 ms/p99 646 ms, 70 measured p95 790
 ms/p99 858 ms, and 80 measured p95 945 ms/p99 991 ms. All measured rungs meet
-the proposed beta latency SLO. Eighty users is still not a safe planning load:
+the approved beta latency SLO. Eighty users is still not a safe planning load:
 throughput declined, host CPU idle reached 13%, and the runnable queue reached
 16 on four cores. The safe planning limit remains 50 users.
 
@@ -69,7 +68,7 @@ governance decision:
 
 | State | Approver | Approval date | Review date |
 |---|---|---|---|
-| Proposed; awaiting owner/mentor acceptance | - | - | Three months after approval |
+| Approved for public beta | Ahmed Osama Ali, project owner | 2026-08-15 | 2026-11-15 |
 
 ## Not yet defined
 

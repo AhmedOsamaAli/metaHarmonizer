@@ -15,14 +15,14 @@ review queue, quality metrics, and mappings. After the test, all isolated
 containers, volumes, networks, worktree files, and secrets were removed.
 Production `/healthz` returned 200 before, throughout, and after every rung.
 
-The proposed public-beta objectives are:
+The project-approved public-beta objectives are:
 
 - zero unexpected HTTP failures;
 - 100% checks;
 - p95 at or below 1 second;
 - p99 at or below 2 seconds.
 
-The table is classified against the proposed beta SLO in
+The table is classified against the approved beta SLO in
 `docs/service-level-objectives.md`. SLO compliance and safe operating capacity
 are separate: safe capacity additionally requires 25% p95 headroom,
 non-declining throughput, and resource reserve.
@@ -47,7 +47,7 @@ Throughput flattened at approximately 98-101 requests/second from 50 users
 onward. At 80 users throughput fell while latency rose, demonstrating CPU queueing
 rather than useful scaling. The 80-user rung remained functionally correct but
 had only 5.5% p95 headroom and saturated host CPU scheduling. It meets the
-proposed beta response objective but is not safe operating capacity.
+approved beta response objective but is not safe operating capacity.
 
 ## What “50 users” means
 
