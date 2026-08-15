@@ -19,7 +19,8 @@ def healthy_check() -> dict:
         "metrics": {"configured": True, "status": 200, "server_errors_delta": 0},
         "services": {name: "healthy" for name in ("api", "worker", "postgres", "redis")},
         "queue_depth": 0,
-        "database": {"unresolved_failures": 0, "failed_jobs_24h": 0},
+        "active_users_5m": 0,
+        "database": {"registered_users": 4, "unresolved_failures": 0, "failed_jobs_24h": 0},
         "backup_timer": {"ActiveState": "active"},
         "backup_service": {"Result": "success", "ExecMainExitTimestamp": "Fri 2026-08-14 01:00:00 UTC"},
         "kb_timer": {"ActiveState": "active"},
@@ -41,6 +42,16 @@ def test_assess_applies_measured_thresholds():
     issues = production_report.assess(check, require_backup=False)
     assert {issue["code"] for issue in issues} == {"disk_warning", "queue_warning"}
     assert all(issue["severity"] == "warning" for issue in issues)
+
+
+def test_assess_active_user_window_uses_planning_thresholds():
+    check = healthy_check()
+    check["active_users_5m"] = 40
+    assert production_report.assess(check, require_backup=False)[0]["code"] == "active_users_warning"
+    check["active_users_5m"] = 50
+    issue = production_report.assess(check, require_backup=False)[0]
+    assert issue["code"] == "active_users_planning_limit"
+    assert issue["severity"] == "warning"
 
 
 def test_assess_keeps_unconfigured_backup_visible_without_false_claim():

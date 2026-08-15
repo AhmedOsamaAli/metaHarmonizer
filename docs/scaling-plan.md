@@ -13,6 +13,10 @@
 The dashboard and ML limits are separate. Fifty active reviewers does not mean
 fifty simultaneous model executions.
 
+“Active” means the controlled k6 workload or, in production reporting, distinct
+authenticated users seen in a rolling five-minute window. Total registered
+accounts are not a concurrency metric and currently have no benchmarked maximum.
+
 ## Expansion triggers
 
 Expansion starts only when retained production evidence shows one of these for
@@ -26,6 +30,11 @@ at least three business days, or a scheduled event requires it:
 
 The 800 ms trigger is 80% of the one-second p95 objective, leaving time to act
 before users experience an SLO breach.
+
+In production, use the five-minute distinct-active-user count as an early-warning
+proxy. It is intentionally conservative and is not mathematically identical to
+simultaneous k6 VUs. Confirm a scale decision with request rate, latency, CPU,
+queue, and job evidence rather than this count alone.
 
 ## Phase 0: owner and billing decision
 

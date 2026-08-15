@@ -80,6 +80,7 @@ journalctl -u metaharmonizer-ops-check.service -n 50 --no-pager
 |---|---:|---:|
 | Root filesystem | 70% | 85%; stop new uploads |
 | Queue depth | 160 | 200; API capacity limit |
+| Distinct authenticated users active in five minutes | 40 | 50; warning only, investigate measured capacity and do not reject users automatically |
 | Public health | - | Any non-200 response |
 | API/worker/PostgreSQL/Redis | - | Missing or unhealthy |
 | Failed jobs | Any in 24 hours | Any unresolved dead-letter failure |
@@ -90,6 +91,10 @@ journalctl -u metaharmonizer-ops-check.service -n 50 --no-pager
 HTTP 5xx metrics remain admin-scoped. Create a dedicated API token and place it
 only in `/home/ubuntu/.config/metaharmonizer/ops-monitor.env` as
 `OPS_METRICS_BEARER_TOKEN`; do not make `/metrics` public.
+
+The active-user count is a rolling aggregate from authenticated requests. It is
+not total registered accounts, open refresh sessions, or exact instantaneous
+concurrency. Use it with latency, request rate, CPU, queue, and job metrics.
 
 ## Delivery and ownership
 

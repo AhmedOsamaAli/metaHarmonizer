@@ -25,6 +25,11 @@ throughput, and resource reserve. The 50-user target meets those conditions; it
 is not a forecast of adoption or permission to run 50 simultaneous ML jobs.
 Real ML remains limited to two concurrent jobs per worker.
 
+The SLO does not impose a 50-account registration limit. It defines response
+quality under a controlled active workload. Total accounts, daily users,
+simultaneous dashboard activity, uploads, queue depth, and ML jobs are separate
+quantities and must not be substituted for one another.
+
 ## Measurement
 
 - Dashboard latency is measured by `load/k6/multiuser.js` against an isolated

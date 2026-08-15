@@ -40,6 +40,8 @@ logger = logging.getLogger("app.ratelimit")
 IDEMPOTENCY_HEADER = "Idempotency-Key"
 IDEMPOTENT_ROUTES = ("/studies", "/harmonize", "/federation/import")
 IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60
+ACTIVE_USERS_KEY = "ops:active-users:5m"
+ACTIVE_USERS_WINDOW_SECONDS = 5 * 60
 
 # Paths exempt from rate limiting. These are authenticated, high-frequency, and
 # not unauthenticated brute-force vectors:
@@ -89,10 +91,23 @@ async def _client_id(request: Request) -> tuple[str, bool]:
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        identity, is_auth = await _client_id(request)
         if request.url.path.startswith(RATE_LIMIT_EXEMPT_PREFIXES):
+            if is_auth:
+                now = time.time()
+                try:
+                    r = get_redis()
+                    async with r.pipeline(transaction=True) as pipe:
+                        pipe.zremrangebyscore(
+                            ACTIVE_USERS_KEY, 0, now - ACTIVE_USERS_WINDOW_SECONDS
+                        )
+                        pipe.zadd(ACTIVE_USERS_KEY, {identity: now})
+                        pipe.expire(ACTIVE_USERS_KEY, ACTIVE_USERS_WINDOW_SECONDS * 2)
+                        await pipe.execute()
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("active-user tracking skipped (redis unavailable): %s", exc)
             return await call_next(request)
 
-        identity, is_auth = await _client_id(request)
         window = settings.rate_limit_window_sec
         limit = settings.rate_limit_auth if is_auth else settings.rate_limit_anon
         now = time.time()
@@ -112,7 +127,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 pipe.zadd(key, {f"{now}:{uuid.uuid4().hex}": now})
                 pipe.zcard(key)
                 pipe.expire(key, window)
-                _, _, count, _ = await pipe.execute()
+                if is_auth:
+                    pipe.zremrangebyscore(
+                        ACTIVE_USERS_KEY, 0, now - ACTIVE_USERS_WINDOW_SECONDS
+                    )
+                    pipe.zadd(ACTIVE_USERS_KEY, {identity: now})
+                    pipe.expire(ACTIVE_USERS_KEY, ACTIVE_USERS_WINDOW_SECONDS * 2)
+                results = await pipe.execute()
+                count = results[2]
         except Exception as exc:  # noqa: BLE001 — fail open on Redis trouble
             logger.warning("rate-limit check skipped (redis unavailable): %s", exc)
             return await call_next(request)

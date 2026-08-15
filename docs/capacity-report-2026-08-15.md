@@ -15,7 +15,7 @@ review queue, quality metrics, and mappings. After the test, all isolated
 containers, volumes, networks, worktree files, and secrets were removed.
 Production `/healthz` returned 200 before, throughout, and after every rung.
 
-The adopted public-beta objectives are:
+The proposed public-beta objectives are:
 
 - zero unexpected HTTP failures;
 - 100% checks;
@@ -46,7 +46,52 @@ seconds with one second of think time.
 Throughput flattened at approximately 98-101 requests/second from 50 users
 onward. At 80 users throughput fell while latency rose, demonstrating CPU queueing
 rather than useful scaling. The 80-user rung remained functionally correct but
-is outside the response-time objective.
+had only 5.5% p95 headroom and saturated host CPU scheduling. It meets the
+proposed beta response objective but is not safe operating capacity.
+
+## What “50 users” means
+
+The 50-user planning limit means **50 distinct authenticated curators actively
+repeating the measured dashboard workflow at the same time**, with one second
+between iterations. It does not mean:
+
+- only 50 accounts may be registered;
+- only 50 people may use the system in a day or month;
+- 50 browser tabs left idle consume the measured capacity;
+- 50 simultaneous uploads or real ML jobs are supported.
+
+No maximum registered-account count was benchmarked. Inactive accounts and
+refresh-session rows do not generate request load; their database storage is a
+different growth question. The test created 80 accounts only to supply distinct
+identities for the concurrency ladder, not to establish an account-count limit.
+
+Normal production HTTP requests are short, so “instantaneous concurrent users”
+is not directly observable after a response completes. Production therefore
+records the aggregate number of distinct authenticated users seen in the last
+five minutes. That rolling count is a scaling signal, not an assertion that all
+of those users issued a request in the same millisecond. Open WebSockets count
+only users watching live progress and are also not a complete user count.
+The rolling set is updated by valid bearer/API-token HTTP requests, including
+rate-limit-exempt job polling and WebSocket-ticket creation; a refresh-cookie
+request alone is not counted until the client makes an authenticated API call.
+
+## Resource paths and bottlenecks
+
+| Workload/resource | Measured or configured boundary | First bottleneck | Scale action | Evidence not yet available |
+|---|---|---|---|---|
+| Dashboard reads | 50 active curators safe; 80 meets beta SLO but saturates | API/host CPU and runnable queue | More OCPUs, then test multiple API processes/replicas | Mixed read plus real-ML ladder after resize |
+| Registered/inactive users | No tested account maximum | PostgreSQL row/index growth eventually; no current pressure measured | Observe DB size/query plans; archive only with policy | Account-count/storage benchmark |
+| Login bursts | Anonymous IP budget 20 requests/minute; account lock after 5 failed attempts | Security controls by design | Do not raise for capacity; use SSO or distributed ingress only after threat review | Multi-site legitimate-login arrival profile |
+| Upload acceptance | 2 submissions/second tested without shedding; 3 active jobs/user | Per-user guard, then queue depth | Preserve guards; add workers only when queue age proves need | Mixed large-file arrival test |
+| Real ML execution | 2 concurrent jobs/worker; 2,700 representative jobs/day planning | Worker/host CPU; four-way test showed little throughput gain | CPU resize and retest; remote workers after object storage/private networking | Production-shape mixed read/ML benchmark |
+| Queue | Warning 160, reject 200 | Configured Redis backpressure | Add verified worker capacity before changing queue limit | Oldest-job wait metric not yet implemented |
+| PostgreSQL | Logical DB approximately 10.9 MB at baseline; pool 10 + 20 overflow/process | Aggregate connection pools when API/workers multiply | Recalculate pools below `max_connections`; tune from observed waits | Connection saturation benchmark |
+| Redis | Approximately 26.6 MiB volume; queue zero at baseline | Queue/rate/session operations; no saturation observed | Private central Redis or managed/replicated service for multi-host | Redis latency/failover benchmark |
+| Memory | Approximately 20 GB available before load test | Not the dashboard limit; model duplication can change this | Keep 4 GiB reserve; measure per added API/worker process | Multi-process engine RSS measurement |
+| Disk | 67% used; 12.22 GB build cache reclaimable; 70%/85% thresholds | Build cache or retained data/KB depending report | Inspect components, prune cache in maintenance, expand volume only when justified | Long-term organic growth after enough daily snapshots |
+| Network | Shape reports 4 Gbps; no network saturation observed | Unknown because not reached | Measure before changing network architecture | Bandwidth/connection telemetry under external load |
+
+Values labeled “not yet available” are gaps, not implied capacity.
 
 ## Resource evidence
 

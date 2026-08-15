@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import httpx
 import pytest
+import pytest_asyncio
 import redis as sync_redis
 from fastapi import FastAPI
 
@@ -33,15 +34,15 @@ def _redis_up() -> bool:
 skip_no_redis = pytest.mark.skipif(not _redis_up(), reason="dev Redis not reachable (port 6380)")
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def _redis_clean():
     r = sync_redis.from_url(REDIS_TEST_URL, decode_responses=True)
-    for pattern in ("ratelimit:*", "idem:*"):
+    for pattern in ("ratelimit:*", "idem:*", "ops:active-users:*"):
         for k in r.scan_iter(pattern):
             r.delete(k)
     redis_mod._client = None  # rebuild async singleton in the running loop
     yield
-    for pattern in ("ratelimit:*", "idem:*"):
+    for pattern in ("ratelimit:*", "idem:*", "ops:active-users:*"):
         for k in r.scan_iter(pattern):
             r.delete(k)
     # Close the async singleton on its own loop to avoid GC-time warnings.
@@ -59,6 +60,10 @@ def _app() -> FastAPI:
     @app.get("/ping")
     async def ping():
         return {"ok": True}
+
+    @app.get("/api/v1/jobs/example")
+    async def poll_job():
+        return {"state": "running"}
 
     @app.post("/studies")
     async def create_study():
@@ -100,6 +105,36 @@ async def test_valid_access_token_uses_authenticated_budget(_redis_clean, monkey
             for _ in range(settings.rate_limit_anon + 1)
         ]
     assert all(response.status_code == 200 for response in responses)
+    r = sync_redis.from_url(REDIS_TEST_URL, decode_responses=True)
+    assert r.zrange("ops:active-users:5m", 0, -1) == ["user:123"]
+
+
+@skip_no_redis
+async def test_active_user_window_counts_distinct_authenticated_users(_redis_clean):
+    app = _app()
+    first = create_access_token(user_id=101, role="curator", email="first@example.com")
+    second = create_access_token(user_id=202, role="curator", email="second@example.com")
+    async with _client(app) as client:
+        await client.get("/ping", headers={"Authorization": f"Bearer {first}"})
+        await client.get("/ping", headers={"Authorization": f"Bearer {first}"})
+        await client.get("/ping", headers={"Authorization": f"Bearer {second}"})
+        await client.get("/ping")
+    r = sync_redis.from_url(REDIS_TEST_URL, decode_responses=True)
+    assert r.zcard("ops:active-users:5m") == 2
+
+
+@skip_no_redis
+async def test_rate_limit_exempt_job_poll_still_tracks_active_user(_redis_clean):
+    app = _app()
+    token = create_access_token(user_id=303, role="curator", email="jobs@example.com")
+    async with _client(app) as client:
+        response = await client.get(
+            "/api/v1/jobs/example",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    assert response.status_code == 200
+    r = sync_redis.from_url(REDIS_TEST_URL, decode_responses=True)
+    assert r.zrange("ops:active-users:5m", 0, -1) == ["user:303"]
 
 
 @skip_no_redis

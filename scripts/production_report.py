@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -123,6 +124,7 @@ def systemd_state(unit: str) -> dict[str, str]:
 def database_metrics(repo: Path) -> dict[str, int]:
     sql = """select json_build_object(
       'database_bytes', pg_database_size(current_database()),
+    'registered_users', (select count(*) from users),
       'studies', (select count(*) from studies),
       'queued_jobs', (select count(*) from job_runs where state='queued'),
       'running_jobs', (select count(*) from job_runs where state='running'),
@@ -161,6 +163,15 @@ def collect_check(repo: Path) -> dict[str, Any]:
         os.getenv("OPS_METRICS_BEARER_TOKEN", ""),
     )
     queue_depth = int(compose(repo, "exec", "-T", "redis", "redis-cli", "ZCARD", "arq:queue"))
+    active_cutoff = time.time() - 5 * 60
+    active_users_5m = int(
+        compose(
+            repo,
+            "exec", "-T", "redis", "redis-cli", "EVAL",
+            "redis.call('ZREMRANGEBYSCORE', KEYS[1], '-inf', ARGV[1]); return redis.call('ZCARD', KEYS[1])",
+            "1", "ops:active-users:5m", str(active_cutoff),
+        )
+    )
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "filesystem": {
@@ -177,6 +188,7 @@ def collect_check(repo: Path) -> dict[str, Any]:
         },
         "services": service_health(repo),
         "queue_depth": queue_depth,
+        "active_users_5m": active_users_5m,
         "database": database_metrics(repo),
         "backup_timer": systemd_state("metaharmonizer-backup.timer"),
         "backup_service": systemd_state("metaharmonizer-backup.service"),
@@ -213,6 +225,19 @@ def assess(check: dict[str, Any], *, require_backup: bool) -> list[dict[str, str
         add("critical", "queue_full", f"Queue depth is {depth} (limit 200).")
     elif depth >= 160:
         add("warning", "queue_warning", f"Queue depth is {depth} (80% of limit 200).")
+    active_users = int(check.get("active_users_5m", 0))
+    if active_users >= 50:
+        add(
+            "warning",
+            "active_users_planning_limit",
+            f"{active_users} distinct authenticated users were active in five minutes (planning limit 50).",
+        )
+    elif active_users >= 40:
+        add(
+            "warning",
+            "active_users_warning",
+            f"{active_users} distinct authenticated users were active in five minutes (expansion trigger 40).",
+        )
     database = check["database"]
     if database["unresolved_failures"]:
         add("critical", "unresolved_failures", f"{database['unresolved_failures']} job failures are unresolved.")
@@ -351,6 +376,7 @@ def render_report(report: dict[str, Any]) -> str:
         f"- Public health: HTTP {report['public_health']['status']}",
         f"- Filesystem: {filesystem['used_percent']:.1f}% used; {human_bytes(filesystem['free_bytes'])} free",
         f"- Queue: {report['queue_depth']} pending; {report['database']['unresolved_failures']} unresolved failures",
+        f"- Users: {report['active_users_5m']} distinct authenticated users active in five minutes; {report['database']['registered_users']} registered",
         f"- Backup timer: {report['backup_timer'].get('ActiveState', 'unknown')}",
         f"- KB update timer: {report['kb_timer'].get('ActiveState', 'unknown')}",
         "",
