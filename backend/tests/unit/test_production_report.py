@@ -23,6 +23,7 @@ def healthy_check() -> dict:
         "database": {"registered_users": 4, "unresolved_failures": 0, "failed_jobs_24h": 0},
         "backup_timer": {"ActiveState": "active"},
         "backup_service": {"Result": "success", "ExecMainExitTimestamp": "Fri 2026-08-14 01:00:00 UTC"},
+        "backup_last_success_age_hours": 1.0,
         "kb_timer": {"ActiveState": "active"},
         "kb_service": {"Result": "success"},
     }
@@ -111,7 +112,7 @@ def test_alert_retries_after_delivery_becomes_available(tmp_path: Path, monkeypa
 
 def test_stale_backup_and_failed_kb_update_are_reported():
     check = healthy_check()
-    check["backup_service"]["ExecMainExitTimestamp"] = "n/a"
+    check["backup_last_success_age_hours"] = None
     check["kb_service"]["Result"] = "exit-code"
     issues = production_report.assess(check, require_backup=True)
     assert {issue["code"] for issue in issues} == {"backup_stale", "kb_update_failed"}
@@ -121,6 +122,14 @@ def test_systemd_timestamp_age():
     now = datetime(2026, 8, 15, 13, 0, tzinfo=timezone.utc)
     assert production_report.timestamp_age_hours("Fri 2026-08-14 01:00:00 UTC", now=now) == 36
     assert production_report.timestamp_age_hours("n/a", now=now) is None
+
+
+def test_backup_success_marker_age(tmp_path: Path):
+    marker = tmp_path / "last-success"
+    assert production_report.file_age_hours(marker) is None
+    marker.write_text("", encoding="utf-8")
+    age = production_report.file_age_hours(marker)
+    assert age is not None and age < 0.01
 
 
 def test_snapshot_retention_keeps_newest_files(tmp_path: Path):

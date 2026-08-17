@@ -121,6 +121,14 @@ def systemd_state(unit: str) -> dict[str, str]:
     return dict(line.split("=", 1) for line in output.splitlines() if "=" in line)
 
 
+def file_age_hours(path: Path, *, now: datetime | None = None) -> float | None:
+    if not path.is_file():
+        return None
+    current = now or datetime.now(timezone.utc)
+    modified = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+    return max((current - modified).total_seconds() / 3600, 0.0)
+
+
 def database_metrics(repo: Path) -> dict[str, int]:
     sql = """select json_build_object(
       'database_bytes', pg_database_size(current_database()),
@@ -172,6 +180,12 @@ def collect_check(repo: Path) -> dict[str, Any]:
             "1", "ops:active-users:5m", str(active_cutoff),
         )
     )
+    backup_success_path = Path(
+        os.getenv(
+            "OPS_BACKUP_SUCCESS_FILE",
+            Path.home() / ".local/state/metaharmonizer/backup/last-success",
+        )
+    )
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "filesystem": {
@@ -192,6 +206,7 @@ def collect_check(repo: Path) -> dict[str, Any]:
         "database": database_metrics(repo),
         "backup_timer": systemd_state("metaharmonizer-backup.timer"),
         "backup_service": systemd_state("metaharmonizer-backup.service"),
+        "backup_last_success_age_hours": file_age_hours(backup_success_path),
         "kb_timer": systemd_state("metaharmonizer-kb-update.timer"),
         "kb_service": systemd_state("metaharmonizer-kb-update.service"),
     }
@@ -254,8 +269,7 @@ def assess(check: dict[str, Any], *, require_backup: bool) -> list[dict[str, str
         backup_result = check["backup_service"].get("Result")
         if backup_result not in {"success", ""}:
             add("critical", "backup_failed", f"Last backup service result is {backup_result}.")
-        backup_timestamp = check["backup_service"].get("ExecMainExitTimestamp", "")
-        backup_age = timestamp_age_hours(backup_timestamp)
+        backup_age = check.get("backup_last_success_age_hours")
         if backup_age is None or backup_age > 36:
             message = "No completed backup timestamp is available." if backup_age is None else f"Last backup completed {backup_age:.1f} hours ago."
             add("critical", "backup_stale", message)

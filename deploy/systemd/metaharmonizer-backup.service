@@ -8,6 +8,7 @@ Type=oneshot
 User=ubuntu
 WorkingDirectory=/home/ubuntu/metaHarmonizer
 ExecStart=/usr/bin/docker compose -f docker-compose.yml -f docker-compose.prod.yml run --rm -v /home/ubuntu/.config/metaharmonizer/backup.key:/run/secrets/metaharmonizer-backup.key:ro api python -m scripts.backup_postgres backup
+ExecStartPost=/usr/bin/sh -c 'mkdir -p /home/ubuntu/.local/state/metaharmonizer/backup && touch /home/ubuntu/.local/state/metaharmonizer/backup/last-success'
 
 [Install]
 WantedBy=multi-user.target
