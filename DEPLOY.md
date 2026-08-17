@@ -207,10 +207,16 @@ Generate the host-only encryption key once:
 ```bash
 mkdir -p ~/.config/metaharmonizer
 docker compose run --rm \
+  --user "$(id -u):$(id -g)" \
   -v "$HOME/.config/metaharmonizer:/keys" \
   api python -m scripts.backup_postgres keygen --key-file /keys/backup.key
 chmod 600 ~/.config/metaharmonizer/backup.key
+sudo chown 1000:1000 ~/.config/metaharmonizer/backup.key
 ```
+
+The application image runs as UID/GID 1000. The final ownership is required so
+the non-root one-shot backup container can read the mode-0600 key. Never loosen
+the key to group/world-readable permissions.
 
 Put `BACKUP_R2_ENDPOINT`, `BACKUP_R2_BUCKET`,
 `BACKUP_R2_ACCESS_KEY_ID`, and `BACKUP_R2_SECRET_ACCESS_KEY` in the production

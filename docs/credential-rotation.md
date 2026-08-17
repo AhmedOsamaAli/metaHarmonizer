@@ -105,7 +105,8 @@ backup remains dependent on the key that encrypted it.
 1. Produce and retain one final backup with the old key.
 2. Archive the old key in institution-controlled cold storage with its backup date range.
 3. Generate `backup-new.key` with `scripts.backup_postgres keygen` and mode `0600`.
-4. Atomically replace the mounted `backup.key`.
+4. Set numeric ownership to UID/GID 1000 (the non-root application container),
+   then atomically replace the mounted `backup.key` without loosening mode `0600`.
 5. Produce a new backup and restore it into a scratch database.
 6. Retain the old key until every old-key backup expires or is re-encrypted and verified.
 

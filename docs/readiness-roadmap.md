@@ -24,7 +24,7 @@ This is the current provider-neutral closure plan for moving from public beta to
 
 | Priority | Work | Needed input | Completion evidence |
 | --- | --- | --- | --- |
-| P0 | Activate encrypted off-host backups and perform a clean restore drill | S3-compatible bucket, endpoint, access-key ID, secret key | Scheduled backup, retained object, clean restore, application verification |
+| P0 | ✅ Activate encrypted off-host backups and perform a clean restore drill | `docs/backup-restore-drill-2026-08-17.md`: private R2 upload, AES-256-GCM encryption, six-table count parity, disposable API readiness, scratch cleanup, enabled daily timer, and strict 36-hour freshness monitoring passed |
 | P0 | Complete operational alert delivery | Local five-minute checks and daily growth reports are implemented; provide an alert webhook, dedicated metrics token, and accountable primary/secondary recipients | Delivered test alerts for health, 5xx, queue depth, failed jobs, disk, KB updater failure, and stale backup; acknowledged escalation drill |
 | P0 | Complete ownership and recovery inventory | Oracle/cloud, registrar/DNS, GitHub, Resend, SSH, database, recovery and 2FA owners | Two authorized administrators and tested recovery path per service |
 | P1 | Run authenticated browser journey in hosted CI | Dedicated non-production E2E account | Playwright journey passes without personal credentials |
@@ -37,7 +37,7 @@ This is the current provider-neutral closure plan for moving from public beta to
 | Order | Trigger or decision | Action | Completion evidence |
 |---:|---|---|---|
 | 1 | Owner decision now | Verify OCI tenancy/billing, current 4-OCPU charge status, service limits, and prices/availability for 6 OCPU/24 GB and 8 OCPU/24 GB | Redacted billing/limits evidence and signed no-change/resize decision |
-| 2 | Before any resize | Activate encrypted off-host backup and pass a clean restore drill | Retained backup, clean restore, application verification |
+| 2 | ✅ Before any resize | Encrypted off-host backup and clean restore drill passed on 2026-08-17 | `docs/backup-restore-drill-2026-08-17.md` |
 | 3 | Sustained >40 active users or p95 >800 ms | Resize CPU first; test two API processes/replicas; do not add memory without measured need | Repeat 50-80 user ladder, mixed-load test, replica-failure drill, rollback |
 | 4 | Sustained queue wait/worker CPU saturation | Move uploads to S3/R2, deploy a private remote worker with the same image/KB SHA | Object lifecycle tests, private connectivity, 1/2-worker benchmark, worker-loss drill |
 | 5 | Institution requires HA | External load balancer plus replicated/managed stateful services and external monitoring | Documented RPO/RTO, failover drill, on-call delivery and ownership |
