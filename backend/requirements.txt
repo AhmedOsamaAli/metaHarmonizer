@@ -1,6 +1,6 @@
 fastapi==0.141.1
-starlette==1.5.0
-uvicorn[standard]==0.52.1
+starlette==1.6.0
+uvicorn[standard]==0.52.3
 python-multipart==0.0.32
 pydantic==2.13.4
 pydantic-settings==2.15.0
@@ -8,22 +8,22 @@ pandas==2.3.3
 rapidfuzz==3.14.5
 numpy==1.26.4
 sentence-transformers==5.7.0
-transformers==5.14.1
+transformers==5.15.0
 torch>=2.1.0
 requests>=2.34.2
 google-genai>=1.75.0
 
 # --- Persistence + cache (Sprint 2 / Dev infra) ---------------------------
-sqlalchemy[asyncio]==2.0.51
+sqlalchemy[asyncio]==2.0.52
 asyncpg==0.31.0
-alembic==1.19.0
+alembic==1.19.1
 redis==5.3.1
 # Job queue for the harmonize pipeline (Sprint 4).
 arq==0.28.0
 
 # --- Observability --------------------------------------------------------
 # Optional: error tracking. init_sentry() no-ops if unset/uninstalled.
-sentry-sdk[fastapi]==2.66.1
+sentry-sdk[fastapi]==2.68.0
 # Prometheus golden-signal metrics at admin-scoped /metrics.
 prometheus-client==0.26.0
 
