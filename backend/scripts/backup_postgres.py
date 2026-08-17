@@ -234,6 +234,18 @@ def _same_database(first: URL, second: URL) -> bool:
     )
 
 
+def _write_compatible_restore_sql(source: Path, destination: Path) -> int:
+    """Remove only pg_dump settings unsupported by older target servers."""
+    removed = 0
+    with source.open("rb") as src, destination.open("wb") as dst:
+        for line in src:
+            if line.strip() == b"SET transaction_timeout = 0;":
+                removed += 1
+                continue
+            dst.write(line)
+    return removed
+
+
 def restore(target_database_url: str, object_key: str | None, allow_production: bool) -> str:
     production = _database_url()
     target = _database_url(target_database_url)
@@ -262,6 +274,8 @@ def restore(target_database_url: str, object_key: str | None, allow_production: 
     with tempfile.TemporaryDirectory(prefix="mh-restore-") as temp_dir:
         encrypted_path = Path(temp_dir) / "database.dump.enc"
         dump_path = Path(temp_dir) / "database.dump"
+        raw_sql_path = Path(temp_dir) / "database.raw.sql"
+        restore_sql_path = Path(temp_dir) / "database.restore.sql"
         client.download_file(bucket, object_key, str(encrypted_path))
         decrypt_file(encrypted_path, dump_path, encryption_key)
         subprocess.run(
@@ -271,10 +285,20 @@ def restore(target_database_url: str, object_key: str | None, allow_production: 
                 "--if-exists",
                 "--no-owner",
                 "--no-privileges",
-                "--exit-on-error",
-                "--dbname",
-                target.database or "postgres",
+                "--file",
+                str(raw_sql_path),
                 str(dump_path),
+            ],
+            check=True,
+        )
+        _write_compatible_restore_sql(raw_sql_path, restore_sql_path)
+        subprocess.run(
+            [
+                "psql",
+                "--set",
+                "ON_ERROR_STOP=1",
+                "--file",
+                str(restore_sql_path),
             ],
             env=_postgres_env(target),
             check=True,

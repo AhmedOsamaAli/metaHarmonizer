@@ -42,6 +42,26 @@ def test_tampered_backup_is_rejected(tmp_path):
         backup.decrypt_file(encrypted, restored, key)
 
 
+def test_restore_sql_removes_only_unsupported_transaction_timeout(tmp_path):
+    source = tmp_path / "raw.sql"
+    destination = tmp_path / "restore.sql"
+    source.write_bytes(
+        b"SET statement_timeout = 0;\n"
+        b"SET transaction_timeout = 0;\n"
+        b"SET lock_timeout = 0;\n"
+        b"SELECT 'SET transaction_timeout = 0;';\n"
+    )
+
+    removed = backup._write_compatible_restore_sql(source, destination)
+
+    assert removed == 1
+    assert destination.read_bytes() == (
+        b"SET statement_timeout = 0;\n"
+        b"SET lock_timeout = 0;\n"
+        b"SELECT 'SET transaction_timeout = 0;';\n"
+    )
+
+
 def test_retention_keeps_daily_weekly_monthly_tiers():
     now = datetime(2026, 8, 8, 2, tzinfo=timezone.utc)
     keys = [_name(now - timedelta(days=day)) for day in range(400)]
