@@ -107,6 +107,7 @@ docs/*
 !docs/capacity-report-2026-08-13.md
 !docs/capacity-report-2026-08-15.md
 !docs/curator-guide.md
+!docs/curator-usability-protocol.md
 !docs/backup-restore-drill-2026-08-17.md
 !docs/operational-alert-drill-2026-08-19.md
 !docs/production-operations.md

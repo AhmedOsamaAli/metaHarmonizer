@@ -3,6 +3,57 @@
 This guide covers the curator workflow on the hosted application at
 <https://metaharmonizer.online> and on an equivalent self-hosted instance.
 
+## Getting access
+
+1. Open the application and choose **Create account**, then supply your
+   institutional email address and a password. Passwords that appear in known
+   public breaches are rejected.
+2. Confirm the verification link sent to that address. You cannot sign in until
+   the address is verified.
+3. If the instance restricts registration to specific email domains, an
+   administrator must approve an address outside those domains. You will be told
+   that approval is pending, and you will receive a message once it is granted.
+4. Sign in. The first account created on a new instance becomes the
+   administrator; every later account is a curator.
+
+To evaluate the interface without an account, choose **Explore a live demo — no
+account needed** on the sign-in page. The demo shows a sample study with
+realistic results and blocks every write, so nothing you do is saved. Leave the
+demo before real work.
+
+If you forget your password, use **Forgot password?** and follow the emailed
+link. Sessions expire after a period of inactivity; signing in again restores
+your work, because decisions are stored on the server rather than in the
+browser.
+
+## What the application does
+
+MetaHarmonizer proposes; you decide. For each uploaded study it suggests how
+source columns map to a target schema, and how source values map to ontology
+terms. Nothing is final until a curator accepts it, and your original file is
+never modified.
+
+Two pieces of vocabulary appear throughout the interface:
+
+**Stage** shows how a proposal was produced, from most to least deterministic:
+
+| Badge | Meaning |
+| --- | --- |
+| S1 Dict/Fuzzy | Dictionary or close-string match |
+| S2 Value/Ontology | Match derived from the column's values or ontology context |
+| S3 Semantic | Semantic similarity from an embedding model |
+| S4 LLM | Optional language-model fallback, when enabled |
+| Invalid / Unmapped | No usable proposal; the column needs your decision |
+
+**Confidence** is the engine's own estimate for a proposal. High-confidence
+proposals may be accepted automatically by the instance's configured threshold;
+everything below it is held for review. Treat confidence as triage guidance, not
+evidence: a confident proposal can still be wrong, which is why the review
+queue puts risky items first.
+
+Each study also records the schema version and the ontology snapshot used to
+produce it, so a result can be reproduced and audited later.
+
 ## Before you upload
 
 Upload only de-identified clinical metadata. Do not upload names, contact
@@ -32,6 +83,14 @@ Select **Run harmonization**. The job continues on the server if you change
 pages or refresh the browser. Its progress remains in the jobs tray. A failed
 job shows an error and can be submitted again after correcting the input.
 
+The jobs tray in the header shows every run you have started, with live
+progress. You may leave the page, review another study, or close the tab; the
+run continues and the result appears when it completes. Each curator may have a
+small number of runs in flight at once, and the instance refuses new work when
+its queue is full — in both cases, wait for a run to finish and submit again.
+Submitting the same file twice while it is still running returns the run already
+in progress instead of duplicating the work.
+
 ## 2. Review schema mappings
 
 Open **Schema** and select the study. The default **Pending** tab contains
@@ -50,6 +109,11 @@ Decisions are saved immediately. Accepted, rejected, and edited decisions are
 remembered for the curator so repeated columns can be prefilled or rejected on
 later studies. An admin must separately promote a learned decision before it
 applies globally.
+
+These remembered decisions form two layers. Your own decisions are personal and
+apply only to your studies. An administrator can promote a reviewed decision to
+a shared layer used by everyone on the instance. Where both exist, your personal
+decision wins, so a shared default never silently overrides your judgement.
 
 The default **Smart review order** places risky mappings first and keeps
 look-alike columns together. Clicking a sortable header cycles through
@@ -151,3 +215,6 @@ your MetaHarmonizer instance and provide only the minimum necessary details.
 Include the application page, study ID if non-sensitive, approximate time,
 expected result, actual result, and reproducible steps. Redact values and file
 names that could identify a patient or institution.
+
+If you are evaluating whether this guide is sufficient on its own, use
+[curator-usability-protocol.md](curator-usability-protocol.md).
