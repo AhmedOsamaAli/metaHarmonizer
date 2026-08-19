@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import * as Dialog from '@radix-ui/react-dialog';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
   Check,
@@ -183,7 +183,10 @@ export default function MappingReview() {
         setMappings(fresh);
         setFilterStatus(defaultMappingStatusFilter(fresh, requestedStatus));
       })
-      .catch(console.error)
+      .catch((error) => {
+        setMappings([]);
+        toast.error(error instanceof ApiError ? error.message : 'Failed to load schema mappings.');
+      })
       .finally(() => setLoading(false));
   }, [requestedStatus, selectedId]);
 
@@ -209,7 +212,11 @@ export default function MappingReview() {
         setGroupInfo(info);
         setQueueStats(q.stats);
       })
-      .catch(console.error);
+      .catch((error) => {
+        setGroupInfo({});
+        setQueueStats(null);
+        toast.error(error instanceof ApiError ? error.message : 'Failed to load smart review order.');
+      });
   }, [selectedId, smartOrder, mappings]);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') =>
@@ -911,10 +918,23 @@ export default function MappingReview() {
       )}
 
       {/* Edit Modal */}
-      {editingId !== null && createPortal(
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4 pt-20 backdrop-blur-sm">
-          <div className="w-full max-w-md space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-pop dark:border-slate-800 dark:bg-slate-900">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Edit mapping</h3>
+      <Dialog.Root
+        open={editingId !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditingId(null);
+            setEditField('');
+            setEditNote('');
+          }
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm" />
+          <Dialog.Content className="fixed left-1/2 top-20 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-pop focus:outline-none dark:border-slate-800 dark:bg-slate-900">
+            <Dialog.Title className="text-lg font-semibold text-slate-900 dark:text-slate-100">Edit mapping</Dialog.Title>
+            <Dialog.Description className="text-sm text-slate-500 dark:text-slate-400">
+              Replace the proposed target field and optionally record why.
+            </Dialog.Description>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">
                 New field name
@@ -940,6 +960,7 @@ export default function MappingReview() {
             </div>
             <div className="flex justify-end gap-2">
               <button
+                type="button"
                 onClick={() => {
                   setEditingId(null);
                   setEditField('');
@@ -950,6 +971,7 @@ export default function MappingReview() {
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleEditSubmit}
                 disabled={!editField.trim()}
                 className="btn-primary btn-sm"
@@ -957,10 +979,9 @@ export default function MappingReview() {
                 Save
               </button>
             </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </div>
   );
 }

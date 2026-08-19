@@ -8,6 +8,7 @@ import { JobsProvider } from './context/JobsContext';
 import { NotificationsProvider } from './context/NotificationsContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { TourProvider } from './components/Walkthrough';
+import AppErrorBoundary from './components/AppErrorBoundary';
 import './index.css';
 
 // Apply the saved theme before first paint. Bundled (served from 'self'),
@@ -33,20 +34,22 @@ const queryClient = new QueryClient({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ThemeProvider>
-          <AuthProvider>
-            <NotificationsProvider>
-              <JobsProvider>
-                <TourProvider>
-                  <App />
-                </TourProvider>
-              </JobsProvider>
-            </NotificationsProvider>
-          </AuthProvider>
-        </ThemeProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <ThemeProvider>
+            <AuthProvider>
+              <NotificationsProvider>
+                <JobsProvider>
+                  <TourProvider>
+                    <App />
+                  </TourProvider>
+                </JobsProvider>
+              </NotificationsProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   </React.StrictMode>,
 );

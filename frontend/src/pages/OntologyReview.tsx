@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import * as Dialog from '@radix-ui/react-dialog';
 import { useParams } from 'react-router-dom';
 import {
   Check,
@@ -37,6 +37,7 @@ import StudyPicker from '../components/StudyPicker';
 import StudyGate, { isStudyReady } from '../components/StudyGate';
 import { Card, CardBody } from '../components/ui/Card';
 import SegmentedControl from '../components/ui/SegmentedControl';
+import { ApiError } from '../api/http';
 import type { OntologyMapping, OntologySearchResult } from '../api/types';
 
 interface EditState { id: number; term: string; ontId: string; raw?: string }
@@ -82,7 +83,10 @@ export default function OntologyReview() {
     setLoading(true);
     getOntologyMappings(selectedId)
       .then(setOntoMappings)
-      .catch(console.error)
+      .catch((error) => {
+        setOntoMappings([]);
+        toast.error(error instanceof ApiError ? error.message : 'Failed to load ontology mappings.');
+      })
       .finally(() => setLoading(false));
   }, [selectedId]);
 
@@ -93,13 +97,13 @@ export default function OntologyReview() {
 
   const handleAccept = async (id: number) => {
     setBusy((b) => ({ ...b, [id]: true }));
-    try { patch(await acceptOntologyMapping(id, remember)); } catch { /* ignore */ }
+    try { patch(await acceptOntologyMapping(id, remember)); } catch { toast.error('Could not accept the ontology mapping.'); }
     finally { setBusy((b) => ({ ...b, [id]: false })); }
   };
 
   const handleReject = async (id: number) => {
     setBusy((b) => ({ ...b, [id]: true }));
-    try { patch(await rejectOntologyMapping(id, remember)); } catch { /* ignore */ }
+    try { patch(await rejectOntologyMapping(id, remember)); } catch { toast.error('Could not reject the ontology mapping.'); }
     finally { setBusy((b) => ({ ...b, [id]: false })); }
   };
 
@@ -156,7 +160,10 @@ export default function OntologyReview() {
     if (!query) return;
     setSearching(true);
     try { setSearchResults(await searchOntology(query)); }
-    catch { setSearchResults([]); }
+    catch {
+      setSearchResults([]);
+      toast.error('Ontology search failed.');
+    }
     finally { setSearching(false); }
   };
 
@@ -379,10 +386,14 @@ export default function OntologyReview() {
   return (
     <div className="space-y-6">
       {/* Edit Modal (with embedded search) */}
-      {editState && createPortal(
-        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-20" onClick={closeModal}>
-          <div className="w-full max-w-lg space-y-4 rounded-xl bg-white p-6 shadow-xl dark:bg-slate-900" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-200">Set ontology term</h3>
+      {editState && <Dialog.Root open onOpenChange={(open) => !open && closeModal()}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40" />
+          <Dialog.Content className="fixed left-1/2 top-20 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 space-y-4 rounded-lg bg-white p-6 shadow-xl focus:outline-none dark:bg-slate-900">
+            <Dialog.Title className="text-sm font-semibold text-slate-800 dark:text-slate-200">Set ontology term</Dialog.Title>
+            <Dialog.Description className="sr-only">
+              Assign a controlled-vocabulary term and ontology identifier to this value.
+            </Dialog.Description>
             {editState.raw && (
               <p className="text-xs text-slate-500">
                 Assigning a term to <code className="rounded bg-slate-100 dark:bg-slate-800/70 px-1.5 py-0.5 text-slate-700 dark:text-slate-300">{editState.raw}</code>
@@ -423,7 +434,7 @@ export default function OntologyReview() {
                   placeholder="Search NCIT, UBERON…"
                   className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 />
-                <button onClick={() => handleSearch()} disabled={searching} className="rounded-lg bg-primary-600 p-2 text-white hover:bg-primary-700">
+                <button type="button" aria-label="Search ontology" onClick={() => handleSearch()} disabled={searching} className="rounded-lg bg-primary-600 p-2 text-white hover:bg-primary-700">
                   {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 </button>
               </div>
@@ -459,10 +470,11 @@ export default function OntologyReview() {
             </div>
 
             <div className="flex justify-end gap-2">
-              <button onClick={closeModal} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+              <button type="button" onClick={closeModal} className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
                 Cancel
               </button>
               <button
+                type="button"
                 disabled={!editState.term.trim() || busy[editState.id]}
                 onClick={handleEditSave}
                 className="flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-1.5 text-sm text-white hover:bg-primary-700 disabled:opacity-50"
@@ -470,10 +482,9 @@ export default function OntologyReview() {
                 {busy[editState.id] ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Save'}
               </button>
             </div>
-          </div>
-        </div>,
-        document.body,
-      )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>}
 
       <PageHeader
         title="Ontology review"
