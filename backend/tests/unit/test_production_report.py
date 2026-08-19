@@ -189,6 +189,31 @@ def test_auto_prune_can_be_disabled(tmp_path: Path, monkeypatch):
     assert production_report.maybe_reclaim(capacity_check(99.0), tmp_path) is None
 
 
+def test_reclaim_escalates_when_still_above_threshold(tmp_path: Path, monkeypatch):
+    passes: list[bool] = []
+    usage = iter([capacity_check(88.0)["filesystem"], capacity_check(62.0)["filesystem"]])
+
+    def fake_reclaim(*, cap_build_cache=False, **_kwargs):
+        passes.append(cap_build_cache)
+        return {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "capped_build_cache": cap_build_cache,
+            "freed_bytes": 5 * 1024**3 if cap_build_cache else 0,
+            "freed_by_type": {"Build Cache": 5 * 1024**3 if cap_build_cache else 0},
+            "docker_storage": {"Images": {"size_bytes": 9 * 1024**3, "reclaimable_bytes": 0}},
+        }
+
+    monkeypatch.setattr(production_report, "reclaim_storage", fake_reclaim)
+    monkeypatch.setattr(production_report, "filesystem_usage", lambda: next(usage))
+
+    check = capacity_check(90.0)
+    result = production_report.maybe_reclaim(check, tmp_path)
+
+    assert passes == [False, True]
+    assert result["freed_bytes"] == 5 * 1024**3
+    assert check["filesystem"]["used_percent"] == 62.0
+
+
 def test_systemd_timestamp_age():
     now = datetime(2026, 8, 15, 13, 0, tzinfo=timezone.utc)
     assert production_report.timestamp_age_hours("Fri 2026-08-14 01:00:00 UTC", now=now) == 36

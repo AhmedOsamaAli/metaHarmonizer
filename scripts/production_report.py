@@ -322,16 +322,25 @@ def docker_storage() -> dict[str, dict[str, int]]:
     return result
 
 
-def reclaim_storage(*, build_cache_max_age_hours: int | None = None) -> dict[str, Any]:
-    """Free dangling images and aged build cache.
+def reclaim_storage(
+    *,
+    build_cache_max_age_hours: int | None = None,
+    cap_build_cache: bool = False,
+) -> dict[str, Any]:
+    """Free dangling images and build cache.
 
     Tagged images are deliberately kept so the previously deployed release stays
-    available for rollback.
+    available for rollback. ``cap_build_cache`` additionally trims the cache to a
+    fixed budget, which is what actually reclaims space when the cache is recent
+    but the filesystem is already under pressure.
     """
     age = build_cache_max_age_hours or int(os.getenv("OPS_BUILD_CACHE_MAX_AGE_HOURS", "168"))
     before = docker_storage()
     run(["docker", "image", "prune", "-f"], timeout=600)
     run(["docker", "builder", "prune", "-f", "--filter", f"until={age}h"], timeout=900)
+    if cap_build_cache:
+        keep = os.getenv("OPS_BUILD_CACHE_KEEP_GB", "4")
+        run(["docker", "builder", "prune", "-f", f"--keep-storage={keep}GB"], timeout=900)
     after = docker_storage()
     freed = {
         kind: max(values["size_bytes"] - after.get(kind, values)["size_bytes"], 0)
@@ -339,6 +348,7 @@ def reclaim_storage(*, build_cache_max_age_hours: int | None = None) -> dict[str
     }
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        "capped_build_cache": cap_build_cache,
         "freed_bytes": sum(freed.values()),
         "freed_by_type": freed,
         "docker_storage": after,
@@ -358,7 +368,15 @@ def maybe_reclaim(check: dict[str, Any], state_dir: Path) -> dict[str, Any] | No
     if age is not None and age < cooldown:
         return None
     result = reclaim_storage()
-    check["filesystem"] = filesystem_usage()
+    usage = filesystem_usage()
+    if float(usage["used_percent"]) >= threshold:
+        escalated = reclaim_storage(cap_build_cache=True)
+        escalated["freed_bytes"] += result["freed_bytes"]
+        for kind, value in result["freed_by_type"].items():
+            escalated["freed_by_type"][kind] = escalated["freed_by_type"].get(kind, 0) + value
+        result = escalated
+        usage = filesystem_usage()
+    check["filesystem"] = usage
     check["docker_storage"] = result["docker_storage"]
     check["storage_reclaimed"] = result
     write_json(state_path, result)

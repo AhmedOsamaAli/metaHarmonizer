@@ -84,16 +84,19 @@ stands.
 
 When the filesystem reaches the warning threshold, the check reclaims storage
 before assessing thresholds: dangling images and build cache older than the
-configured age are removed. Tagged images are deliberately kept so the
-previously deployed release remains available for rollback. The amount freed is
-recorded in the check, the alert, and the daily report.
+configured age are removed. If the filesystem is still at or above the threshold
+afterwards, the build cache is trimmed to a fixed budget, because a large recent
+cache is usually what consumes the space. Tagged images are deliberately kept so
+the previously deployed release remains available for rollback. The amount freed
+is recorded in the check, the alert, and the daily report.
 
 | Setting | Default | Purpose |
 |---|---|---|
 | `OPS_AUTO_PRUNE` | `1` | Set `0` to disable automatic reclamation |
 | `OPS_PRUNE_THRESHOLD_PERCENT` | `70` | Filesystem use that triggers reclamation |
 | `OPS_PRUNE_COOLDOWN_HOURS` | `6` | Minimum interval between automatic runs |
-| `OPS_BUILD_CACHE_MAX_AGE_HOURS` | `168` | Build cache older than this is removed |
+| `OPS_BUILD_CACHE_MAX_AGE_HOURS` | `168` | Build cache older than this is removed first |
+| `OPS_BUILD_CACHE_KEEP_GB` | `4` | Build-cache budget kept when trimming is escalated |
 
 Reclaim manually at any time:
 
