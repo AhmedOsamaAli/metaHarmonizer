@@ -22,7 +22,12 @@ def healthy_check() -> dict:
         "services": {name: "healthy" for name in ("api", "worker", "postgres", "redis")},
         "queue_depth": 0,
         "active_users_5m": 0,
-        "database": {"registered_users": 4, "unresolved_failures": 0, "failed_jobs_24h": 0},
+        "database": {
+            "registered_users": 4,
+            "unresolved_failures": 0,
+            "failed_jobs_24h": 0,
+            "oldest_queued_seconds": 0,
+        },
         "backup_timer": {"ActiveState": "active"},
         "backup_service": {"Result": "success", "ExecMainExitTimestamp": "Fri 2026-08-14 01:00:00 UTC"},
         "backup_last_success_age_hours": 1.0,
@@ -118,6 +123,20 @@ def test_stale_backup_and_failed_kb_update_are_reported():
     check["kb_service"]["Result"] = "exit-code"
     issues = production_report.assess(check, require_backup=True)
     assert {issue["code"] for issue in issues} == {"backup_stale", "kb_update_failed"}
+
+
+def test_queue_wait_is_reported_independently_of_depth():
+    # A short queue of slow jobs is still a long wait for the curator.
+    check = healthy_check()
+    check["database"]["oldest_queued_seconds"] = 360
+    issues = production_report.assess(check, require_backup=False)
+    assert [i["code"] for i in issues] == ["queue_wait_warning"]
+    assert "6 minutes" in issues[0]["message"]
+
+    check["database"]["oldest_queued_seconds"] = 1200
+    issue = production_report.assess(check, require_backup=False)[0]
+    assert issue["code"] == "queue_wait_critical"
+    assert issue["severity"] == "critical"
 
 
 def capacity_check(used_percent: float = 72.0) -> dict:

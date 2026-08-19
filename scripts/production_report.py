@@ -145,6 +145,7 @@ def database_metrics(repo: Path) -> dict[str, int]:
     'registered_users', (select count(*) from users),
       'studies', (select count(*) from studies),
       'queued_jobs', (select count(*) from job_runs where state='queued'),
+      'oldest_queued_seconds', (select coalesce(round(extract(epoch from now() - min(created_at))), 0) from job_runs where state='queued'),
       'running_jobs', (select count(*) from job_runs where state='running'),
       'failed_jobs_24h', (select count(*) from job_runs where state='failed' and created_at >= now() - interval '24 hours'),
       'unresolved_failures', (select count(*) from job_failures where resolved_at is null)
@@ -245,6 +246,21 @@ def assess(check: dict[str, Any], *, require_backup: bool) -> list[dict[str, str
         add("critical", "queue_full", f"Queue depth is {depth} (limit 200).")
     elif depth >= 160:
         add("warning", "queue_warning", f"Queue depth is {depth} (80% of limit 200).")
+    # Depth alone does not describe what a curator experiences; a short queue of
+    # slow jobs still means a long wait.
+    oldest_wait = int(check["database"].get("oldest_queued_seconds", 0) or 0)
+    if oldest_wait >= 900:
+        add(
+            "critical",
+            "queue_wait_critical",
+            f"The oldest queued job has waited {oldest_wait // 60} minutes (limit 15).",
+        )
+    elif oldest_wait >= 300:
+        add(
+            "warning",
+            "queue_wait_warning",
+            f"The oldest queued job has waited {oldest_wait // 60} minutes (expansion trigger 5).",
+        )
     active_users = int(check.get("active_users_5m", 0))
     if active_users >= 50:
         add(
@@ -475,6 +491,7 @@ def render_report(report: dict[str, Any]) -> str:
         f"{human_bytes(filesystem['used_bytes'])} of {human_bytes(filesystem['total_bytes'])}; "
         f"{human_bytes(filesystem['free_bytes'])} free",
         f"- Queue: {report['queue_depth']} pending; {report['database']['unresolved_failures']} unresolved failures",
+        f"- Oldest queued job waited: {int(report['database'].get('oldest_queued_seconds', 0) or 0) // 60} minutes",
         f"- Users: {report['active_users_5m']} distinct authenticated users active in five minutes; {report['database']['registered_users']} registered",
         f"- Backup timer: {report['backup_timer'].get('ActiveState', 'unknown')}",
         f"- KB update timer: {report['kb_timer'].get('ActiveState', 'unknown')}",
