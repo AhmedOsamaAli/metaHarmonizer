@@ -1,89 +1,148 @@
 # MetaHarmonizer
 
-**Automated harmonization of clinical metadata into standardized, ontology-annotated, cBioPortal-compatible schemas.**
+[![Application CI](https://github.com/AhmedOsamaAli/metaHarmonizer/actions/workflows/ci.yml/badge.svg)](https://github.com/AhmedOsamaAli/metaHarmonizer/actions/workflows/ci.yml)
+[![Security Gates](https://github.com/AhmedOsamaAli/metaHarmonizer/actions/workflows/security.yml/badge.svg)](https://github.com/AhmedOsamaAli/metaHarmonizer/actions/workflows/security.yml)
+[![Container Smoke](https://github.com/AhmedOsamaAli/metaHarmonizer/actions/workflows/deploy-smoke.yml/badge.svg)](https://github.com/AhmedOsamaAli/metaHarmonizer/actions/workflows/deploy-smoke.yml)
+[![License](https://img.shields.io/github/license/AhmedOsamaAli/metaHarmonizer)](LICENSE)
 
-MetaHarmonizer maps inconsistent clinical metadata to a curated standard using a multi-stage ML pipeline, and presents the results in an interactive dashboard where curators review, correct, and export them — keeping expert oversight in the loop.
+MetaHarmonizer is a human-in-the-loop platform for converting heterogeneous
+clinical metadata into standardized, ontology-annotated, export-ready schemas.
+It combines deterministic matching, curated aliases, semantic models, and an
+optional LLM fallback with review workflows that keep curators in control.
 
-> GSoC 2026 — [Automated Clinical Metadata Harmonization Dashboard](https://github.com/cBioPortal/GSoC/issues/136)
+**Public beta:** [metaharmonizer.online](https://metaharmonizer.online)
 
-## Why
+**Project:** [cBioPortal GSoC 2026 proposal](https://github.com/cBioPortal/GSoC/issues/136)
 
-Clinical metadata across studies is heterogeneous: the same concept appears as `AGE`, `AGE_AT_DIAGNOSIS`, or `DIAGNOSIS_AGE`; sex as `male` / `M` / `1`; treatments under dozens of synonyms. Manual harmonization does not scale. MetaHarmonizer automates the mapping and surfaces only the decisions that need a human.
+## Capabilities
 
-## How it works
-
-Two mapping steps, each reviewable:
-
-1. **Schema mapping** — raw column headers → curated standard fields.
-2. **Ontology mapping** — cell values → ontology terms (NCIt, UBERON, …).
-
-Both run through a four-stage cascade (exact dictionary → alias → semantic embedding → optional LLM), stopping at the first high-confidence match. Low-confidence and unmapped items are ordered risky-first for curator review.
+- Map source columns to cBioPortal, GDC, and curated target schemas.
+- Normalize values against NCIt, UBERON, and EFO ontology snapshots.
+- Review low-confidence mappings in risk-prioritized schema and ontology queues.
+- Reuse personal curator decisions and promote reviewed decisions to a shared layer.
+- Compare quality, confidence, stage, and coverage metrics before export.
+- Export validated cBioPortal-compatible clinical metadata.
+- Run asynchronous jobs with bounded retries, queue backpressure, and live progress.
+- Preserve reproducibility through schema versions, ontology snapshot hashes, and audit history.
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    Browser[React dashboard] -->|HTTPS / REST / WebSocket| Caddy
+    Caddy --> API[FastAPI API]
+    API --> PostgreSQL[(PostgreSQL)]
+    API --> Redis[(Redis / arq)]
+    Redis --> Worker[ML worker]
+    Worker --> PostgreSQL
+    Worker --> KB[Versioned KB and model cache]
 ```
-React SPA ──REST/WS──> FastAPI ──> PostgreSQL + Redis
-                          │
-                          └─> engine_adapter (EngineProtocol)
-                                 └─> metaharmonizer engine  |  mock (tests)
-```
 
-Only `backend/app/engine_adapter/` may import the upstream `metaharmonizer` package — the ML engine sits behind a single, swappable seam (`ENGINE_IMPL=metaharmonizer|mock`).
+The application accesses the upstream
+[MetaHarmonizer engine](https://github.com/shbrief/MetaHarmonizer) exclusively
+through `backend/app/engine_adapter/`. API, worker, and tests depend on the stable
+adapter protocol rather than upstream implementation details.
 
-## Tech stack
+## Technology
 
-- **Frontend:** React 18, TypeScript, Vite, Tailwind CSS, TanStack Query
-- **Backend:** FastAPI, Pydantic v2, SQLAlchemy (async), Alembic
-- **Data:** PostgreSQL 16, Redis 7 (jobs via arq, rate limiting, WebSockets)
-- **Auth:** JWT access/refresh, Argon2id, RBAC, email verification
-- **Engine:** `metaharmonizer` (SapBERT/MiniLM embeddings, NCI EVS, optional Gemini)
+| Layer | Components |
+|---|---|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, TanStack Query |
+| API | FastAPI, Pydantic, SQLAlchemy async, Alembic |
+| Data | PostgreSQL 16, Redis 7, arq |
+| ML | MetaHarmonizer, Sentence Transformers, FAISS, optional Gemini |
+| Operations | Docker Compose, Caddy, GitHub Actions, systemd adapters |
 
-## Quick start
+## Quick Start
 
-**Docker is the one supported path**, identical on Windows, macOS, and Linux. No config editing — `.env.example` is preconfigured with a dev login secret and the public knowledge-base download URL.
-
-> Prerequisites: Docker Desktop (or Docker Engine + Compose), ~15 GB free disk, ~8 GB RAM.
+Prerequisites: Docker Engine with Compose, approximately 15 GB free disk, and
+8 GB RAM.
 
 ```bash
 git clone https://github.com/AhmedOsamaAli/metaHarmonizer.git
 cd metaHarmonizer
-cp .env.example .env                             # Windows PowerShell:  copy .env.example .env
-docker compose --profile kb run --rm kb-import   # one-time: download + install the KB & models (~1.4 GB)
-docker compose up --build                        # SPA + API + worker + Postgres + Redis behind Caddy
+cp .env.example .env
 ```
 
-Open **http://localhost:8080** and register — the **first** account becomes the admin; later accounts are curators.
-
-Skip-login, the optional Stage-4 LLM, native dev setup, and troubleshooting are all in **[SETUP.md](SETUP.md)**. Interactive API reference (OpenAPI/Swagger): `http://localhost:8000/docs`.
-
-Curators: follow the standalone **[upload, review, quality, and export guide](docs/curator-guide.md)**.
-
-## Configuration
-
-`.env.example` is the annotated catalogue. Key variables:
-
-| Variable                | Required | Description                                     |
-| ----------------------- | :------: | ----------------------------------------------- |
-| `JWT_SECRET`            |   yes    | Signs tokens (boot fails if < 32 bytes).        |
-| `DATABASE_URL`          |   yes    | `postgresql+asyncpg://…` DSN.                   |
-| `REDIS_URL`             |   yes    | Jobs, rate limits, WS tickets.                  |
-| `ALLOWED_EMAIL_DOMAINS` |   yes    | Signup allow-list; empty = registration closed. |
-| `ENGINE_IMPL`           |          | `metaharmonizer` (default) or `mock`.           |
-| `GEMINI_API_KEY`        |          | Enables the optional Stage-4 LLM rematch.       |
-
-Migrations are managed by Alembic and are not auto-applied — run `alembic upgrade head` after schema changes.
-
-## Testing
+For a local evaluation, set `AUTH_MODE=none` in `.env`. For JWT authentication,
+replace `JWT_SECRET` with a random value of at least 32 bytes.
 
 ```bash
-cd backend && pytest        # runs against Postgres + Redis
-cd frontend && npm test     # Vitest
+docker compose --profile kb run --rm kb-import
+docker compose up --build
 ```
 
-CI (GitHub Actions) runs the backend suite against ephemeral Postgres/Redis, the frontend build + tests, and the engine-boundary check on every push.
+Open [http://localhost:8080](http://localhost:8080). The API health endpoint is
+[http://localhost:8000/healthz](http://localhost:8000/healthz), and local Swagger
+documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs).
 
-## Acknowledgments
+The API container applies Alembic migrations during startup. See the
+[local setup guide](SETUP.md) for authenticated development, native hot reload,
+email configuration, reset procedures, and troubleshooting.
 
-- [MetaHarmonizer engine](https://github.com/shbrief/MetaHarmonizer) — the ML harmonization pipeline
-- [cBioPortal](https://www.cbioportal.org/) — target schema for cancer genomics
-- [NCI Thesaurus](https://ncithesaurus.nci.nih.gov/) — biomedical ontology
+## Development and Testing
+
+```bash
+# Backend
+cd backend
+pytest
+
+# Frontend
+cd frontend
+npm install
+npm run build
+npm test
+
+# End-to-end tests against a running stack
+cd e2e
+npm ci
+npm test
+```
+
+Protected CI validates backend and frontend tests, coverage floors, dependency
+audits, secret scanning, CodeQL, container vulnerability scans, SBOM generation,
+non-root execution, and runtime smoke tests. The
+[engine adapter contract](.github/workflows/engine-boundary.yml) prevents direct
+upstream-engine imports outside the adapter boundary.
+
+## Documentation
+
+- [Local setup and troubleshooting](SETUP.md)
+- [Production deployment and recovery](DEPLOY.md)
+- [Curator guide](docs/curator-guide.md)
+- [Production operations](docs/production-operations.md)
+- [Service-level objectives](docs/service-level-objectives.md)
+- [Capacity and scaling](docs/scaling-plan.md)
+- [Load and stress testing](load/README.md)
+- [Engine adapter](backend/app/engine_adapter/README.md)
+- [MCP server](mcp/README.md)
+
+## Security and Data Handling
+
+MetaHarmonizer is intended for de-identified metadata. Do not upload protected
+health information, direct identifiers, secrets, or credentials. Production
+deployments should use HTTPS, strong host-only secrets, restricted registration,
+encrypted off-host backups, and named operators. Security reports that may
+contain sensitive information should not be posted to public issues.
+
+Operational defaults and deployment controls are documented in
+[DEPLOY.md](DEPLOY.md) and [production operations](docs/production-operations.md).
+
+## Contributing
+
+1. Create a focused branch from `main`.
+2. Add tests for behavioral changes.
+3. Run the relevant backend, frontend, or end-to-end suite.
+4. Open a pull request and wait for all protected checks.
+
+Major dependency, engine, schema, and infrastructure changes require explicit
+migration notes and targeted validation.
+
+## License and Acknowledgments
+
+This project is distributed under the [repository license](LICENSE).
+
+- [MetaHarmonizer](https://github.com/shbrief/MetaHarmonizer)
+- [cBioPortal](https://www.cbioportal.org/)
+- [NCI Thesaurus](https://ncithesaurus.nci.nih.gov/)
+- [EBI Ontology Lookup Service](https://www.ebi.ac.uk/ols4/)

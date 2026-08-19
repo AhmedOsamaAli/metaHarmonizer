@@ -98,10 +98,12 @@ concurrency. Use it with latency, request rate, CPU, queue, and job metrics.
 
 ## Delivery and ownership
 
-Copy `deploy/ops-monitor.env.example` to the host-only path above with mode
-`0600`. `OPS_ALERT_WEBHOOK_URL` accepts a Slack-compatible incoming webhook.
-Without a webhook, checks and reports still run and are retained locally, but
-there is no defensible claim that someone will be notified at 3 a.m.
+Production uses a Slack-compatible incoming webhook in the host-only mode-`0600`
+configuration. The primary operator is Ahmed Osama Ali and the secondary
+operator is Dr. Sehyun Oh. Critical alerts require acknowledgement within 15
+minutes and secondary escalation after a further 15 minutes; warnings are
+reviewed within four hours. See
+`docs/operational-alert-drill-2026-08-19.md` for delivered evidence.
 
 Before declaring operational alerting complete, record:
 
@@ -112,9 +114,9 @@ Before declaring operational alerting complete, record:
    updater failure, and stale/failed backup.
 5. A quarterly recipient and recovery-access review.
 
-Backups remain a separate P0 gap. Keep `OPS_REQUIRE_BACKUP=0` until an encrypted
-off-host backup and clean restore drill pass; then enable it so stale or failed
-backup state becomes critical.
+Encrypted off-host backup and clean restore passed on 2026-08-17. Production now
+uses `OPS_REQUIRE_BACKUP=1`, so stale or failed backup state is critical. See
+`docs/backup-restore-drill-2026-08-17.md`.
 
 ## Cost and migration interpretation
 

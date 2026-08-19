@@ -29,5 +29,7 @@ still requires:
 - peer-confirmed federation imports during an old/new public-key overlap;
 - Caddy renewal/account-log confirmation after changing the real ACME contact.
 
-These checks are credential-owner work in `docs/readiness-roadmap.md`; they are
-not substitutes for the engineering rotation procedures validated here.
+These checks are credential-owner work tracked outside the public repository;
+they are not substitutes for the engineering rotation procedures validated
+here. Current operator procedures are in `docs/credential-rotation.md` and
+`docs/production-operations.md`.
