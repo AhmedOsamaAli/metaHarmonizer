@@ -74,6 +74,33 @@ systemctl list-timers 'metaharmonizer-ops-*' --no-pager
 journalctl -u metaharmonizer-ops-check.service -n 50 --no-pager
 ```
 
+## Reported capacity and automatic cleanup
+
+Every check and every alert reports the current sizes, not only the threshold
+that was crossed: filesystem used percentage, used and total bytes, free bytes,
+total Docker usage, and reclaimable Docker usage. Alerts append a
+`Current capacity:` line, so a warning always states where storage actually
+stands.
+
+When the filesystem reaches the warning threshold, the check reclaims storage
+before assessing thresholds: dangling images and build cache older than the
+configured age are removed. Tagged images are deliberately kept so the
+previously deployed release remains available for rollback. The amount freed is
+recorded in the check, the alert, and the daily report.
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `OPS_AUTO_PRUNE` | `1` | Set `0` to disable automatic reclamation |
+| `OPS_PRUNE_THRESHOLD_PERCENT` | `70` | Filesystem use that triggers reclamation |
+| `OPS_PRUNE_COOLDOWN_HOURS` | `6` | Minimum interval between automatic runs |
+| `OPS_BUILD_CACHE_MAX_AGE_HOURS` | `168` | Build cache older than this is removed |
+
+Reclaim manually at any time:
+
+```bash
+python3 scripts/production_report.py prune
+```
+
 ## Thresholds
 
 | Signal | Warning | Critical/action |

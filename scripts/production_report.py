@@ -79,6 +79,16 @@ def forecast_days(current: int, threshold: int, daily_growth: float) -> float | 
     return (threshold - current) / daily_growth
 
 
+def filesystem_usage() -> dict[str, Any]:
+    disk = shutil.disk_usage("/")
+    return {
+        "total_bytes": disk.total,
+        "used_bytes": disk.used,
+        "free_bytes": disk.free,
+        "used_percent": round(disk.used / disk.total * 100, 2),
+    }
+
+
 def fetch_health(url: str) -> tuple[int, str]:
     try:
         with urllib.request.urlopen(url, timeout=15) as response:  # noqa: S310
@@ -164,7 +174,6 @@ def service_health(repo: Path) -> dict[str, str]:
 
 
 def collect_check(repo: Path) -> dict[str, Any]:
-    disk = shutil.disk_usage("/")
     status, body = fetch_health(os.getenv("OPS_HEALTH_URL", "https://metaharmonizer.online/healthz"))
     metrics_status, metrics_body = fetch_metrics(
         os.getenv("OPS_METRICS_URL", "https://metaharmonizer.online/metrics"),
@@ -188,12 +197,8 @@ def collect_check(repo: Path) -> dict[str, Any]:
     )
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "filesystem": {
-            "total_bytes": disk.total,
-            "used_bytes": disk.used,
-            "free_bytes": disk.free,
-            "used_percent": round(disk.used / disk.total * 100, 2),
-        },
+        "filesystem": filesystem_usage(),
+        "docker_storage": docker_storage(),
         "public_health": {"status": status, "body": body},
         "metrics": {
             "configured": bool(os.getenv("OPS_METRICS_BEARER_TOKEN", "")),
@@ -317,6 +322,67 @@ def docker_storage() -> dict[str, dict[str, int]]:
     return result
 
 
+def reclaim_storage(*, build_cache_max_age_hours: int | None = None) -> dict[str, Any]:
+    """Free dangling images and aged build cache.
+
+    Tagged images are deliberately kept so the previously deployed release stays
+    available for rollback.
+    """
+    age = build_cache_max_age_hours or int(os.getenv("OPS_BUILD_CACHE_MAX_AGE_HOURS", "168"))
+    before = docker_storage()
+    run(["docker", "image", "prune", "-f"], timeout=600)
+    run(["docker", "builder", "prune", "-f", "--filter", f"until={age}h"], timeout=900)
+    after = docker_storage()
+    freed = {
+        kind: max(values["size_bytes"] - after.get(kind, values)["size_bytes"], 0)
+        for kind, values in before.items()
+    }
+    return {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "freed_bytes": sum(freed.values()),
+        "freed_by_type": freed,
+        "docker_storage": after,
+    }
+
+
+def maybe_reclaim(check: dict[str, Any], state_dir: Path) -> dict[str, Any] | None:
+    """Reclaim storage once the filesystem reaches the warning threshold."""
+    if os.getenv("OPS_AUTO_PRUNE", "1") != "1":
+        return None
+    threshold = float(os.getenv("OPS_PRUNE_THRESHOLD_PERCENT", "70"))
+    if float(check["filesystem"]["used_percent"]) < threshold:
+        return None
+    state_path = state_dir / "last-prune.json"
+    cooldown = float(os.getenv("OPS_PRUNE_COOLDOWN_HOURS", "6"))
+    age = file_age_hours(state_path)
+    if age is not None and age < cooldown:
+        return None
+    result = reclaim_storage()
+    check["filesystem"] = filesystem_usage()
+    check["docker_storage"] = result["docker_storage"]
+    check["storage_reclaimed"] = result
+    write_json(state_path, result)
+    return result
+
+
+def capacity_summary(check: dict[str, Any]) -> str:
+    filesystem = check["filesystem"]
+    parts = [
+        f"Filesystem {filesystem['used_percent']:.1f}% used "
+        f"({human_bytes(filesystem['used_bytes'])} of {human_bytes(filesystem['total_bytes'])}, "
+        f"{human_bytes(filesystem['free_bytes'])} free)"
+    ]
+    docker = check.get("docker_storage") or {}
+    if docker:
+        total = sum(values["size_bytes"] for values in docker.values())
+        reclaimable = sum(values["reclaimable_bytes"] for values in docker.values())
+        parts.append(f"Docker {human_bytes(total)} ({human_bytes(reclaimable)} reclaimable)")
+    reclaimed = (check.get("storage_reclaimed") or {}).get("freed_bytes", 0)
+    if reclaimed:
+        parts.append(f"automatic cleanup freed {human_bytes(reclaimed)}")
+    return "; ".join(parts) + "."
+
+
 def release_storage(repo: Path, state_dir: Path) -> dict[str, Any]:
     env = parse_env(repo / ".env")
     current_names = [env.get(key, "") for key in KB_KEYS]
@@ -366,7 +432,6 @@ def load_growth(state_dir: Path, current: dict[str, Any]) -> dict[str, Any]:
 def build_report(repo: Path, state_dir: Path) -> dict[str, Any]:
     check = collect_check(repo)
     check["issues"] = assess(check, require_backup=os.getenv("OPS_REQUIRE_BACKUP", "0") == "1")
-    check["docker_storage"] = docker_storage()
     check["kb_releases"] = release_storage(repo, state_dir)
     data_names = (
         "metaharmonizer_uploads", "metaharmonizer_pg_data", "metaharmonizer_redis_data",
@@ -388,7 +453,9 @@ def render_report(report: dict[str, Any]) -> str:
         "## Status",
         "",
         f"- Public health: HTTP {report['public_health']['status']}",
-        f"- Filesystem: {filesystem['used_percent']:.1f}% used; {human_bytes(filesystem['free_bytes'])} free",
+        f"- Filesystem: {filesystem['used_percent']:.1f}% used; "
+        f"{human_bytes(filesystem['used_bytes'])} of {human_bytes(filesystem['total_bytes'])}; "
+        f"{human_bytes(filesystem['free_bytes'])} free",
         f"- Queue: {report['queue_depth']} pending; {report['database']['unresolved_failures']} unresolved failures",
         f"- Users: {report['active_users_5m']} distinct authenticated users active in five minutes; {report['database']['registered_users']} registered",
         f"- Backup timer: {report['backup_timer'].get('ActiveState', 'unknown')}",
@@ -407,6 +474,9 @@ def render_report(report: dict[str, Any]) -> str:
     ])
     for name, size in report["data_volumes"].items():
         lines.append(f"| {name.removeprefix('metaharmonizer_')} | {human_bytes(size)} | - |")
+    reclaimed = (report.get("storage_reclaimed") or {}).get("freed_bytes", 0)
+    if reclaimed:
+        lines.extend(["", f"Automatic cleanup freed {human_bytes(reclaimed)} during this run."])
     lines.extend(["", "## Growth forecast", ""])
     if growth["sample_days"] < 0.5:
         lines.append("Forecast pending: at least 12 hours of production snapshots are required.")
@@ -446,7 +516,11 @@ def send_webhook(message: str) -> bool:
     return True
 
 
-def alert_if_needed(issues: list[dict[str, str]], state_dir: Path) -> None:
+def alert_if_needed(
+    issues: list[dict[str, str]],
+    state_dir: Path,
+    capacity: str | None = None,
+) -> None:
     fingerprint = hashlib.sha256(json.dumps(issues, sort_keys=True).encode()).hexdigest()
     state_path = state_dir / "alert-state.json"
     previous = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
@@ -464,6 +538,8 @@ def alert_if_needed(issues: list[dict[str, str]], state_dir: Path) -> None:
     summary = "MetaHarmonizer production alert\n" + "\n".join(
         f"[{item['severity'].upper()}] {item['message']}" for item in issues
     )
+    if capacity:
+        summary += f"\nCurrent capacity: {capacity}"
     delivered = send_webhook(summary)
     state_path.write_text(
         json.dumps({"fingerprint": fingerprint, "delivered": delivered, "timestamp": datetime.now(timezone.utc).isoformat()}, indent=2) + "\n",
@@ -490,22 +566,37 @@ def prune_snapshots(snapshot_dir: Path, keep: int = 400) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("check", "report"))
+    parser.add_argument("command", choices=("check", "report", "prune"))
     parser.add_argument("--repo", type=Path, default=Path(os.getenv("OPS_REPO_ROOT", Path.cwd())))
     parser.add_argument("--state-dir", type=Path, default=Path(os.getenv("OPS_STATE_DIR", Path.home() / ".local/state/metaharmonizer/operations")))
     args = parser.parse_args(argv)
     os.chdir(args.repo)
     args.state_dir.mkdir(parents=True, exist_ok=True)
 
+    if args.command == "prune":
+        result = reclaim_storage()
+        write_json(args.state_dir / "last-prune.json", result)
+        print(json.dumps({"freed_bytes": result["freed_bytes"], "capacity": capacity_summary({
+            "filesystem": filesystem_usage(),
+            "docker_storage": result["docker_storage"],
+            "storage_reclaimed": result,
+        })}))
+        return 0
+
     if args.command == "check":
         result = collect_check(args.repo)
         previous_path = args.state_dir / "latest-check.json"
         previous = json.loads(previous_path.read_text(encoding="utf-8")) if previous_path.exists() else None
         add_counter_deltas(result, previous)
+        maybe_reclaim(result, args.state_dir)
         result["issues"] = assess(result, require_backup=os.getenv("OPS_REQUIRE_BACKUP", "0") == "1")
         write_json(previous_path, result)
-        alert_if_needed(result["issues"], args.state_dir)
-        print(json.dumps({"timestamp": result["timestamp"], "issues": result["issues"]}))
+        alert_if_needed(result["issues"], args.state_dir, capacity=capacity_summary(result))
+        print(json.dumps({
+            "timestamp": result["timestamp"],
+            "capacity": capacity_summary(result),
+            "issues": result["issues"],
+        }))
         return 2 if any(issue["severity"] == "critical" for issue in result["issues"]) else 0
 
     result = build_report(args.repo, args.state_dir)

@@ -4,6 +4,8 @@ import importlib.util
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 
 SCRIPT = Path(__file__).resolve().parents[3] / "scripts" / "production_report.py"
 SPEC = importlib.util.spec_from_file_location("production_report", SCRIPT)
@@ -116,6 +118,75 @@ def test_stale_backup_and_failed_kb_update_are_reported():
     check["kb_service"]["Result"] = "exit-code"
     issues = production_report.assess(check, require_backup=True)
     assert {issue["code"] for issue in issues} == {"backup_stale", "kb_update_failed"}
+
+
+def capacity_check(used_percent: float = 72.0) -> dict:
+    check = healthy_check()
+    check["filesystem"] = {
+        "total_bytes": 45 * 1024**3,
+        "used_bytes": int(45 * 1024**3 * used_percent / 100),
+        "free_bytes": int(45 * 1024**3 * (100 - used_percent) / 100),
+        "used_percent": used_percent,
+    }
+    check["docker_storage"] = {
+        "Images": {"size_bytes": 9 * 1024**3, "reclaimable_bytes": 1024**3},
+        "Build Cache": {"size_bytes": 8 * 1024**3, "reclaimable_bytes": 8 * 1024**3},
+    }
+    return check
+
+
+def test_capacity_summary_reports_current_sizes():
+    summary = production_report.capacity_summary(capacity_check())
+    assert "72.0% used" in summary
+    assert "of 45.0 GiB" in summary
+    assert "Docker 17.0 GiB" in summary
+    assert "reclaimable" in summary
+
+
+def test_alert_message_includes_current_capacity(tmp_path: Path, monkeypatch):
+    delivered: list[str] = []
+    monkeypatch.setattr(production_report, "send_webhook", lambda message: delivered.append(message) is None or True)
+    issues = [{"severity": "warning", "code": "disk_warning", "message": "Filesystem use is 72.0%."}]
+
+    production_report.alert_if_needed(issues, tmp_path, capacity=production_report.capacity_summary(capacity_check()))
+
+    assert "Current capacity:" in delivered[0]
+    assert "12.6 GiB free" in delivered[0]
+
+
+def test_reclaim_runs_only_above_threshold_and_respects_cooldown(tmp_path: Path, monkeypatch):
+    calls: list[str] = []
+
+    def fake_reclaim(**_kwargs):
+        calls.append("reclaim")
+        return {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "freed_bytes": 3 * 1024**3,
+            "freed_by_type": {"Build Cache": 3 * 1024**3},
+            "docker_storage": {"Images": {"size_bytes": 9 * 1024**3, "reclaimable_bytes": 0}},
+        }
+
+    monkeypatch.setattr(production_report, "reclaim_storage", fake_reclaim)
+    monkeypatch.setattr(production_report, "filesystem_usage", lambda: capacity_check(61.0)["filesystem"])
+
+    below = capacity_check(65.0)
+    assert production_report.maybe_reclaim(below, tmp_path) is None
+    assert calls == []
+
+    above = capacity_check(72.0)
+    result = production_report.maybe_reclaim(above, tmp_path)
+    assert result["freed_bytes"] == 3 * 1024**3
+    assert above["filesystem"]["used_percent"] == 61.0
+    assert "automatic cleanup freed 3.0 GiB" in production_report.capacity_summary(above)
+
+    assert production_report.maybe_reclaim(capacity_check(72.0), tmp_path) is None
+    assert calls == ["reclaim"]
+
+
+def test_auto_prune_can_be_disabled(tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("OPS_AUTO_PRUNE", "0")
+    monkeypatch.setattr(production_report, "reclaim_storage", lambda **_: pytest.fail("must not prune"))
+    assert production_report.maybe_reclaim(capacity_check(99.0), tmp_path) is None
 
 
 def test_systemd_timestamp_age():
