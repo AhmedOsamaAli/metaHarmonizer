@@ -25,7 +25,7 @@ This is the current provider-neutral closure plan for moving from public beta to
 | Priority | Work | Needed input | Completion evidence |
 | --- | --- | --- | --- |
 | P0 | ✅ Activate encrypted off-host backups and perform a clean restore drill | `docs/backup-restore-drill-2026-08-17.md`: private R2 upload, AES-256-GCM encryption, six-table count parity, disposable API readiness, scratch cleanup, enabled daily timer, and strict 36-hour freshness monitoring passed |
-| P0 | Complete operational alert delivery | Local five-minute checks and daily growth reports are implemented; provide an alert webhook, dedicated metrics token, and accountable primary/secondary recipients | Delivered test alerts for health, 5xx, queue depth, failed jobs, disk, KB updater failure, and stale backup; acknowledged escalation drill |
+| P0 | ✅ Complete operational alert delivery | `docs/operational-alert-drill-2026-08-19.md`: private Slack webhook, read-scoped metrics token, seven-signal synthetic matrix, primary/secondary receipt, and 15/30-minute critical escalation policy verified |
 | P0 | Complete ownership and recovery inventory | Oracle/cloud, registrar/DNS, GitHub, Resend, SSH, database, recovery and 2FA owners | Two authorized administrators and tested recovery path per service |
 | P1 | Run authenticated browser journey in hosted CI | Dedicated non-production E2E account | Playwright journey passes without personal credentials |
 | P1 | Decide registration/indexing/GA policy | Institution-approved public-access policy | Configuration and documentation match the decision |
