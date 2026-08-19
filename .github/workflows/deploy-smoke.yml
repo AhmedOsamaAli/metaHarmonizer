@@ -46,7 +46,8 @@ jobs:
           SEED_ROLE=admin
           EOF
 
-      # CI-only override: publish the API port so the runner can reach it.
+      # CI-only override: publish the API and the Caddy origin so the runner can
+      # reach both the API directly and the served SPA for the browser journey.
       - name: Write CI compose override
         run: |
           cat > docker-compose.ci.yml <<'EOF'
@@ -54,6 +55,9 @@ jobs:
             api:
               ports:
                 - "8000:8000"
+            caddy:
+              ports:
+                - "8080:80"
           EOF
 
       - name: Build application images
@@ -141,6 +145,52 @@ jobs:
           cat resp.json
           test "$code" = "200"
           grep -q 'access_token' resp.json
+
+      - name: Publish SPA assets for the browser journey
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up --no-deps --exit-code-from web web
+
+      - name: Wait for the served application
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/healthz >/dev/null 2>&1; then
+              echo "Caddy origin ready"; exit 0
+            fi
+            sleep 2
+          done
+          echo "Caddy origin did not become ready"; exit 1
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install end-to-end browser
+        working-directory: e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+
+      # Runs the authenticated journey rather than skipping it: the seeded
+      # account above supplies the credentials the suite requires.
+      - name: Run end-to-end journey
+        working-directory: e2e
+        env:
+          E2E_BASE_URL: http://localhost:8080
+          E2E_EMAIL: admin@example.com
+          E2E_PASSWORD: CiSmoke!2026
+        run: npx playwright test
+
+      - name: Upload end-to-end report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report-${{ github.sha }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          if-no-files-found: ignore
+          retention-days: 14
 
       - name: Dump logs on failure
         if: failure()
