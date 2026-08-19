@@ -15,14 +15,14 @@ review queue, quality metrics, and mappings. After the test, all isolated
 containers, volumes, networks, worktree files, and secrets were removed.
 Production `/healthz` returned 200 before, throughout, and after every rung.
 
-The project-approved public-beta objectives are:
+The project-approved public-service objectives are:
 
 - zero unexpected HTTP failures;
 - 100% checks;
 - p95 at or below 1 second;
 - p99 at or below 2 seconds.
 
-The table is classified against the approved beta SLO in
+The table is classified against the approved public-service SLO in
 `docs/service-level-objectives.md`. SLO compliance and safe operating capacity
 are separate: safe capacity additionally requires 25% p95 headroom,
 non-declining throughput, and resource reserve.
@@ -79,7 +79,7 @@ request alone is not counted until the client makes an authenticated API call.
 
 | Workload/resource | Measured or configured boundary | First bottleneck | Scale action | Evidence not yet available |
 |---|---|---|---|---|
-| Dashboard reads | 50 active curators safe; 80 meets beta SLO but saturates | API/host CPU and runnable queue | More OCPUs, then test multiple API processes/replicas | Mixed read plus real-ML ladder after resize |
+| Dashboard reads | 50 active curators safe; 80 meets the public-service SLO but saturates | API/host CPU and runnable queue | More OCPUs, then test multiple API processes/replicas | Mixed read plus real-ML ladder after resize |
 | Registered/inactive users | No tested account maximum | PostgreSQL row/index growth eventually; no current pressure measured | Observe DB size/query plans; archive only with policy | Account-count/storage benchmark |
 | Login bursts | Anonymous IP budget 20 requests/minute; account lock after 5 failed attempts | Security controls by design | Do not raise for capacity; use SSO or distributed ingress only after threat review | Multi-site legitimate-login arrival profile |
 | Upload acceptance | 2 submissions/second tested without shedding; 3 active jobs/user | Per-user guard, then queue depth | Preserve guards; add workers only when queue age proves need | Mixed large-file arrival test |
@@ -123,7 +123,7 @@ zero.
   plateau's steepest queueing region.
 - **Observed planning edge:** 60 active curators, measured at p95 610 ms and p99
   646 ms.
-- **Saturation evidence:** 80 users still met the beta SLO, but throughput fell,
+- **Saturation evidence:** 80 users still met the public-service SLO, but throughput fell,
   p95 headroom was only 5.5%, host idle reached 13%, and run queue reached 16.
 - **Real ML limit remains:** two concurrent jobs per worker and approximately
   2,700 representative jobs/day/worker with operational headroom. Dashboard VUs

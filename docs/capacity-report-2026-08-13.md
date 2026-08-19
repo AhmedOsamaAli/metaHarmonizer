@@ -11,7 +11,7 @@ Host: Windows Docker Desktop with 20 CPUs and approximately 31.2 GiB allocated
 memory. These results define a conservative operating envelope for this host
 shape, not a universal cloud-instance guarantee.
 
-The proposed public-beta objective is zero unexpected failures, 100% checks,
+The approved public-service objective is zero unexpected failures, 100% checks,
 p95 at or below 1 second, and p99 at or below 2 seconds. See
 `docs/service-level-objectives.md`. The original run used an undocumented 800
 ms p95 threshold; reclassification below is unchanged because 20 users measured

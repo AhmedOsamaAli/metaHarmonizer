@@ -108,7 +108,7 @@ compact, durable k6 summary; `-Out json=...` records the much larger time series
 
 ## SLOs (thresholds)
 
-`load`, `multiuser`, and `soak` enforce the public-beta dashboard objectives and
+`load`, `multiuser`, and `soak` enforce the public-service dashboard objectives and
 **exit non-zero** if breached:
 
 - `http_req_failed` = **0%** in the deterministic isolated fixture

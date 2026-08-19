@@ -112,6 +112,9 @@ docs/*
 !docs/production-operations.md
 !docs/scaling-plan.md
 !docs/service-level-objectives.md
+!docs/architecture.md
+!docs/handover.md
+!docs/licensing.md
 
 
 # Local KB build output (large; built offline, distributed via the export CLI)

@@ -10,7 +10,7 @@ clinical metadata into standardized, ontology-annotated, export-ready schemas.
 It combines deterministic matching, curated aliases, semantic models, and an
 optional LLM fallback with review workflows that keep curators in control.
 
-**Public beta:** [metaharmonizer.online](https://metaharmonizer.online)
+**Public deployment:** [metaharmonizer.online](https://metaharmonizer.online)
 
 **Project:** [cBioPortal GSoC 2026 proposal](https://github.com/cBioPortal/GSoC/issues/136)
 
@@ -42,6 +42,10 @@ The application accesses the upstream
 [MetaHarmonizer engine](https://github.com/shbrief/MetaHarmonizer) exclusively
 through `backend/app/engine_adapter/`. API, worker, and tests depend on the stable
 adapter protocol rather than upstream implementation details.
+
+See the [detailed architecture](docs/architecture.md) for trust boundaries,
+module ownership, consistency rules, deployment constraints, and delegated
+scaling work.
 
 ## Technology
 
@@ -111,8 +115,11 @@ upstream-engine imports outside the adapter boundary.
 - [Production deployment and recovery](DEPLOY.md)
 - [Curator guide](docs/curator-guide.md)
 - [Production operations](docs/production-operations.md)
+- [Architecture](docs/architecture.md)
 - [Service-level objectives](docs/service-level-objectives.md)
 - [Capacity and scaling](docs/scaling-plan.md)
+- [Authority handover](docs/handover.md)
+- [Licensing and cBioPortal RFC 86](docs/licensing.md)
 - [Load and stress testing](load/README.md)
 - [Engine adapter](backend/app/engine_adapter/README.md)
 - [MCP server](mcp/README.md)
@@ -128,15 +135,14 @@ contain sensitive information should not be posted to public issues.
 Operational defaults and deployment controls are documented in
 [DEPLOY.md](DEPLOY.md) and [production operations](docs/production-operations.md).
 
+Vulnerabilities should be reported through [SECURITY.md](SECURITY.md). Product
+support boundaries are documented in [SUPPORT.md](SUPPORT.md).
+
 ## Contributing
 
-1. Create a focused branch from `main`.
-2. Add tests for behavioral changes.
-3. Run the relevant backend, frontend, or end-to-end suite.
-4. Open a pull request and wait for all protected checks.
-
-Major dependency, engine, schema, and infrastructure changes require explicit
-migration notes and targeted validation.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md),
+and [GOVERNANCE.md](GOVERNANCE.md). Notable changes are recorded in
+[CHANGELOG.md](CHANGELOG.md).
 
 ## License and Acknowledgments
 

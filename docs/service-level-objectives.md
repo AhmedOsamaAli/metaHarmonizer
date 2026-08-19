@@ -1,18 +1,18 @@
-# Public beta service objectives
+# Public service objectives
 
 ## Purpose and status
 
 These objectives replace the undocumented load-test defaults. They are the
-project-approved engineering baseline for the public beta, grounded in the
+project-approved engineering baseline for the public deployment, grounded in the
 curator workflow, measured production-shape behavior, and existing project
 acceptance criteria. Institutional operation may add stricter requirements.
 
 ## Objectives
 
-| Surface | SLI | Public beta objective | Rationale |
+| Surface | SLI | Public service objective | Rationale |
 |---|---|---|---|
 | Availability | Successful five-minute public `/healthz` checks | 99% per calendar month, excluding announced maintenance | Existing project objective; permits approximately 7h 18m unavailable in a 30.44-day month while the service has no HA/failover |
-| Dashboard API | Request duration for the authenticated curator read fan-out | p95 at or below 1 second; p99 at or below 2 seconds | Direct public-beta user-experience target: normal interactions return within one second and rare tail interactions within two seconds |
+| Dashboard API | Request duration for the authenticated curator read fan-out | p95 at or below 1 second; p99 at or below 2 seconds | Direct public-service user-experience target: normal interactions return within one second and rare tail interactions within two seconds |
 | Dashboard correctness | Expected statuses/checks in the controlled capacity fixture | 100% checks and zero unexpected HTTP failures | Every request in the deterministic isolated fixture has a known expected response; allowing test errors would hide capacity defects |
 | Warm harmonization | End-to-end duration for the representative 200-column workload | p95 at or below 60 seconds | Existing project acceptance criterion; work is asynchronous and exposes progress rather than blocking the dashboard |
 | Queue protection | Pending arq jobs | Warning at 160; reject at 200 | 80% early-warning point and the configured hard backpressure limit |
@@ -46,7 +46,7 @@ quantities and must not be substituted for one another.
 The 2026-08-15 production-shape test measured 50 users at p95 536 ms with no
 failures. Sixty users measured p95 610 ms/p99 646 ms, 70 measured p95 790
 ms/p99 858 ms, and 80 measured p95 945 ms/p99 991 ms. All measured rungs meet
-the approved beta latency SLO. Eighty users is still not a safe planning load:
+the approved public-service latency SLO. Eighty users is still not a safe planning load:
 throughput declined, host CPU idle reached 13%, and the runnable queue reached
 16 on four cores. The safe planning limit remains 50 users.
 
@@ -61,14 +61,14 @@ governance decision:
 
 1. Send the reviewer a link to this document and the two dated capacity reports.
 2. A named mentor/service owner responds in a meeting record, issue, or pull
-  request: "Approved as the MetaHarmonizer public-beta SLO through [review date]."
+  request: "Approved as the MetaHarmonizer public-service SLO through [review date]."
 3. Record the approver, approval date, and review date below.
 4. Any changed number must include its user rationale and new benchmark evidence;
   thresholds are never loosened solely to make a test pass.
 
 | State | Approver | Approval date | Review date |
 |---|---|---|---|
-| Approved for public beta | Ahmed Osama Ali, project owner | 2026-08-15 | 2026-11-15 |
+| Approved for public deployment | Ahmed Osama Ali, project owner | 2026-08-15 | 2026-11-15 |
 
 ## Not yet defined
 

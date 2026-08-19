@@ -19,7 +19,7 @@ endpoint; only its hash is stored in PostgreSQL and its plaintext is host-only.
 - Recipient access and recovery ownership: review quarterly and whenever an
   operator leaves the project.
 
-These are public-beta operating targets, not a staffed institutional 24/7
+These are public-service operating targets, not a staffed institutional 24/7
 on-call contract.
 
 ## Verified delivery
@@ -67,4 +67,4 @@ disk, queue, jobs, KB updater, backup freshness, and authenticated metrics.
 
 **Pass.** Local detection, authenticated 5xx collection, external Slack
 delivery, primary/secondary receipt, the seven-signal synthetic matrix, and
-escalation expectations are verified for public-beta operation.
+escalation expectations are verified for public operation.
