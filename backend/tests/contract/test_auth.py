@@ -175,6 +175,30 @@ async def test_bad_password_rejected(client):
     assert r.json()["error"]["code"] == "AUTH_FAILED"
 
 
+async def test_login_fails_closed_when_lockout_store_is_unavailable(client, monkeypatch):
+    make_client, domain, _ = client
+    email = f"redis-down@{domain}"
+
+    def unavailable_redis():
+        raise RuntimeError("redis unavailable")
+
+    import app.routers.auth as auth_mod
+
+    async with await make_client() as c:
+        await c.post(
+            "/api/v1/auth/register",
+            json={"email": email, "password": "right-pass"},
+        )
+        monkeypatch.setattr(auth_mod, "get_redis", unavailable_redis)
+        response = await c.post(
+            "/api/v1/auth/login",
+            json={"email": email, "password": "right-pass"},
+        )
+
+    assert response.status_code == 429
+    assert response.json()["error"]["code"] == "ACCOUNT_LOCKED"
+
+
 async def test_me_requires_token(client):
     make_client, domain, _ = client
     async with await make_client() as c:

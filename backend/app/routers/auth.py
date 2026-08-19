@@ -17,6 +17,8 @@ Policy
 
 from __future__ import annotations
 
+import logging
+
 import jwt
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,6 +63,7 @@ from app.schemas.auth import (
     VerifyEmailRequest,
 )
 
+logger = logging.getLogger("app.auth")
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
@@ -161,8 +164,9 @@ async def _is_locked(email: str) -> bool:
     try:
         n = await get_redis().get(_lock_key(email))
         return bool(n) and int(n) >= settings.login_max_failures
-    except Exception:
-        return False  # fail-open: never lock people out because Redis is down
+    except Exception as exc:
+        logger.error("Login lockout check failed; denying login: %s", exc)
+        return True
 
 
 async def _record_failure(email: str) -> None:

@@ -7,6 +7,7 @@ Handles file upload, triggers the harmonization pipeline, and returns results.
 from __future__ import annotations
 
 import hashlib
+import logging
 from pathlib import Path
 
 import pandas as pd
@@ -30,6 +31,7 @@ from app.repositories import studies as studies_repo
 from app.services.harmonizer import generate_study_id
 
 router = APIRouter(prefix="/api/v1", tags=["harmonize"])
+logger = logging.getLogger("app.harmonize")
 
 UPLOAD_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "uploads"
 CURATED_PATH = (
@@ -266,6 +268,18 @@ async def harmonize_study(
             target_schema=target_schema,
         )
     except Exception as exc:  # noqa: BLE001 — queue unreachable: shed load, don't run in-process
+        await studies_repo.update_status(db_session, study_id, "failed")
+        await jobs_repo.mark_failed(
+            db_session,
+            job,
+            error_code="queue_unavailable",
+            error_message="The job could not be submitted to the worker queue.",
+        )
+        await db_session.commit()
+        try:
+            storage.delete(file_key)
+        except Exception:  # noqa: BLE001 — preserve the queue error response
+            logger.exception("Failed to remove upload after queue submission failed")
         raise HTTPException(
             status_code=503,
             detail="The job queue is temporarily unavailable. Please retry shortly.",

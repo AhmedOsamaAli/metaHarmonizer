@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 import app.core.settings as settings_mod
 import app.db.session as db_session
-from app.db.models import Study, User
+from app.db.models import JobRun, Study, User
 
 from _authflow import register_and_login
 
@@ -146,3 +146,68 @@ async def test_harmonize_enforces_per_user_quota_but_allows_dedup(env, monkeypat
         rejected = await c.post("/api/v1/harmonize", headers=headers, **distinct)
         assert rejected.status_code == 429, rejected.text
         assert rejected.headers["Retry-After"] == "30"
+
+
+async def test_queue_failure_cleans_upload_and_releases_dedup(env, monkeypatch):
+    make_client, domain = env
+    stored: set[str] = set()
+    failed_study_id: str | None = None
+
+    class FakeStorage:
+        scheme = "s3"
+
+        def store(self, key, _src):
+            stored.add(key)
+
+        def delete(self, key):
+            stored.discard(key)
+
+    async def fail_enqueue(**kwargs):
+        nonlocal failed_study_id
+        failed_study_id = kwargs["study_id"]
+        raise RuntimeError("queue unavailable")
+
+    import app.routers.harmonize as harmonize_mod
+
+    monkeypatch.setattr(harmonize_mod, "get_storage", lambda: FakeStorage())
+    monkeypatch.setattr(harmonize_mod, "enqueue_harmonize", fail_enqueue)
+
+    csv = b"SEX,AGE\nMale,61\n"
+    submit = {
+        "files": {"file": ("queue-failure.csv", csv, "text/csv")},
+        "data": {"mode": "schema"},
+    }
+
+    async with make_client() as c:
+        user = await register_and_login(c, f"queue@{domain}")
+        headers = {"Authorization": f"Bearer {user['access_token']}"}
+
+        failed = await c.post("/api/v1/harmonize", headers=headers, **submit)
+        assert failed.status_code == 503, failed.text
+        assert stored == set()
+        assert failed_study_id is not None
+
+        async def succeed_enqueue(**_kwargs):
+            return None
+
+        monkeypatch.setattr(harmonize_mod, "enqueue_harmonize", succeed_enqueue)
+        retried = await c.post("/api/v1/harmonize", headers=headers, **submit)
+        assert retried.status_code == 202, retried.text
+        retried_study_id = retried.json()["study_id"]
+        assert retried_study_id != failed_study_id
+
+    async with db_session.SessionLocal() as s:
+        studies = list(
+            await s.scalars(
+                sa.select(Study)
+                .where(Study.id.in_([failed_study_id, retried_study_id]))
+                .order_by(Study.created_at)
+            )
+        )
+        assert [study.status for study in studies] == ["failed", "queued"]
+        failed_job = await s.scalar(
+            sa.select(JobRun).where(JobRun.study_id == studies[0].id)
+        )
+        assert failed_job is not None
+        assert failed_job.state == "failed"
+        assert failed_job.error_code == "queue_unavailable"
