@@ -113,6 +113,7 @@ docs/*
 !docs/scaling-plan.md
 !docs/service-level-objectives.md
 !docs/architecture.md
+!docs/architecture-overview.svg
 !docs/handover.md
 !docs/licensing.md
 

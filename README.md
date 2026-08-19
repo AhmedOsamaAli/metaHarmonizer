@@ -27,36 +27,9 @@ optional LLM fallback with review workflows that keep curators in control.
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    Curator[Curator browser] -->|HTTPS| Edge
-
-    subgraph Host[Single OCI host · Docker Compose]
-        Edge[Caddy · TLS and routing]
-        SPA[React application]
-        API[FastAPI API]
-        Queue[(Redis / arq)]
-        Worker[ML worker]
-        DB[(PostgreSQL)]
-        Files[(Study files)]
-        Adapter[Engine adapter]
-        Engine[MetaHarmonizer engine]
-        KB[(Versioned KB and model cache)]
-
-        Edge -->|Static assets| SPA
-        Edge -->|REST / WebSocket| API
-        API -->|Durable application state| DB
-        API -->|Jobs and live progress| Queue
-        API --> Files
-        Queue -->|Bounded asynchronous work| Worker
-        Worker --> DB
-        Worker --> Files
-        Worker --> Adapter --> Engine --> KB
-    end
-
-    API -.->|Email and optional LLM| Providers[External providers]
-    DB -->|Encrypted scheduled dump| Backup[R2 backup storage]
-```
+<a href="docs/architecture.md">
+    <img src="docs/architecture-overview.svg" alt="MetaHarmonizer production architecture showing the curator request path, queued ML execution, durable state, engine boundary, external providers, and encrypted backups">
+</a>
 
 PostgreSQL is the durable source of truth. Redis holds reconstructable queue,
 progress, rate-limit, and activity state. Long-running model execution is

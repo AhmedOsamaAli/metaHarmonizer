@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 820" role="img" aria-labelledby="title desc">
+  <title id="title">MetaHarmonizer production architecture</title>
+  <desc id="desc">A curator connects through Caddy to FastAPI. FastAPI uses PostgreSQL for durable state and Redis to queue bounded work for the ML worker. The worker accesses MetaHarmonizer through an engine adapter and uses persistent host volumes. External providers and encrypted R2 backups sit outside the single OCI host boundary.</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#020617" flood-opacity="0.35"/>
+    </filter>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10Z" fill="#60a5fa"/>
+    </marker>
+    <marker id="arrow-amber" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10Z" fill="#fbbf24"/>
+    </marker>
+    <marker id="arrow-teal" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10Z" fill="#2dd4bf"/>
+    </marker>
+    <marker id="arrow-muted" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10Z" fill="#64748b"/>
+    </marker>
+    <style>
+      text{font-family:"Segoe UI",Arial,sans-serif}.eyebrow{font-size:13px;font-weight:700;letter-spacing:2px;fill:#7dd3fc}.heading{font-size:28px;font-weight:750;fill:#f8fafc}.summary{font-size:15px;fill:#94a3b8}.boundary-label{font-size:12px;font-weight:700;letter-spacing:1.7px;fill:#93c5fd}.card-title{font-size:18px;font-weight:700;fill:#f8fafc}.card-copy{font-size:12px;fill:#aebbd0}.tag{font-size:10px;font-weight:700;fill:#dbeafe}.icon{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:2}.flow{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-dasharray:10 9;animation:travel 1.5s linear infinite}.static-flow{fill:none;stroke:#64748b;stroke-width:2.2;stroke-linecap:round}.pulse{animation:pulse 2.2s ease-in-out infinite;transform-origin:center}.operations{font-size:12px;fill:#cbd5e1}.operations-label{font-size:11px;font-weight:700;letter-spacing:1px;fill:#7dd3fc}@keyframes travel{to{stroke-dashoffset:-38}}@keyframes pulse{0%,100%{opacity:.65}50%{opacity:1}}@media(prefers-reduced-motion:reduce){.flow,.pulse{animation:none}}
+    </style>
+  </defs>
+
+  <rect width="1400" height="820" rx="24" fill="#050b18"/>
+  <path d="M0 24Q0 0 24 0H1376Q1400 0 1400 24V820H0Z" fill="#07101f"/>
+  <circle cx="1250" cy="72" r="118" fill="#0c1b32" opacity="0.55"/>
+  <circle cx="1320" cy="20" r="54" fill="#10334a" opacity="0.4"/>
+
+  <text x="54" y="52" class="eyebrow">VERIFIED PRODUCTION ARCHITECTURE</text>
+  <text x="54" y="88" class="heading">Human review in the foreground. Bounded model work in the queue.</text>
+  <text x="54" y="116" class="summary">PostgreSQL is durable; Redis is reconstructable; every engine call crosses one enforced adapter.</text>
+
+  <rect x="220" y="145" width="930" height="570" rx="24" fill="#081322" stroke="#36506f" stroke-width="2" stroke-dasharray="9 8"/>
+  <rect x="246" y="130" width="278" height="30" rx="15" fill="#10243b" stroke="#36506f"/>
+  <text x="265" y="150" class="boundary-label">SINGLE OCI HOST - DOCKER COMPOSE</text>
+
+  <g filter="url(#shadow)">
+    <rect x="34" y="238" width="158" height="118" rx="16" fill="#0d1a2d" stroke="#60a5fa" stroke-width="2"/>
+  </g>
+  <rect x="54" y="258" width="36" height="30" rx="5" fill="#102b4d" stroke="#60a5fa"/>
+  <path d="M54 266H90M62 274h1m7 0h1" class="icon" stroke="#60a5fa"/>
+  <text x="102" y="279" class="card-title">Curator</text>
+  <text x="54" y="318" class="card-copy">Browser over HTTPS</text>
+  <text x="54" y="339" class="card-copy">upload - review - export</text>
+
+  <g filter="url(#shadow)">
+    <rect x="260" y="210" width="208" height="146" rx="16" fill="#0d1a2d" stroke="#60a5fa" stroke-width="2"/>
+  </g>
+  <path d="M288 243l18-8 18 8v14c0 12-8 21-18 26-10-5-18-14-18-26Z" class="icon" stroke="#60a5fa"/>
+  <path d="m299 257 5 5 10-12" class="icon" stroke="#60a5fa"/>
+  <text x="338" y="251" class="card-title">Caddy</text>
+  <text x="286" y="306" class="card-copy">TLS - React assets</text>
+  <text x="286" y="328" class="card-copy">REST / WebSocket proxy</text>
+
+  <g filter="url(#shadow)">
+    <rect x="520" y="210" width="244" height="146" rx="16" fill="#0b1d25" stroke="#2dd4bf" stroke-width="2"/>
+  </g>
+  <rect x="546" y="234" width="42" height="42" rx="9" fill="#103334" stroke="#2dd4bf"/>
+  <path d="m564 245-8 10 8 10m7-20 8 10-8 10" class="icon" stroke="#2dd4bf"/>
+  <text x="604" y="251" class="card-title">FastAPI</text>
+  <text x="546" y="306" class="card-copy">auth - ownership - contracts</text>
+  <text x="546" y="328" class="card-copy">review workflows - live status</text>
+  <rect x="676" y="232" width="68" height="22" rx="8" fill="#12313b" stroke="#2b5960"/>
+  <text x="690" y="247" class="tag">NON-ROOT</text>
+
+  <g filter="url(#shadow)">
+    <rect x="520" y="412" width="244" height="126" rx="16" fill="#211a08" stroke="#fbbf24" stroke-width="2"/>
+  </g>
+  <rect x="546" y="436" width="42" height="42" rx="9" fill="#3b2b08" stroke="#fbbf24"/>
+  <path d="M556 447h22M556 457h16M556 467h10" class="icon" stroke="#fbbf24"/>
+  <circle cx="578" cy="467" r="4" fill="#fbbf24" class="pulse"/>
+  <text x="604" y="453" class="card-title">Redis / arq</text>
+  <text x="546" y="501" class="card-copy">bounded queue - retries</text>
+  <text x="546" y="522" class="card-copy">progress - rate limits</text>
+
+  <g filter="url(#shadow)">
+    <rect x="816" y="412" width="286" height="126" rx="16" fill="#171329" stroke="#a78bfa" stroke-width="2"/>
+  </g>
+  <circle cx="850" cy="457" r="20" fill="#29204a" stroke="#a78bfa"/>
+  <path d="M850 443v5m0 18v5m-14-14h5m18 0h5m-24-10 4 4m12 12 4 4m0-20-4 4m-12 12-4 4" class="icon" stroke="#a78bfa"/>
+  <circle cx="850" cy="457" r="7" class="icon" stroke="#a78bfa"/>
+  <text x="884" y="453" class="card-title">ML worker</text>
+  <text x="842" y="501" class="card-copy">queued engine execution</text>
+  <text x="842" y="522" class="card-copy">measured concurrency: 2 jobs</text>
+
+  <g filter="url(#shadow)">
+    <rect x="260" y="580" width="208" height="104" rx="16" fill="#0b1d25" stroke="#2dd4bf" stroke-width="2"/>
+  </g>
+  <ellipse cx="294" cy="612" rx="17" ry="7" class="icon" stroke="#2dd4bf"/>
+  <path d="M277 612v24c0 4 8 7 17 7s17-3 17-7v-24m-34 12c0 4 8 7 17 7s17-3 17-7" class="icon" stroke="#2dd4bf"/>
+  <text x="326" y="616" class="card-title">PostgreSQL</text>
+  <text x="286" y="661" class="card-copy">durable source of truth</text>
+
+  <g filter="url(#shadow)">
+    <rect x="520" y="580" width="244" height="104" rx="16" fill="#211a08" stroke="#fbbf24" stroke-width="2"/>
+  </g>
+  <path d="M547 608h15l7 7h23v29h-45Z" class="icon" stroke="#fbbf24"/>
+  <text x="606" y="616" class="card-title">Host volumes</text>
+  <text x="546" y="661" class="card-copy">study files - KB - model cache</text>
+
+  <g filter="url(#shadow)">
+    <rect x="816" y="580" width="286" height="104" rx="16" fill="#171329" stroke="#a78bfa" stroke-width="2"/>
+  </g>
+  <path d="m847 606 18-10 18 10v20l-18 10-18-10Zm0 0 18 10 18-10m-18 10v20" class="icon" stroke="#a78bfa"/>
+  <text x="900" y="610" class="card-title">Engine boundary</text>
+  <text x="842" y="651" class="card-copy">adapter - MetaHarmonizer</text>
+  <text x="842" y="671" class="card-copy">versioned models and KB</text>
+
+  <g filter="url(#shadow)">
+    <rect x="1190" y="210" width="176" height="146" rx="16" fill="#111827" stroke="#64748b" stroke-width="2"/>
+  </g>
+  <path d="M1220 259a17 17 0 0 1 32-7 14 14 0 1 1 4 27h-36a10 10 0 0 1 0-20Z" class="icon" stroke="#94a3b8"/>
+  <text x="1216" y="307" class="card-title">Providers</text>
+  <text x="1216" y="329" class="card-copy">email - optional LLM</text>
+
+  <g filter="url(#shadow)">
+    <rect x="1190" y="580" width="176" height="104" rx="16" fill="#111827" stroke="#64748b" stroke-width="2"/>
+  </g>
+  <path d="M1218 624h34v25h-34Zm8 0v-8a9 9 0 0 1 18 0v8" class="icon" stroke="#94a3b8"/>
+  <text x="1266" y="620" class="card-title">R2 backup</text>
+  <text x="1266" y="644" class="card-copy">encrypted DB dump</text>
+  <text x="1266" y="663" class="card-copy">restore-drill verified</text>
+
+  <path d="M192 282H260" class="flow" stroke="#60a5fa" marker-end="url(#arrow-blue)"/>
+  <path d="M468 282H520" class="flow" stroke="#60a5fa" marker-end="url(#arrow-blue)"/>
+  <path d="M642 356V412" class="flow" stroke="#fbbf24" marker-end="url(#arrow-amber)"/>
+  <path d="M764 475H816" class="flow" stroke="#fbbf24" marker-end="url(#arrow-amber)"/>
+  <path d="M642 538V580" class="static-flow" marker-end="url(#arrow-muted)"/>
+  <path d="M959 538V580" class="flow" stroke="#a78bfa" marker-end="url(#arrow-muted)"/>
+  <path d="M560 356V382H364V580" class="static-flow" marker-end="url(#arrow-muted)"/>
+  <path d="M764 282H1190" class="flow" stroke="#2dd4bf" marker-end="url(#arrow-teal)"/>
+  <path d="M468 632H1190" class="static-flow" marker-end="url(#arrow-muted)"/>
+
+  <rect x="220" y="746" width="930" height="44" rx="12" fill="#111d30" stroke="#2b405c"/>
+  <text x="246" y="773" class="operations-label">OPERATIONS</text>
+  <text x="352" y="773" class="operations">protected CI - health checks - Slack alerts - rollback - backup freshness</text>
+
+  <g transform="translate(1120 738)">
+    <circle cx="9" cy="9" r="6" fill="#60a5fa"/><text x="24" y="14" class="operations">request</text>
+    <circle cx="105" cy="9" r="6" fill="#fbbf24"/><text x="120" y="14" class="operations">queue</text>
+    <circle cx="195" cy="9" r="6" fill="#2dd4bf"/><text x="210" y="14" class="operations">external</text>
+  </g>
+</svg>
