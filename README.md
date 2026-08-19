@@ -28,20 +28,48 @@ optional LLM fallback with review workflows that keep curators in control.
 ## Architecture
 
 ```mermaid
-flowchart LR
-    Browser[React dashboard] -->|HTTPS / REST / WebSocket| Caddy
-    Caddy --> API[FastAPI API]
-    API --> PostgreSQL[(PostgreSQL)]
-    API --> Redis[(Redis / arq)]
-    Redis --> Worker[ML worker]
-    Worker --> PostgreSQL
-    Worker --> KB[Versioned KB and model cache]
+flowchart TB
+    Curator[Curator browser] -->|HTTPS| Edge
+
+    subgraph Host[Single OCI host · Docker Compose]
+        Edge[Caddy · TLS and routing]
+        SPA[React application]
+        API[FastAPI API]
+        Queue[(Redis / arq)]
+        Worker[ML worker]
+        DB[(PostgreSQL)]
+        Files[(Study files)]
+        Adapter[Engine adapter]
+        Engine[MetaHarmonizer engine]
+        KB[(Versioned KB and model cache)]
+
+        Edge -->|Static assets| SPA
+        Edge -->|REST / WebSocket| API
+        API -->|Durable application state| DB
+        API -->|Jobs and live progress| Queue
+        API --> Files
+        Queue -->|Bounded asynchronous work| Worker
+        Worker --> DB
+        Worker --> Files
+        Worker --> Adapter --> Engine --> KB
+    end
+
+    API -.->|Email and optional LLM| Providers[External providers]
+    DB -->|Encrypted scheduled dump| Backup[R2 backup storage]
 ```
 
-The application accesses the upstream
+PostgreSQL is the durable source of truth. Redis holds reconstructable queue,
+progress, rate-limit, and activity state. Long-running model execution is
+bounded and queued, while curator review remains synchronous. The public
+deployment stores study files, the versioned knowledge base, and model caches on
+persistent host volumes; R2 stores encrypted PostgreSQL backups only.
+
+The API and worker access the upstream
 [MetaHarmonizer engine](https://github.com/shbrief/MetaHarmonizer) exclusively
-through `backend/app/engine_adapter/`. API, worker, and tests depend on the stable
-adapter protocol rather than upstream implementation details.
+through `backend/app/engine_adapter/`. CI enforces this boundary so application
+code depends on a stable adapter protocol rather than upstream implementation
+details. The current deployment is portable but not highly available because
+the host, Caddy, PostgreSQL, Redis, API, and worker share one failure domain.
 
 See the [detailed architecture](docs/architecture.md) for trust boundaries,
 module ownership, consistency rules, deployment constraints, and delegated
