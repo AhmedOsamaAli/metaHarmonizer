@@ -104,6 +104,34 @@ Reclaim manually at any time:
 python3 scripts/production_report.py prune
 ```
 
+## Registration control
+
+Close or reopen new-account registration in one command. The script edits
+`ALLOWED_EMAIL_DOMAINS`, recreates the API, confirms the running container took
+the new value, and checks public health. If any step fails it restores the
+previous setting automatically.
+
+```bash
+./scripts/registration_mode.sh status
+./scripts/registration_mode.sh close                      # invite-only
+./scripts/registration_mode.sh open --domains example.org # named domains
+./scripts/registration_mode.sh open --domains '*'         # any verified address
+```
+
+Closing registration stops new self-registrations from being approved; people
+can still submit the form, but no new account becomes usable without an
+administrator approving it. It does **not** sign out or disable existing
+accounts. To remove access for an existing user, deactivate that account in the
+admin area.
+
+The previous value is kept next to the environment file as
+`.env.registration-backup`. That file contains production secrets, so it is
+git-ignored and must stay on the host with the same permissions as `.env`.
+
+Verified on 2026-08-19: closing switched the running API to invite-only and
+reopening restored `*`, with the API healthy and public health returning 200 at
+each step.
+
 ## Thresholds
 
 | Signal | Warning | Critical/action |
