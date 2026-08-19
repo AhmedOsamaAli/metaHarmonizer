@@ -23,6 +23,12 @@ Do not test destructive techniques against the public service or access data tha
 does not belong to you. We will acknowledge a credible report, preserve evidence,
 rotate exposed credentials, and coordinate remediation before disclosure.
 
+Acknowledgement is targeted within three business days. That is a best-effort
+commitment from a small team rather than a commercial agreement, and it covers
+acknowledgement only; remediation time depends on severity and on whether a fix
+requires an upstream dependency. If a report indicates active exposure of
+credentials or data, say so explicitly in the first message so it is prioritised.
+
 ## Security controls
 
 Protected CI runs dependency audits, secret scanning, CodeQL, container
