@@ -1,0 +1,128 @@
+# MetaHarmonizer — full system architecture (D2)
+# Render:  d2 --layout=elk architecture.d2 architecture.svg
+# Docs:    https://d2lang.com
+# Reverse-engineered from source (compose, Caddyfile, FastAPI app, engine adapter, GitHub Actions).
+
+direction: right
+
+vars: {
+  d2-config: {
+    layout-engine: elk
+    theme-id: 5
+  }
+}
+
+title: |md
+  # MetaHarmonizer — System Architecture
+| { near: top-center; style.font-size: 28 }
+
+curator: "Curator / Admin" { shape: person; style.fill: "#4338ca"; style.font-color: "#ffffff" }
+agent: "LLM Agent\n(Claude / Cursor)" { shape: person; style.fill: "#4338ca"; style.font-color: "#ffffff" }
+
+edge: "Edge" {
+  style.fill: "#faf5ff"; style.stroke: "#a21caf"
+  caddy: "Caddy Reverse Proxy\n(SPA static + /api + WS + CSP/TLS)" {
+    shape: hexagon; style.fill: "#a21caf"; style.font-color: "#ffffff"
+  }
+  spa: "Web SPA\nReact 18 · Vite · TS · Tailwind · React Query" {
+    shape: page; style.fill: "#1d4ed8"; style.font-color: "#ffffff"
+  }
+}
+
+app: "Application (one image · two commands)" {
+  style.fill: "#eff6ff"; style.stroke: "#1d4ed8"
+
+  api: "API Service — FastAPI · uvicorn" {
+    style.fill: "#dbeafe"; style.stroke: "#1d4ed8"
+    mw: "Middleware\nrequest-id · errors · security headers\nPrometheus · rate-limit + idempotency · CORS" { style.fill: "#bfdbfe" }
+    routers: "Routers\nauth · admin · harmonize · mappings\nontology · quality · export · federation · ws" { style.fill: "#bfdbfe" }
+    services: "Domain Services\nharmonizer · exporter · analytics\nactive_learning · learned_apply · schema_diff" { style.fill: "#bfdbfe" }
+    repos: "Repositories (all SQL)" { style.fill: "#bfdbfe" }
+    adapter: "Engine Adapter\n(EngineProtocol — only engine importer)" { style.fill: "#ede9fe"; style.stroke: "#6d28d9" }
+
+    mw -> routers
+    routers -> services
+    services -> repos
+    services -> adapter
+  }
+
+  worker: "Job Worker — arq\nrun_harmonize · cron (retention, nightly export)" {
+    style.fill: "#dbeafe"; style.stroke: "#1d4ed8"
+    wadapter: "Engine Adapter (same boundary)" { style.fill: "#ede9fe"; style.stroke: "#6d28d9" }
+  }
+}
+
+engine: "Harmonization Engine — metaharmonizer 0.4.1" {
+  style.fill: "#f5f3ff"; style.stroke: "#6d28d9"
+  sme: "SchemaMapEngine\n4-stage cascade:\n1 Dict/Fuzzy · 2 Value/Onto\n3 Semantic (MiniLM) · 4 LLM" { style.fill: "#ddd6fe" }
+  ome: "OntoMapEngine\nNCIt · UBERON (FAISS)" { style.fill: "#ddd6fe" }
+  sme -> ome: value pass
+}
+
+mcp: "MCP Server\nharmonize_table/columns/values\nstdio · SSE" { shape: hexagon; style.fill: "#7c3aed"; style.font-color: "#ffffff" }
+
+data: "State & Storage" {
+  style.fill: "#f0fdf4"; style.stroke: "#15803d"
+  pg: "PostgreSQL 16\nstudies · mappings(+versions)\nontology · audit · users · pins · jobs" { shape: cylinder; style.fill: "#15803d"; style.font-color: "#ffffff" }
+  redis: "Redis 7\nqueue · progress pub/sub\nrate-limit · idempotency · WS tickets" { shape: cylinder; style.fill: "#b91c1c"; style.font-color: "#ffffff" }
+  objstore: "Object Store\nuploads / exports (file:// or S3/R2)" { shape: page; style.fill: "#ca8a04"; style.font-color: "#ffffff" }
+  kb: "Knowledge Base\nFAISS · MiniLM model · ontology corpora" { shape: page; style.fill: "#ca8a04"; style.font-color: "#ffffff" }
+}
+
+external: "External Services" {
+  style.fill: "#f8fafc"; style.stroke: "#64748b"
+  gemini: "Google Gemini API\n(Stage-4 LLM, optional)" { style.fill: "#e2e8f0" }
+  vocab: "NCI EVS · OLS · UMLS\n(cached)" { style.fill: "#e2e8f0" }
+  resend: "Resend (email)" { style.fill: "#e2e8f0" }
+  hibp: "HaveIBeenPwned" { style.fill: "#e2e8f0" }
+  hf: "HuggingFace Hub\n(offline in prod)" { style.fill: "#e2e8f0" }
+  cbio: "cBioPortal\n(import target)" { style.fill: "#e2e8f0" }
+}
+
+obs: "Observability (as used)" {
+  style.fill: "#fffbeb"; style.stroke: "#ca8a04"
+  metrics: "/metrics\nPrometheus-format golden signals" { shape: page; style.fill: "#fef3c7" }
+  sentry: "Sentry\nerror tracking (optional)" { style.fill: "#fde68a" }
+}
+
+cicd: "CI/CD — GitHub" {
+  style.fill: "#f1f5f9"; style.stroke: "#334155"
+  gh: "GitHub repo" { shape: hexagon; style.fill: "#334155"; style.font-color: "#ffffff" }
+  actions: "GitHub Actions\nci · engine-boundary · kb-refresh · deploy-smoke" { style.fill: "#cbd5e1" }
+  e2e: "Playwright E2E" { style.fill: "#cbd5e1" }
+  gh -> actions
+  actions -> e2e
+}
+
+# ---- Control + data flow ----
+curator -> edge.spa: uses (HTTPS)
+edge.spa -> edge.caddy: assets + API
+edge.caddy -> app.api.mw: "/api, /healthz, /metrics, WS"
+agent -> mcp: MCP tools
+
+app.api.repos -> data.pg: SQL (asyncpg)
+app.api.adapter -> engine: harmonize / map values
+app.api -> data.objstore: uploads / exports
+app.api -> data.redis: enqueue (queue mode) { style.stroke-dash: 3 }
+app.api <-> data.redis: rate-limit · idempotency · progress bus
+
+data.redis -> app.worker: dequeue job (arq)
+app.worker.wadapter -> engine: harmonize / map values
+app.worker -> data.pg: persist mappings + pins
+app.worker -> data.objstore: read upload
+app.worker -> data.redis: publish progress
+
+engine -> data.kb: vector search + term lookup
+engine -> external.gemini: Stage-4 LLM
+engine -> external.vocab: vocab lookups (cached)
+engine -> external.hf: load model (offline)
+mcp -> engine: via adapter boundary
+
+app.api -> external.resend: verify / reset email
+app.api -> external.hibp: breach check
+app.api -> obs.sentry: errors
+app.api -> obs.metrics: exposes { style.stroke-dash: 3 }
+curator -> external.cbio: import harmonized export
+
+cicd.actions -> app.api: build + test + deploy { style.stroke-dash: 3; style.stroke: "#334155" }
+cicd.actions -> edge.spa: build SPA (web_dist) { style.stroke-dash: 3; style.stroke: "#334155" }

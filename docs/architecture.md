@@ -4,23 +4,15 @@
 
 MetaHarmonizer is a human-in-the-loop metadata harmonization system. Curators
 upload de-identified tabular metadata, review schema and ontology proposals,
-approve corrections, inspect quality, and export standardized datasets.
+approve corrections, inspect quality, and export standardized datasets. AI
+clients may reach the same engine through the optional MCP server, and validated
+exports feed cBioPortal-compatible tooling.
 
-```mermaid
-flowchart LR
-    Curator[Curator browser] -->|HTTPS| Edge[Caddy]
-    Edge -->|Static assets| SPA[React application]
-    Edge -->|REST and WebSocket| API[FastAPI API]
-    API --> DB[(PostgreSQL)]
-    API --> Queue[(Redis / arq)]
-    Queue --> Worker[ML worker]
-    Worker --> DB
-    Worker --> Objects[Study objects]
-    Worker --> Models[Versioned KB and model cache]
-    API --> Objects
-    Ops[Systemd operations] --> API
-    Ops --> Backup[Encrypted R2 backups]
-```
+<img src="architecture-overview.svg" alt="MetaHarmonizer system architecture and workflow showing clients, the single-host production runtime, durable state, external integrations, delivery, and host operations">
+
+Production currently runs on one host, so PostgreSQL, Redis, Caddy, API, and
+worker share a failure domain; horizontal scaling does not by itself create high
+availability.
 
 ## Trust boundaries
 
@@ -115,93 +107,6 @@ Changes must preserve these rules:
 6. KB/model updates are versioned, integrity checked, benchmarked, and reversible.
 7. Operational changes include health verification and a rollback path.
 
-## Known limitations and delegated work
-
-- The deployment is single-host and has no automatic failover.
-- Production metrics are retained locally; durable external metrics history is
-  delegated to a later institutional deployment.
-- Remote ML workers require private database/Redis connectivity and S3-compatible
-  study-object storage.
-- API and worker CPU remain the measured scaling constraint; adding concurrency
-  without benchmarks is unsupported.
-- Large page modules may be decomposed when feature work resumes, but module
-  size alone does not justify a release-risk refactor.# Architecture
-
-## System context
-
-MetaHarmonizer is a human-in-the-loop metadata harmonization service. Curators
-upload de-identified study metadata, review schema and ontology candidates, and
-export standardized data. The matching engine proposes; curators remain the
-source of final decisions.
-
-```mermaid
-flowchart LR
-    Curator[Curator browser]
-    Agent[AI client / MCP host]
-    Portal[cBioPortal or downstream tools]
-
-    subgraph Host[MetaHarmonizer deployment boundary]
-        Caddy[Caddy: TLS and routing]
-        SPA[React SPA]
-        API[FastAPI API]
-        Redis[(Redis: queue, rate limits, pub/sub)]
-        Worker[arq ML worker]
-        DB[(PostgreSQL)]
-        Files[(Uploads / object storage)]
-        Adapter[Engine adapter]
-        Engine[MetaHarmonizer engine]
-        KB[(Versioned KB and model cache)]
-    end
-
-    Curator -->|HTTPS| Caddy
-    Caddy --> SPA
-    Caddy -->|REST / WebSocket| API
-    API --> DB
-    API --> Redis
-    API --> Files
-    Redis --> Worker
-    Worker --> DB
-    Worker --> Files
-    Worker --> Adapter --> Engine --> KB
-    Agent -->|MCP, optional| Adapter
-    API -->|validated exports| Portal
-```
-
-Production currently uses one host. PostgreSQL, Redis, Caddy, API, and worker
-therefore share a failure domain; horizontal scaling does not by itself create
-high availability.
-
-## Application layers
-
-```mermaid
-flowchart TB
-    Routes[FastAPI routers]
-    Services[Application services]
-    Repositories[Repositories]
-    Database[(SQLAlchemy / PostgreSQL)]
-    Queue[Queue and worker tasks]
-    Protocol[EngineProtocol]
-    Adapter[MetaHarmonizer adapter]
-    Upstream[Vendored upstream engine]
-
-    Routes --> Services
-    Routes --> Repositories
-    Services --> Repositories --> Database
-    Routes --> Queue --> Services
-    Services --> Protocol
-    Protocol --> Adapter --> Upstream
-```
-
-- Routers own HTTP contracts, authentication, authorization, and response codes.
-- Services own workflows and domain transformations.
-- Repositories own persistence queries and transactions.
-- Worker tasks own asynchronous execution, retries, and progress publication.
-- `backend/app/engine_adapter/` is the only application package allowed to import
-  the upstream engine. CI enforces this dependency boundary.
-
-Some simple routes call repositories directly. This is intentional where there
-is no reusable domain workflow; shared behavior belongs in services.
-
 ## Harmonization lifecycle
 
 ```mermaid
@@ -279,3 +184,38 @@ These are deliberate follow-up items, not hidden guarantees:
 5. Add mixed dashboard/real-ML load tests after any CPU or worker expansion.
 6. Continue raising component-level frontend coverage and decomposing the largest
    review/admin pages as behavior changes require.
+
+## Further architecture material
+
+This document is the current, authoritative description of the deployed system.
+The material below adds depth or records why a decision was made.
+
+| Document | What it covers |
+|---|---|
+| [Architecture review dossier](architecture/README.md) | Source-derived discovery report, layer model, risk register, and diagram index |
+| [Engine system design](architecture/engine-system-design.md) | Matching engine, adapter boundary, staged cascade, and knowledge base |
+| [Dashboard system design](architecture/dashboard-system-design.md) | API, worker, realtime, auth, and deployment topology of the dashboard |
+| [Knowledge base lifecycle](kb-lifecycle.md) | How the KB bundle is built, published, seeded, and refreshed |
+| [Scaling plan](scaling-plan.md) | Measured limits and the phased path beyond one host |
+| [Production operations](production-operations.md) | Health checks, capacity reports, alerting, and recovery |
+
+**Decision records**
+
+| ADR | Decision |
+|---|---|
+| [0001](adr/0001-engine-adapter-pattern.md) | Isolate the upstream engine behind one adapter protocol |
+| [0002](adr/0002-system-architecture.md) | Modular monolith, single VM, and the chosen infrastructure |
+| [0003](adr/0003-two-layer-curation-kb.md) | Two-layer curation knowledge base |
+
+ADRs record the decision at the time it was taken. Where a later choice replaced
+an option, this document and the deployment guide are authoritative.
+
+**Diagram sources**
+
+| File | Format |
+|---|---|
+| [architecture-overview.svg](architecture-overview.svg) | Rendered system overview used above and in the README |
+| [system-overview.svg](architecture/system-overview.svg) | Detailed component and stack map |
+| [architecture.d2](architecture/architecture.d2) | D2 source for the full system diagram |
+| [architecture.drawio](architecture/architecture.drawio) | Editable draw.io diagram |
+| [workspace.dsl](architecture/workspace.dsl) | Structurizr C4 model |

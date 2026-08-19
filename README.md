@@ -45,8 +45,8 @@ details. The current deployment is portable but not highly available because
 the host, Caddy, PostgreSQL, Redis, API, and worker share one failure domain.
 
 See the [detailed architecture](docs/architecture.md) for trust boundaries,
-module ownership, consistency rules, deployment constraints, and delegated
-scaling work.
+module ownership, consistency rules, deployment constraints, decision records,
+and delegated scaling work.
 
 ## Technology
 

@@ -1,0 +1,298 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2380" height="1340" viewBox="0 0 2380 1340" font-family="Segoe UI, Helvetica Neue, Helvetica, Arial, sans-serif">
+  <style>
+    .title{font-size:30px;font-weight:700;fill:#0f172a}
+    .subtitle{font-size:15px;font-weight:500;fill:#475569}
+    .ctitle{font-size:17px;font-weight:700;fill:#0f172a}
+    .stitle{font-size:13px;font-weight:700;fill:#475569;letter-spacing:.3px}
+    .ntitle{font-size:15px;font-weight:700;fill:#0f172a}
+    .ntext{font-size:12.5px;fill:#334155}
+    .tiny{font-size:11px;fill:#64748b}
+    .lbl{font-size:11px;fill:#475569}
+    .node{fill:#ffffff;stroke:#cbd5e1;stroke-width:1.5}
+    .eMain{stroke:#2563eb;stroke-width:2.2;fill:none}
+    .eData{stroke:#16a34a;stroke-width:2.2;fill:none}
+    .eExt{stroke:#e11d48;stroke-width:1.8;fill:none;stroke-dasharray:7,5}
+    .eRT{stroke:#9333ea;stroke-width:2;fill:none;stroke-dasharray:5,4}
+    .lblbg{fill:#ffffff;opacity:.95;rx:5;ry:5}
+  </style>
+  <defs>
+    <marker id="aBlue" markerWidth="10" markerHeight="8" refX="8.5" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#2563eb"/></marker>
+    <marker id="aGreen" markerWidth="10" markerHeight="8" refX="8.5" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#16a34a"/></marker>
+    <marker id="aRed" markerWidth="10" markerHeight="8" refX="8.5" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#e11d48"/></marker>
+    <marker id="aPurple" markerWidth="10" markerHeight="8" refX="8.5" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8 z" fill="#9333ea"/></marker>
+  </defs>
+
+  <!-- Title -->
+  <text x="1190" y="46" text-anchor="middle" class="title">MetaHarmonizer — System Architecture &amp; Stack</text>
+  <text x="1190" y="74" text-anchor="middle" class="subtitle">Curator-in-the-loop platform for harmonizing clinical / biomedical study metadata to a curated schema + ontologies</text>
+
+  <!-- ===================== Containers ===================== -->
+  <rect x="40" y="110" width="330" height="760" rx="14" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/>
+  <text x="60" y="138" class="ctitle">Actors &amp; MCP</text>
+
+  <rect x="400" y="110" width="380" height="760" rx="14" fill="#f0fdfa" stroke="#5eead4" stroke-width="1.5"/>
+  <text x="420" y="138" class="ctitle">Frontend &amp; Edge</text>
+
+  <rect x="810" y="110" width="850" height="1000" rx="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="830" y="138" class="ctitle">Backend Core</text>
+
+  <rect x="2050" y="110" width="300" height="1000" rx="14" fill="#faf5ff" stroke="#c4b5fd" stroke-width="1.5"/>
+  <text x="2070" y="138" class="ctitle">External Services</text>
+
+  <rect x="400" y="1140" width="1950" height="170" rx="14" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/>
+  <text x="420" y="1168" class="ctitle">Deployment &amp; CI / CD</text>
+
+  <rect x="40" y="900" width="330" height="240" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="60" y="928" class="ctitle">Legend</text>
+
+  <!-- Engine–Adapter boundary -->
+  <rect x="840" y="300" width="640" height="330" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.8" stroke-dasharray="8,6"/>
+  <text x="858" y="322" class="stitle">ENGINE–ADAPTER BOUNDARY  ·  only the adapter imports the engine</text>
+
+  <!-- Realtime -->
+  <rect x="840" y="810" width="620" height="90" rx="12" fill="#f5f3ff" stroke="#c4b5fd" stroke-width="1.4" stroke-dasharray="6,4"/>
+  <text x="858" y="832" class="stitle">REALTIME</text>
+
+  <!-- Integration / curation -->
+  <rect x="840" y="920" width="800" height="150" rx="12" fill="#ecfeff" stroke="#67e8f9" stroke-width="1.4" stroke-dasharray="6,4"/>
+  <text x="858" y="942" class="stitle">INTEGRATION &amp; CURATION FEATURES</text>
+
+  <!-- ===================== Edges (drawn under nodes) ===================== -->
+  <!-- blue: primary flow -->
+  <path d="M330,270 L400,270" class="eMain" marker-end="url(#aBlue)"/>
+  <path d="M590,430 L590,500" class="eMain" marker-end="url(#aBlue)"/>
+  <path d="M740,560 L790,560 L790,440 L880,440" class="eMain" marker-end="url(#aBlue)"/>
+  <path d="M735,720 L800,720 L800,470 L880,470" class="eMain" marker-end="url(#aBlue)"/>
+  <path d="M1100,430 L1150,430" class="eMain" marker-end="url(#aBlue)"/>
+  <path d="M980,510 L980,640 L1230,640 L1230,690" class="eMain" marker-end="url(#aBlue)"/>
+  <path d="M1150,730 L1100,730" class="eMain" marker-end="url(#aBlue)"/>
+  <path d="M1100,700 L1125,700 L1125,500 L1150,500" class="eMain" marker-end="url(#aBlue)"/>
+  <path d="M300,690 L340,690 L340,760 L400,760" class="eMain" marker-end="url(#aBlue)"/>
+  <path d="M400,790 L360,790 L360,600 L300,600" class="eMain" marker-end="url(#aBlue)"/>
+
+  <!-- green: persistence / KB -->
+  <path d="M1450,400 L1520,400" class="eData" marker-end="url(#aGreen)"/>
+  <path d="M1450,540 L1490,540 L1490,545 L1520,545" class="eData" marker-end="url(#aGreen)"/>
+  <path d="M1360,620 L1360,650 L1560,650 L1560,690" class="eData" marker-end="url(#aGreen)"/>
+
+  <!-- purple: realtime / async -->
+  <path d="M1250,780 L1250,810" class="eRT" marker-end="url(#aPurple)"/>
+  <path d="M840,855 L800,855 L800,360 L750,360" class="eRT" marker-end="url(#aPurple)"/>
+
+  <!-- red dashed: optional / external -->
+  <path d="M1300,355 L1300,232 L2050,232" class="eExt" marker-end="url(#aRed)"/>
+  <path d="M1360,355 L1360,300 L2050,300" class="eExt" marker-end="url(#aRed)"/>
+  <path d="M1000,360 L1000,262 L2015,262 L2015,455 L2050,455" class="eExt" marker-end="url(#aRed)"/>
+  <path d="M1035,360 L1035,278 L2030,278 L2030,545 L2050,545" class="eExt" marker-end="url(#aRed)"/>
+  <path d="M1640,700 L2050,700" class="eExt" marker-end="url(#aRed)"/>
+  <path d="M1640,560 L1950,560 L1950,760 L2050,760" class="eExt" marker-end="url(#aRed)"/>
+
+  <!-- ===================== Actor nodes ===================== -->
+  <rect x="75" y="180" width="260" height="150" rx="10" class="node"/>
+  <circle cx="120" cy="228" r="16" fill="#dbeafe" stroke="#60a5fa"/><circle cx="120" cy="223" r="6" fill="#2563eb"/><path d="M110,246 Q110,233 120,233 Q130,233 130,246 z" fill="#2563eb"/>
+  <text x="150" y="220" class="ntitle">Curator / Admin</text>
+  <text x="150" y="244" class="ntext">Browser operator</text>
+  <text x="95" y="278" class="ntext">Upload · review · ontology</text>
+  <text x="95" y="300" class="ntext">quality · export · admin</text>
+
+  <rect x="75" y="490" width="260" height="140" rx="10" class="node"/>
+  <rect x="93" y="528" width="40" height="40" rx="9" fill="#fee2e2" stroke="#fca5a5"/><text x="113" y="554" text-anchor="middle" font-size="12" font-weight="700" fill="#dc2626">AI</text>
+  <text x="150" y="540" class="ntitle">LLM Agent</text>
+  <text x="150" y="564" class="ntext">Claude / Cursor</text>
+  <text x="95" y="600" class="ntext">Optional external actor</text>
+
+  <rect x="75" y="680" width="260" height="150" rx="10" class="node"/>
+  <rect x="93" y="716" width="52" height="40" rx="9" fill="#ede9fe" stroke="#c4b5fd"/><text x="119" y="742" text-anchor="middle" font-size="12" font-weight="700" fill="#7c3aed">MCP</text>
+  <text x="158" y="720" class="ntitle">metaharmonizer-mcp</text>
+  <text x="158" y="744" class="ntext">PyPI · stdio / SSE</text>
+  <text x="95" y="792" class="ntext">3 harmonization tools</text>
+  <text x="95" y="814" class="tiny">harmonize_table / columns / values</text>
+
+  <!-- ===================== Frontend nodes ===================== -->
+  <!-- browser window -->
+  <rect x="430" y="180" width="320" height="250" rx="10" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <path d="M430,190 a10,10 0 0 1 10,-10 h300 a10,10 0 0 1 10,10 v22 h-320 z" fill="#1e293b"/>
+  <circle cx="446" cy="196" r="4" fill="#ef4444"/><circle cx="460" cy="196" r="4" fill="#f59e0b"/><circle cx="474" cy="196" r="4" fill="#22c55e"/>
+  <rect x="492" y="188" width="248" height="16" rx="8" fill="#475569"/>
+  <text x="500" y="200" font-size="9.5" fill="#cbd5e1">https://app.metaharmonizer / review</text>
+  <circle cx="470" cy="250" r="20" fill="#0f172a"/><circle cx="470" cy="250" r="6" fill="none" stroke="#61dafb" stroke-width="2"/><ellipse cx="470" cy="250" rx="18" ry="7" fill="none" stroke="#61dafb" stroke-width="2"/><ellipse cx="470" cy="250" rx="18" ry="7" fill="none" stroke="#61dafb" stroke-width="2" transform="rotate(60 470 250)"/><ellipse cx="470" cy="250" rx="18" ry="7" fill="none" stroke="#61dafb" stroke-width="2" transform="rotate(120 470 250)"/>
+  <text x="502" y="248" class="ntitle">Web SPA</text>
+  <text x="502" y="268" class="tiny">React · Vite · TS · Tailwind</text>
+  <rect x="448" y="300" width="128" height="46" rx="8" fill="#dbeafe" stroke="#93c5fd"/><text x="512" y="328" text-anchor="middle" class="ntext">Upload / Review</text>
+  <rect x="592" y="300" width="140" height="46" rx="8" fill="#dbeafe" stroke="#93c5fd"/><text x="662" y="328" text-anchor="middle" class="ntext">Ontology &amp; Quality</text>
+  <rect x="448" y="356" width="284" height="46" rx="8" fill="#dbeafe" stroke="#93c5fd"/><text x="590" y="384" text-anchor="middle" class="ntext">Export · Admin · Activity  (REST + WebSocket)</text>
+
+  <!-- Caddy -->
+  <rect x="440" y="500" width="300" height="120" rx="10" class="node"/>
+  <path d="M470,560 l16,-28 l16,28 l-16,28 z" fill="#1f88c0"/><text x="486" y="565" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">Cad</text>
+  <text x="520" y="536" class="ntitle">Caddy Reverse Proxy</text>
+  <text x="520" y="560" class="ntext">TLS · CSP · gzip</text>
+  <text x="470" y="596" class="ntext">Serves SPA + /api + WebSocket</text>
+
+  <!-- Auth (edge/security) -->
+  <rect x="440" y="680" width="300" height="150" rx="10" class="node"/>
+  <rect x="462" y="714" width="40" height="40" rx="9" fill="#fff7ed" stroke="#fdba74"/><text x="482" y="740" text-anchor="middle" font-size="15">🔒</text>
+  <text x="516" y="712" class="ntitle">Authentication</text>
+  <text x="516" y="734" class="tiny">Email/Password · lockout · HIBP</text>
+  <text x="462" y="772" class="ntext">JWT access + refresh · RBAC</text>
+  <text x="462" y="794" class="ntext">(curator / admin)</text>
+  <text x="462" y="816" class="tiny">Email verify + reset via Resend</text>
+
+  <!-- ===================== Backend nodes ===================== -->
+  <!-- FastAPI API -->
+  <rect x="880" y="360" width="220" height="150" rx="10" class="node"/>
+  <rect x="900" y="392" width="42" height="42" rx="9" fill="#009485"/><text x="921" y="418" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff">API</text>
+  <text x="952" y="392" class="ntitle">FastAPI API</text>
+  <text x="952" y="414" class="tiny">uvicorn</text>
+  <text x="900" y="454" class="tiny">request-id · unified errors</text>
+  <text x="900" y="472" class="tiny">rate-limit · idempotency · CORS</text>
+  <text x="900" y="490" class="tiny">security headers · /metrics</text>
+
+  <!-- Engine -->
+  <rect x="1150" y="355" width="300" height="265" rx="10" class="node"/>
+  <circle cx="1182" cy="392" r="20" fill="#3776ab"/><path d="M1172,384 h10 a6,6 0 0 1 6,6 v6 h-16 z" fill="#ffd43b"/><text x="1182" y="397" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">Py</text>
+  <text x="1214" y="388" class="ntitle">MetaHarmonizer</text>
+  <text x="1214" y="408" class="ntitle">Engine</text>
+  <text x="1170" y="446" class="ntext">4-stage cascade</text>
+  <text x="1170" y="470" class="tiny">1 · Dictionary / Fuzzy</text>
+  <text x="1170" y="490" class="tiny">2 · Value / Ontology</text>
+  <text x="1170" y="510" class="tiny">3 · Semantic (MiniLM)</text>
+  <text x="1170" y="530" class="tiny">4 · LLM matcher (optional)</text>
+  <text x="1170" y="556" class="tiny">FAISS value→ontology mapping</text>
+  <text x="1170" y="582" class="tiny" font-style="italic">pinned: schema version +</text>
+  <text x="1170" y="600" class="tiny" font-style="italic">ontology snapshot</text>
+
+  <!-- Worker -->
+  <rect x="880" y="660" width="220" height="120" rx="10" class="node"/>
+  <rect x="900" y="692" width="42" height="42" rx="9" fill="#f59e0b"/><text x="921" y="718" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">arq</text>
+  <text x="952" y="692" class="ntitle">Worker Pool</text>
+  <text x="952" y="714" class="tiny">arq</text>
+  <text x="900" y="752" class="ntext">retries · timeouts</text>
+  <text x="900" y="772" class="ntext">scale-out · runs engine</text>
+
+  <!-- Redis -->
+  <rect x="1150" y="660" width="300" height="120" rx="10" class="node"/>
+  <rect x="1172" y="692" width="44" height="44" rx="9" fill="#d82c20"/><text x="1194" y="719" text-anchor="middle" font-size="10" font-weight="700" fill="#ffffff">Redis</text>
+  <text x="1228" y="692" class="ntitle">Redis</text>
+  <text x="1228" y="714" class="tiny">job queue</text>
+  <text x="1172" y="754" class="ntext">Queue + pub/sub progress bus</text>
+  <text x="1172" y="774" class="tiny">rate-limit · idempotency · WS tickets</text>
+
+  <!-- PostgreSQL -->
+  <rect x="1520" y="360" width="120" height="120" rx="10" class="node"/>
+  <ellipse cx="1580" cy="392" rx="26" ry="8" fill="#336791"/><path d="M1554,392 v22 a26,8 0 0 0 52,0 v-22" fill="#336791"/><text x="1580" y="410" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">PG16</text>
+  <text x="1580" y="446" text-anchor="middle" class="ntext" font-weight="700">PostgreSQL</text>
+  <text x="1580" y="465" text-anchor="middle" class="tiny">studies · mappings · audit</text>
+
+  <!-- Object store -->
+  <rect x="1520" y="500" width="120" height="110" rx="10" class="node"/>
+  <path d="M1556,532 h22 l8,8 h20 v34 h-50 z" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.3"/><text x="1580" y="560" text-anchor="middle" font-size="9" font-weight="700" fill="#0f766e">R2</text>
+  <text x="1580" y="586" text-anchor="middle" class="ntext" font-weight="700">Object Store</text>
+  <text x="1580" y="602" text-anchor="middle" class="tiny">uploads / exports</text>
+
+  <!-- KB -->
+  <rect x="1520" y="660" width="120" height="120" rx="10" class="node"/>
+  <ellipse cx="1580" cy="692" rx="24" ry="7" fill="#ddd6fe"/><path d="M1556,692 v20 a24,7 0 0 0 48,0 v-20" fill="#ddd6fe" stroke="#8b5cf6" stroke-width="1.1"/><text x="1580" y="708" text-anchor="middle" font-size="8" font-weight="700" fill="#5b21b6">FAISS</text>
+  <text x="1580" y="742" text-anchor="middle" class="ntext" font-weight="700">Knowledge Base</text>
+  <text x="1580" y="758" text-anchor="middle" class="tiny">MiniLM model</text>
+  <text x="1580" y="773" text-anchor="middle" class="tiny">ontology corpora</text>
+
+  <!-- Realtime contents -->
+  <text x="880" y="868" class="ntext" font-weight="700">WebSocket</text><text x="880" y="887" class="tiny">live job progress → SPA</text>
+  <text x="1150" y="868" class="ntext" font-weight="700">Redis pub/sub</text><text x="1150" y="887" class="tiny">progress bus (process-agnostic)</text>
+
+  <!-- Integration contents -->
+  <rect x="858" y="958" width="250" height="96" rx="9" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="872" y="984" class="ntext" font-weight="700">Federation-Lite</text>
+  <text x="872" y="1006" class="tiny">Ed25519-signed</text>
+  <text x="872" y="1024" class="tiny">export / import</text>
+  <rect x="1120" y="958" width="250" height="96" rx="9" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="1134" y="984" class="ntext" font-weight="700">Active-Learning order</text>
+  <text x="1134" y="1006" class="tiny">risky-first ranking</text>
+  <text x="1134" y="1024" class="tiny">groups look-alikes</text>
+  <rect x="1382" y="958" width="248" height="96" rx="9" fill="#ffffff" stroke="#cbd5e1"/>
+  <text x="1396" y="984" class="ntext" font-weight="700">Two-layer curation KB</text>
+  <text x="1396" y="1006" class="tiny">learned decisions</text>
+  <text x="1396" y="1024" class="tiny">personal → shared</text>
+
+  <!-- ===================== External nodes ===================== -->
+  <rect x="2050" y="190" width="290" height="85" rx="10" class="node"/>
+  <circle cx="2088" cy="232" r="7" fill="#4285f4"/><circle cx="2104" cy="232" r="7" fill="#ea4335"/><circle cx="2096" cy="220" r="7" fill="#fbbc05"/><circle cx="2096" cy="244" r="7" fill="#34a853"/>
+  <text x="2122" y="226" class="ntitle">Google Gemini</text>
+  <text x="2122" y="248" class="tiny">optional Stage-4 LLM</text>
+
+  <rect x="2050" y="295" width="290" height="110" rx="10" class="node"/>
+  <rect x="2068" y="330" width="40" height="40" rx="9" fill="#dbeafe" stroke="#93c5fd"/><text x="2088" y="356" text-anchor="middle" font-size="10" font-weight="700" fill="#1d4ed8">EVS</text>
+  <text x="2122" y="330" class="ntitle">Ontology APIs</text>
+  <text x="2122" y="352" class="tiny">NCI EVS · OLS · UMLS</text>
+  <text x="2068" y="392" class="tiny">cached external lookups</text>
+
+  <rect x="2050" y="425" width="290" height="75" rx="10" class="node"/>
+  <rect x="2068" y="448" width="38" height="30" rx="7" fill="#fff7ed" stroke="#fdba74"/><text x="2087" y="468" text-anchor="middle" font-size="9" font-weight="700" fill="#c2410c">@</text>
+  <text x="2120" y="454" class="ntitle">Resend</text>
+  <text x="2120" y="476" class="tiny">email verify / reset</text>
+
+  <rect x="2050" y="520" width="290" height="75" rx="10" class="node"/>
+  <circle cx="2088" cy="557" r="18" fill="#362d59"/><text x="2088" y="562" text-anchor="middle" font-size="11" font-weight="700" fill="#ffffff">S</text>
+  <text x="2118" y="549" class="ntitle">Sentry</text>
+  <text x="2118" y="571" class="tiny">error tracking (optional)</text>
+
+  <rect x="2050" y="615" width="290" height="95" rx="10" class="node"/>
+  <circle cx="2088" cy="660" r="18" fill="#ffd21e"/><text x="2088" y="665" text-anchor="middle" font-size="9" font-weight="700" fill="#0f172a">HF</text>
+  <text x="2118" y="650" class="ntitle">HuggingFace Hub</text>
+  <text x="2118" y="672" class="tiny">model / corpora source</text>
+  <text x="2118" y="692" class="tiny">offline in production</text>
+
+  <rect x="2050" y="730" width="290" height="85" rx="10" class="node"/>
+  <rect x="2068" y="758" width="40" height="34" rx="7" fill="#eff6ff" stroke="#93c5fd"/><text x="2088" y="780" text-anchor="middle" font-size="8" font-weight="700" fill="#1d4ed8">cBio</text>
+  <text x="2122" y="762" class="ntitle">cBioPortal</text>
+  <text x="2122" y="784" class="tiny">harmonized import target</text>
+
+  <!-- ===================== Deployment nodes ===================== -->
+  <rect x="440" y="1180" width="540" height="110" rx="10" class="node"/>
+  <rect x="462" y="1214" width="44" height="44" rx="9" fill="#2496ed"/><text x="484" y="1241" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">Docker</text>
+  <text x="520" y="1212" class="ntitle">Docker Compose</text>
+  <text x="520" y="1236" class="ntext">Caddy + API + Worker + PostgreSQL + Redis</text>
+  <text x="520" y="1258" class="tiny">single-stack, presentation-friendly</text>
+
+  <rect x="1030" y="1180" width="440" height="110" rx="10" class="node"/>
+  <circle cx="1074" cy="1235" r="22" fill="#181717"/><text x="1074" y="1240" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">GHA</text>
+  <text x="1110" y="1212" class="ntitle">GitHub Actions</text>
+  <text x="1110" y="1236" class="ntext">ci · engine-boundary · kb-refresh</text>
+  <text x="1110" y="1258" class="tiny">deploy-smoke · Playwright E2E</text>
+
+  <rect x="1520" y="1180" width="440" height="110" rx="10" class="node"/>
+  <circle cx="1560" cy="1235" r="17" fill="#f48120"/><text x="1560" y="1240" text-anchor="middle" font-size="8" font-weight="700" fill="#ffffff">CF</text>
+  <text x="1596" y="1212" class="ntitle">Edge &amp; Ops</text>
+  <text x="1596" y="1236" class="ntext">Cloudflare (DNS / CDN / R2)</text>
+  <text x="1596" y="1258" class="tiny">TLS · CSP · Sentry hooks</text>
+
+  <!-- ===================== Edge labels ===================== -->
+  <rect x="330" y="258" width="70" height="20" class="lblbg"/><text x="365" y="272" text-anchor="middle" class="lbl">browser</text>
+  <rect x="600" y="452" width="66" height="20" class="lblbg"/><text x="633" y="466" text-anchor="middle" class="lbl">REST · WS</text>
+  <rect x="748" y="430" width="80" height="20" class="lblbg"/><text x="788" y="444" text-anchor="middle" class="lbl">proxy /api</text>
+  <rect x="748" y="655" width="66" height="20" class="lblbg"/><text x="781" y="669" text-anchor="middle" class="lbl">JWT</text>
+  <rect x="1102" y="410" width="66" height="20" class="lblbg"/><text x="1135" y="424" text-anchor="middle" class="lbl">adapter</text>
+  <rect x="1040" y="628" width="76" height="20" class="lblbg"/><text x="1078" y="642" text-anchor="middle" class="lbl">enqueue</text>
+  <rect x="1092" y="708" width="76" height="20" class="lblbg"/><text x="1130" y="722" text-anchor="middle" class="lbl">dequeue</text>
+  <rect x="1096" y="556" width="52" height="18" class="lblbg"/><text x="1122" y="569" text-anchor="middle" class="lbl">runs</text>
+  <rect x="1460" y="380" width="58" height="20" class="lblbg"/><text x="1489" y="394" text-anchor="middle" class="lbl">persist</text>
+  <rect x="1460" y="520" width="52" height="20" class="lblbg"/><text x="1486" y="534" text-anchor="middle" class="lbl">files</text>
+  <rect x="1372" y="628" width="70" height="20" class="lblbg"/><text x="1407" y="642" text-anchor="middle" class="lbl">lookup</text>
+  <rect x="1188" y="786" width="80" height="20" class="lblbg"/><text x="1228" y="800" text-anchor="middle" class="lbl">pub/sub</text>
+  <rect x="806" y="352" width="104" height="20" class="lblbg"/><text x="858" y="366" text-anchor="middle" class="lbl">WS progress</text>
+  <rect x="1560" y="214" width="88" height="20" class="lblbg"/><text x="1604" y="228" text-anchor="middle" class="lbl">optional LLM</text>
+  <rect x="1560" y="282" width="96" height="20" class="lblbg"/><text x="1608" y="296" text-anchor="middle" class="lbl">ontology lookup</text>
+  <rect x="1700" y="444" width="56" height="20" class="lblbg"/><text x="1728" y="458" text-anchor="middle" class="lbl">email</text>
+  <rect x="1700" y="536" width="56" height="20" class="lblbg"/><text x="1728" y="550" text-anchor="middle" class="lbl">errors</text>
+  <rect x="1720" y="688" width="104" height="20" class="lblbg"/><text x="1772" y="702" text-anchor="middle" class="lbl">model source</text>
+  <rect x="1720" y="748" width="130" height="20" class="lblbg"/><text x="1785" y="762" text-anchor="middle" class="lbl">harmonized export</text>
+  <rect x="300" y="748" width="76" height="20" class="lblbg"/><text x="338" y="762" text-anchor="middle" class="lbl">tools</text>
+
+  <!-- ===================== Legend ===================== -->
+  <line x1="66" y1="964" x2="120" y2="964" class="eMain" marker-end="url(#aBlue)"/><text x="130" y="968" class="lbl">Primary request / job flow</text>
+  <line x1="66" y1="1000" x2="120" y2="1000" class="eData" marker-end="url(#aGreen)"/><text x="130" y="1004" class="lbl">Persistence / KB access</text>
+  <line x1="66" y1="1036" x2="120" y2="1036" class="eExt" marker-end="url(#aRed)"/><text x="130" y="1040" class="lbl">Optional / external service</text>
+  <line x1="66" y1="1072" x2="120" y2="1072" class="eRT" marker-end="url(#aPurple)"/><text x="130" y="1076" class="lbl">Realtime / async progress</text>
+  <text x="66" y="1112" class="tiny">Colour of a box = its subsystem group. Logos mark the real technology used.</text>
+</svg>

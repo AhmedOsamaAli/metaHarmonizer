@@ -114,8 +114,27 @@ docs/*
 !docs/service-level-objectives.md
 !docs/architecture.md
 !docs/architecture-overview.svg
+!docs/kb-lifecycle.md
 !docs/handover.md
 !docs/licensing.md
+
+# Architecture deep dives, decision records, and diagram sources.
+# Re-include the folders, re-ignore their contents, then publish curated files
+# only — working drafts and icon libraries stay local.
+!docs/adr/
+docs/adr/*
+!docs/adr/0001-engine-adapter-pattern.md
+!docs/adr/0002-system-architecture.md
+!docs/adr/0003-two-layer-curation-kb.md
+!docs/architecture/
+docs/architecture/*
+!docs/architecture/README.md
+!docs/architecture/engine-system-design.md
+!docs/architecture/dashboard-system-design.md
+!docs/architecture/system-overview.svg
+!docs/architecture/architecture.d2
+!docs/architecture/architecture.drawio
+!docs/architecture/workspace.dsl
 
 
 # Local KB build output (large; built offline, distributed via the export CLI)
