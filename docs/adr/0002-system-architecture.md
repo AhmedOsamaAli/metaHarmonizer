@@ -68,6 +68,11 @@ Self-host swaps the object store for local disk; everything else identical. One 
 
 No microservices · no Kubernetes · no Kafka/event bus · no multi-tenancy · no managed DB in v1 · no SSO in v1 · no live multi-master federation · no always-on GPU/self-hosted LLM · no live KB build on the VM.
 
+> **Reviewed.** [ADR 0004](0004-locked-decision-review.md) re-examines this list
+> against production evidence. Six still hold; Kubernetes and SSO are relaxed,
+> and the managed-database decision is superseded for institutional deployment.
+> Where the two disagree, ADR 0004 governs.
+
 ## 5. Consequences
 
 - **Positive:** cheap, simple to operate solo, trivial self-host, fast local dev (one compose), clean handover to cBioPortal infra (the same Compose definition).

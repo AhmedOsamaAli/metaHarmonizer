@@ -209,8 +209,10 @@ The repo already curates ADRs under [docs/adr/](../adr); summarized here with tw
 
 The sections above summarise decisions as reconstructed from source. The
 maintained decision records are [ADR 0001](../adr/0001-engine-adapter-pattern.md),
-[ADR 0002](../adr/0002-system-architecture.md), and
-[ADR 0003](../adr/0003-two-layer-curation-kb.md).
+[ADR 0002](../adr/0002-system-architecture.md),
+[ADR 0003](../adr/0003-two-layer-curation-kb.md), and
+[ADR 0004](../adr/0004-locked-decision-review.md), which reviews which of the
+originally locked decisions still hold.
 
 ## 7. Diagram assets
 

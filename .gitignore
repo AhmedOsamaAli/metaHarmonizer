@@ -126,6 +126,7 @@ docs/adr/*
 !docs/adr/0001-engine-adapter-pattern.md
 !docs/adr/0002-system-architecture.md
 !docs/adr/0003-two-layer-curation-kb.md
+!docs/adr/0004-locked-decision-review.md
 !docs/architecture/
 docs/architecture/*
 !docs/architecture/README.md

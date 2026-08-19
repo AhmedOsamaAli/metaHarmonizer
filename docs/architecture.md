@@ -206,6 +206,7 @@ The material below adds depth or records why a decision was made.
 | [0001](adr/0001-engine-adapter-pattern.md) | Isolate the upstream engine behind one adapter protocol |
 | [0002](adr/0002-system-architecture.md) | Modular monolith, single VM, and the chosen infrastructure |
 | [0003](adr/0003-two-layer-curation-kb.md) | Two-layer curation knowledge base |
+| [0004](adr/0004-locked-decision-review.md) | Review of the locked decisions: what still holds, what is relaxed, what is superseded |
 
 ADRs record the decision at the time it was taken. Where a later choice replaced
 an option, this document and the deployment guide are authoritative.
