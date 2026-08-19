@@ -1,144 +1,128 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 820" role="img" aria-labelledby="title desc">
-  <title id="title">MetaHarmonizer production architecture</title>
-  <desc id="desc">A curator connects through Caddy to FastAPI. FastAPI uses PostgreSQL for durable state and Redis to queue bounded work for the ML worker. The worker accesses MetaHarmonizer through an engine adapter and uses persistent host volumes. External providers and encrypted R2 backups sit outside the single OCI host boundary.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1050" role="img" aria-labelledby="title desc">
+  <title id="title">MetaHarmonizer system architecture and workflow</title>
+  <desc id="desc">Clients enter through Caddy into FastAPI. Redis queues model work for an arq worker, PostgreSQL stores durable state, and host volumes hold study files and model assets. GitHub Actions validates releases while systemd performs knowledge-base rollout, monitoring, backup, alerts, and rollback.</desc>
   <defs>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#020617" flood-opacity="0.35"/>
-    </filter>
-    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
-      <path d="M0 0 10 5 0 10Z" fill="#60a5fa"/>
-    </marker>
-    <marker id="arrow-amber" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
-      <path d="M0 0 10 5 0 10Z" fill="#fbbf24"/>
-    </marker>
-    <marker id="arrow-teal" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
-      <path d="M0 0 10 5 0 10Z" fill="#2dd4bf"/>
-    </marker>
-    <marker id="arrow-muted" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
-      <path d="M0 0 10 5 0 10Z" fill="#64748b"/>
-    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="7" stdDeviation="10" flood-color="#020617" flood-opacity=".32"/></filter>
+    <marker id="a-blue" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#38bdf8"/></marker>
+    <marker id="a-amber" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#fbbf24"/></marker>
+    <marker id="a-green" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#34d399"/></marker>
+    <marker id="a-violet" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#a78bfa"/></marker>
+    <marker id="a-gray" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#94a3b8"/></marker>
     <style>
-      text{font-family:"Segoe UI",Arial,sans-serif}.eyebrow{font-size:13px;font-weight:700;letter-spacing:2px;fill:#7dd3fc}.heading{font-size:28px;font-weight:750;fill:#f8fafc}.summary{font-size:15px;fill:#94a3b8}.boundary-label{font-size:12px;font-weight:700;letter-spacing:1.7px;fill:#93c5fd}.card-title{font-size:18px;font-weight:700;fill:#f8fafc}.card-copy{font-size:12px;fill:#aebbd0}.tag{font-size:10px;font-weight:700;fill:#dbeafe}.icon{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-width:2}.flow{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-dasharray:10 9;animation:travel 1.5s linear infinite}.static-flow{fill:none;stroke:#64748b;stroke-width:2.2;stroke-linecap:round}.pulse{animation:pulse 2.2s ease-in-out infinite;transform-origin:center}.operations{font-size:12px;fill:#cbd5e1}.operations-label{font-size:11px;font-weight:700;letter-spacing:1px;fill:#7dd3fc}@keyframes travel{to{stroke-dashoffset:-38}}@keyframes pulse{0%,100%{opacity:.65}50%{opacity:1}}@media(prefers-reduced-motion:reduce){.flow,.pulse{animation:none}}
+      text{font-family:"Segoe UI",Arial,sans-serif}.title{font-size:32px;font-weight:750;fill:#f8fafc}.subtitle{font-size:15px;fill:#9fb0c7}.lane{font-size:11px;font-weight:800;letter-spacing:2px;fill:#7dd3fc}.group{font-size:13px;font-weight:750;letter-spacing:1.4px;fill:#bfdbfe}.nt{font-size:17px;font-weight:750;fill:#f8fafc}.nt-compact{font-size:15px;font-weight:750;fill:#f8fafc}.copy{font-size:11.5px;fill:#aab8cc}.small{font-size:10.5px;fill:#94a3b8}.chip{font-size:10px;font-weight:700;fill:#dbeafe}.label{font-size:10.5px;font-weight:650;fill:#cbd5e1}.footer{font-size:11px;fill:#cbd5e1}.ico{fill:none;stroke:#cbd5e1;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.request{fill:none;stroke:#38bdf8;stroke-width:2.4;stroke-linecap:round;marker-end:url(#a-blue)}.queue{fill:none;stroke:#fbbf24;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:9 7;marker-end:url(#a-amber);animation:travel 1.6s linear infinite}.data{fill:none;stroke:#34d399;stroke-width:2.2;stroke-linecap:round;marker-end:url(#a-green)}.engine{fill:none;stroke:#a78bfa;stroke-width:2.4;stroke-linecap:round;stroke-dasharray:9 7;marker-end:url(#a-violet);animation:travel 1.8s linear infinite}.auto{fill:none;stroke:#94a3b8;stroke-width:2.1;stroke-linecap:round;stroke-dasharray:3 7;marker-end:url(#a-gray)}.pulse{animation:pulse 2.3s ease-in-out infinite;transform-origin:center}@keyframes travel{to{stroke-dashoffset:-32}}@keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}@media(prefers-reduced-motion:reduce){.queue,.engine,.pulse{animation:none}}
     </style>
   </defs>
 
-  <rect width="1400" height="820" rx="24" fill="#050b18"/>
-  <path d="M0 24Q0 0 24 0H1376Q1400 0 1400 24V820H0Z" fill="#07101f"/>
-  <circle cx="1250" cy="72" r="118" fill="#0c1b32" opacity="0.55"/>
-  <circle cx="1320" cy="20" r="54" fill="#10334a" opacity="0.4"/>
+  <rect width="1600" height="1050" rx="24" fill="#050b16"/>
+  <path d="M0 24Q0 0 24 0H1576Q1600 0 1600 24V1050H0Z" fill="#07111f"/>
+  <path d="M1180 0h420v220c-96-56-210-24-292-75-57-36-78-92-128-145Z" fill="#0c2034" opacity=".72"/>
+  <text x="56" y="54" class="lane">METAHARMONIZER</text>
+  <text x="56" y="94" class="title">System Architecture &amp; Workflow</text>
+  <text x="56" y="123" class="subtitle">Client access, production runtime, durable state, integrations, delivery, and host operations</text>
 
-  <text x="54" y="52" class="eyebrow">VERIFIED PRODUCTION ARCHITECTURE</text>
-  <text x="54" y="88" class="heading">Human review in the foreground. Bounded model work in the queue.</text>
-  <text x="54" y="116" class="summary">PostgreSQL is durable; Redis is reconstructable; every engine call crosses one enforced adapter.</text>
+  <text x="56" y="175" class="lane">CLIENTS &amp; OUTPUTS</text>
+  <g filter="url(#shadow)"><rect x="56" y="194" width="232" height="88" rx="14" fill="#0d1b2f" stroke="#38bdf8" stroke-width="1.7"/></g>
+  <image href="architecture/assets/logos/react.svg" x="76" y="214" width="44" height="44"/>
+  <text x="136" y="228" class="nt">Curator web app</text><text x="136" y="250" class="copy">React - HTTPS - WebSocket</text><text x="136" y="267" class="small">upload - review - quality - export</text>
 
-  <rect x="220" y="145" width="930" height="570" rx="24" fill="#081322" stroke="#36506f" stroke-width="2" stroke-dasharray="9 8"/>
-  <rect x="246" y="130" width="278" height="30" rx="15" fill="#10243b" stroke="#36506f"/>
-  <text x="265" y="150" class="boundary-label">SINGLE OCI HOST - DOCKER COMPOSE</text>
+  <g filter="url(#shadow)"><rect x="330" y="194" width="214" height="88" rx="14" fill="#0d1b2f" stroke="#38bdf8" stroke-width="1.7"/></g>
+  <path d="M354 219h38v32h-38Zm8 0v-8m22 8v-8m-22 48v-8m22 8v-8" class="ico" stroke="#38bdf8"/>
+  <text x="410" y="228" class="nt">REST clients</text><text x="410" y="250" class="copy">Bearer API tokens</text><text x="410" y="267" class="small">submit - poll - retrieve</text>
 
-  <g filter="url(#shadow)">
-    <rect x="34" y="238" width="158" height="118" rx="16" fill="#0d1a2d" stroke="#60a5fa" stroke-width="2"/>
-  </g>
-  <rect x="54" y="258" width="36" height="30" rx="5" fill="#102b4d" stroke="#60a5fa"/>
-  <path d="M54 266H90M62 274h1m7 0h1" class="icon" stroke="#60a5fa"/>
-  <text x="102" y="279" class="card-title">Curator</text>
-  <text x="54" y="318" class="card-copy">Browser over HTTPS</text>
-  <text x="54" y="339" class="card-copy">upload - review - export</text>
+  <g filter="url(#shadow)"><rect x="1050" y="194" width="214" height="88" rx="14" fill="#15142a" stroke="#a78bfa" stroke-width="1.7"/></g>
+  <path d="M1078 218h30v30h-30Zm8 30v12m14-12v12m-21-21h-12m41 0h12" class="ico" stroke="#a78bfa"/>
+  <text x="1124" y="228" class="nt">MCP clients</text><text x="1124" y="250" class="copy">optional local tools</text><text x="1124" y="267" class="small">table - columns - values</text>
 
-  <g filter="url(#shadow)">
-    <rect x="260" y="210" width="208" height="146" rx="16" fill="#0d1a2d" stroke="#60a5fa" stroke-width="2"/>
-  </g>
-  <path d="M288 243l18-8 18 8v14c0 12-8 21-18 26-10-5-18-14-18-26Z" class="icon" stroke="#60a5fa"/>
-  <path d="m299 257 5 5 10-12" class="icon" stroke="#60a5fa"/>
-  <text x="338" y="251" class="card-title">Caddy</text>
-  <text x="286" y="306" class="card-copy">TLS - React assets</text>
-  <text x="286" y="328" class="card-copy">REST / WebSocket proxy</text>
+  <g filter="url(#shadow)"><rect x="1306" y="194" width="238" height="88" rx="14" fill="#0d221d" stroke="#34d399" stroke-width="1.7"/></g>
+  <path d="M1332 215h34v40h-34Zm8 12h18m-18 9h18m-18 9h12" class="ico" stroke="#34d399"/>
+  <text x="1382" y="228" class="nt">Validated exports</text><text x="1382" y="250" class="copy">cBioPortal-compatible data</text><text x="1382" y="267" class="small">schema + ontology version pins</text>
 
-  <g filter="url(#shadow)">
-    <rect x="520" y="210" width="244" height="146" rx="16" fill="#0b1d25" stroke="#2dd4bf" stroke-width="2"/>
-  </g>
-  <rect x="546" y="234" width="42" height="42" rx="9" fill="#103334" stroke="#2dd4bf"/>
-  <path d="m564 245-8 10 8 10m7-20 8 10-8 10" class="icon" stroke="#2dd4bf"/>
-  <text x="604" y="251" class="card-title">FastAPI</text>
-  <text x="546" y="306" class="card-copy">auth - ownership - contracts</text>
-  <text x="546" y="328" class="card-copy">review workflows - live status</text>
-  <rect x="676" y="232" width="68" height="22" rx="8" fill="#12313b" stroke="#2b5960"/>
-  <text x="690" y="247" class="tag">NON-ROOT</text>
+  <rect x="184" y="322" width="1080" height="458" rx="24" fill="#081523" stroke="#35516e" stroke-width="2" stroke-dasharray="9 7"/>
+  <rect x="212" y="306" width="446" height="34" rx="17" fill="#10243a" stroke="#35516e"/>
+  <path d="M235 319a10 10 0 0 1 19-4 8 8 0 1 1 3 15h-22a6 6 0 0 1 0-11Z" class="ico" stroke="#93c5fd"/>
+  <text x="270" y="328" class="group">ORACLE CLOUD VM - DOCKER COMPOSE</text>
+  <image href="architecture/assets/logos/docker.svg" x="617" y="311" width="23" height="23"/>
 
-  <g filter="url(#shadow)">
-    <rect x="520" y="412" width="244" height="126" rx="16" fill="#211a08" stroke="#fbbf24" stroke-width="2"/>
-  </g>
-  <rect x="546" y="436" width="42" height="42" rx="9" fill="#3b2b08" stroke="#fbbf24"/>
-  <path d="M556 447h22M556 457h16M556 467h10" class="icon" stroke="#fbbf24"/>
-  <circle cx="578" cy="467" r="4" fill="#fbbf24" class="pulse"/>
-  <text x="604" y="453" class="card-title">Redis / arq</text>
-  <text x="546" y="501" class="card-copy">bounded queue - retries</text>
-  <text x="546" y="522" class="card-copy">progress - rate limits</text>
+  <text x="218" y="374" class="lane">EDGE &amp; APPLICATION</text>
+  <g filter="url(#shadow)"><rect x="224" y="394" width="218" height="138" rx="16" fill="#0d1b2f" stroke="#38bdf8" stroke-width="1.8"/></g>
+  <image href="architecture/assets/logos/caddy.svg" x="246" y="416" width="42" height="42"/><image href="architecture/assets/logos/react.svg" x="299" y="416" width="42" height="42"/>
+  <text x="356" y="433" class="nt">Web edge</text><text x="246" y="484" class="copy">Caddy: TLS + reverse proxy</text><text x="246" y="505" class="copy">serves the React / Vite SPA</text><text x="246" y="521" class="small">only public container</text>
 
-  <g filter="url(#shadow)">
-    <rect x="816" y="412" width="286" height="126" rx="16" fill="#171329" stroke="#a78bfa" stroke-width="2"/>
-  </g>
-  <circle cx="850" cy="457" r="20" fill="#29204a" stroke="#a78bfa"/>
-  <path d="M850 443v5m0 18v5m-14-14h5m18 0h5m-24-10 4 4m12 12 4 4m0-20-4 4m-12 12-4 4" class="icon" stroke="#a78bfa"/>
-  <circle cx="850" cy="457" r="7" class="icon" stroke="#a78bfa"/>
-  <text x="884" y="453" class="card-title">ML worker</text>
-  <text x="842" y="501" class="card-copy">queued engine execution</text>
-  <text x="842" y="522" class="card-copy">measured concurrency: 2 jobs</text>
+  <g filter="url(#shadow)"><rect x="500" y="394" width="230" height="138" rx="16" fill="#0b2021" stroke="#34d399" stroke-width="1.8"/></g>
+  <image href="architecture/assets/logos/fastapi.svg" x="522" y="416" width="44" height="44"/>
+  <text x="584" y="434" class="nt">FastAPI API</text><text x="522" y="484" class="copy">REST + WebSocket contracts</text><text x="522" y="505" class="copy">auth - ownership - workflows</text>
+  <rect x="640" y="414" width="68" height="21" rx="7" fill="#12353a" stroke="#286066"/><text x="652" y="429" class="chip">NON-ROOT</text>
 
-  <g filter="url(#shadow)">
-    <rect x="260" y="580" width="208" height="104" rx="16" fill="#0b1d25" stroke="#2dd4bf" stroke-width="2"/>
-  </g>
-  <ellipse cx="294" cy="612" rx="17" ry="7" class="icon" stroke="#2dd4bf"/>
-  <path d="M277 612v24c0 4 8 7 17 7s17-3 17-7v-24m-34 12c0 4 8 7 17 7s17-3 17-7" class="icon" stroke="#2dd4bf"/>
-  <text x="326" y="616" class="card-title">PostgreSQL</text>
-  <text x="286" y="661" class="card-copy">durable source of truth</text>
+  <g filter="url(#shadow)"><rect x="788" y="394" width="190" height="138" rx="16" fill="#261615" stroke="#f87171" stroke-width="1.8"/></g>
+  <image href="architecture/assets/logos/redis.svg" x="810" y="416" width="44" height="44"/>
+  <text x="872" y="434" class="nt">Redis 7</text><text x="810" y="484" class="copy">queue + progress pub/sub</text><text x="810" y="505" class="copy">rate limits + activity state</text><text x="810" y="521" class="small">reconstructable operational state</text>
 
-  <g filter="url(#shadow)">
-    <rect x="520" y="580" width="244" height="104" rx="16" fill="#211a08" stroke="#fbbf24" stroke-width="2"/>
-  </g>
-  <path d="M547 608h15l7 7h23v29h-45Z" class="icon" stroke="#fbbf24"/>
-  <text x="606" y="616" class="card-title">Host volumes</text>
-  <text x="546" y="661" class="card-copy">study files - KB - model cache</text>
+  <g filter="url(#shadow)"><rect x="1030" y="394" width="190" height="138" rx="16" fill="#17162b" stroke="#a78bfa" stroke-width="1.8"/></g>
+  <image href="architecture/assets/logos/python.svg" x="1052" y="416" width="44" height="44"/>
+  <text x="1114" y="434" class="nt">arq worker</text><text x="1052" y="484" class="copy">bounded asynchronous jobs</text><text x="1052" y="505" class="copy">retries + live progress</text><text x="1052" y="521" class="small">measured concurrency: 2 jobs</text>
 
-  <g filter="url(#shadow)">
-    <rect x="816" y="580" width="286" height="104" rx="16" fill="#171329" stroke="#a78bfa" stroke-width="2"/>
-  </g>
-  <path d="m847 606 18-10 18 10v20l-18 10-18-10Zm0 0 18 10 18-10m-18 10v20" class="icon" stroke="#a78bfa"/>
-  <text x="900" y="610" class="card-title">Engine boundary</text>
-  <text x="842" y="651" class="card-copy">adapter - MetaHarmonizer</text>
-  <text x="842" y="671" class="card-copy">versioned models and KB</text>
+  <text x="218" y="578" class="lane">STATE &amp; MODEL RUNTIME</text>
+  <g filter="url(#shadow)"><rect x="500" y="596" width="230" height="140" rx="16" fill="#0b2021" stroke="#34d399" stroke-width="1.8"/></g>
+  <image href="architecture/assets/logos/postgresql.svg" x="522" y="618" width="48" height="48"/>
+  <text x="588" y="638" class="nt">PostgreSQL 16</text><text x="522" y="689" class="copy">users - studies - mappings - audit</text><text x="522" y="710" class="copy">jobs - versions - reproducibility pins</text><text x="522" y="726" class="small">durable source of truth</text>
 
-  <g filter="url(#shadow)">
-    <rect x="1190" y="210" width="176" height="146" rx="16" fill="#111827" stroke="#64748b" stroke-width="2"/>
-  </g>
-  <path d="M1220 259a17 17 0 0 1 32-7 14 14 0 1 1 4 27h-36a10 10 0 0 1 0-20Z" class="icon" stroke="#94a3b8"/>
-  <text x="1216" y="307" class="card-title">Providers</text>
-  <text x="1216" y="329" class="card-copy">email - optional LLM</text>
+  <g filter="url(#shadow)"><rect x="788" y="596" width="190" height="140" rx="16" fill="#211c0d" stroke="#fbbf24" stroke-width="1.8"/></g>
+  <path d="M812 626h17l8 8h25v34h-50Z" class="ico" stroke="#fbbf24"/>
+  <text x="870" y="638" class="nt-compact">Host volumes</text><text x="812" y="689" class="copy">uploads + schema assets</text><text x="812" y="710" class="copy">KB + model + corpus caches</text><text x="812" y="726" class="small">persistent single-host storage</text>
 
-  <g filter="url(#shadow)">
-    <rect x="1190" y="580" width="176" height="104" rx="16" fill="#111827" stroke="#64748b" stroke-width="2"/>
-  </g>
-  <path d="M1218 624h34v25h-34Zm8 0v-8a9 9 0 0 1 18 0v8" class="icon" stroke="#94a3b8"/>
-  <text x="1266" y="620" class="card-title">R2 backup</text>
-  <text x="1266" y="644" class="card-copy">encrypted DB dump</text>
-  <text x="1266" y="663" class="card-copy">restore-drill verified</text>
+  <g filter="url(#shadow)"><rect x="1030" y="596" width="190" height="140" rx="16" fill="#17162b" stroke="#a78bfa" stroke-width="1.8"/></g>
+  <path d="m1055 627 20-11 20 11v23l-20 11-20-11Zm0 0 20 11 20-11m-20 11v23" class="ico" stroke="#a78bfa"/>
+  <text x="1105" y="632" class="nt-compact">Engine adapter</text><text x="1052" y="685" class="copy">exclusive engine boundary</text><text x="1052" y="706" class="copy">MetaHarmonizer + FAISS</text><image href="architecture/assets/logos/huggingface.svg" x="1052" y="710" width="20" height="20"/><text x="1082" y="726" class="small">versioned KB + offline models</text>
 
-  <path d="M192 282H260" class="flow" stroke="#60a5fa" marker-end="url(#arrow-blue)"/>
-  <path d="M468 282H520" class="flow" stroke="#60a5fa" marker-end="url(#arrow-blue)"/>
-  <path d="M642 356V412" class="flow" stroke="#fbbf24" marker-end="url(#arrow-amber)"/>
-  <path d="M764 475H816" class="flow" stroke="#fbbf24" marker-end="url(#arrow-amber)"/>
-  <path d="M642 538V580" class="static-flow" marker-end="url(#arrow-muted)"/>
-  <path d="M959 538V580" class="flow" stroke="#a78bfa" marker-end="url(#arrow-muted)"/>
-  <path d="M560 356V382H364V580" class="static-flow" marker-end="url(#arrow-muted)"/>
-  <path d="M764 282H1190" class="flow" stroke="#2dd4bf" marker-end="url(#arrow-teal)"/>
-  <path d="M468 632H1190" class="static-flow" marker-end="url(#arrow-muted)"/>
+  <g filter="url(#shadow)"><rect x="22" y="596" width="132" height="140" rx="16" fill="#17202d" stroke="#f59e0b" stroke-width="1.8"/></g>
+  <image href="architecture/assets/logos/cloudflare.svg" x="62" y="616" width="52" height="38"/>
+  <text x="48" y="676" class="nt">R2 backup</text><text x="43" y="699" class="copy">encrypted DB dump</text><text x="43" y="718" class="small">off-host - daily</text>
 
-  <rect x="220" y="746" width="930" height="44" rx="12" fill="#111d30" stroke="#2b405c"/>
-  <text x="246" y="773" class="operations-label">OPERATIONS</text>
-  <text x="352" y="773" class="operations">protected CI - health checks - Slack alerts - rollback - backup freshness</text>
+  <rect x="1292" y="322" width="268" height="458" rx="20" fill="#0b1524" stroke="#44566f" stroke-width="1.6"/>
+  <text x="1320" y="356" class="lane">EXTERNAL INTEGRATIONS</text>
+  <g filter="url(#shadow)"><rect x="1320" y="386" width="212" height="82" rx="14" fill="#111b2a" stroke="#64748b"/></g>
+  <path d="M1343 411h38v28h-38Zm0 0 19 15 19-15" class="ico"/><text x="1396" y="416" class="nt">Resend</text><text x="1396" y="438" class="copy">verification + reset email</text>
+  <g filter="url(#shadow)"><rect x="1320" y="492" width="212" height="82" rx="14" fill="#17162b" stroke="#a78bfa"/></g>
+  <image href="architecture/assets/logos/gemini.svg" x="1342" y="511" width="40" height="40"/><text x="1396" y="521" class="nt">Gemini</text><text x="1396" y="543" class="copy">optional LLM fallback</text>
+  <g filter="url(#shadow)"><rect x="1320" y="598" width="212" height="82" rx="14" fill="#1d1720" stroke="#d8b4fe"/></g>
+  <image href="architecture/assets/logos/sentry.svg" x="1342" y="617" width="40" height="40"/><text x="1396" y="627" class="nt">Sentry</text><text x="1396" y="649" class="copy">optional error monitoring</text>
+  <g filter="url(#shadow)"><rect x="1320" y="704" width="212" height="54" rx="14" fill="#111b2a" stroke="#64748b"/></g>
+  <text x="1342" y="727" class="nt">NCI EVS + OLS</text><text x="1342" y="746" class="copy">KB refresh sources, not runtime calls</text>
 
-  <g transform="translate(1120 738)">
-    <circle cx="9" cy="9" r="6" fill="#60a5fa"/><text x="24" y="14" class="operations">request</text>
-    <circle cx="105" cy="9" r="6" fill="#fbbf24"/><text x="120" y="14" class="operations">queue</text>
-    <circle cx="195" cy="9" r="6" fill="#2dd4bf"/><text x="210" y="14" class="operations">external</text>
-  </g>
+  <path d="M172 282V435H224" class="request"/><path d="M437 282V294H170V475H224" class="request"/>
+  <path d="M442 463H500" class="request"/><text x="454" y="451" class="label">REST / WS</text>
+  <path d="M730 463H788" class="queue"/><text x="742" y="451" class="label">enqueue</text>
+  <path d="M978 463H1030" class="queue"/><text x="988" y="451" class="label">dequeue</text>
+  <path d="M615 532V596" class="data"/><text x="625" y="568" class="label">SQL</text>
+  <path d="M1125 532V596" class="engine"/><text x="1136" y="568" class="label">adapter</text>
+  <path d="M1030 666H978" class="engine"/><text x="990" y="653" class="label">models</text>
+  <path d="M680 532V553H754V708H788" class="data"/><text x="694" y="550" class="label">study files</text>
+  <path d="M1052 532V558H750V666H730" class="data"/><text x="770" y="551" class="label">persist results</text>
+  <path d="M1090 532V570H988V616H978" class="data"/><text x="995" y="566" class="label">read upload</text>
+  <path d="M500 666H154" class="auto"/><text x="236" y="653" class="label">AES-256-GCM backup</text>
+  <path d="M700 394V300H1278V350H1292" class="auto"/><text x="1018" y="293" class="label">optional API integrations</text>
+  <path d="M1157 282V302H1244V666H1220" class="engine"/><text x="1167" y="298" class="label">local package</text>
+  <path d="M680 394V286H1425V282" class="data"/>
+
+  <text x="56" y="833" class="lane">DELIVERY &amp; HOST OPERATIONS</text>
+  <rect x="56" y="852" width="1488" height="132" rx="18" fill="#0b1626" stroke="#334862" stroke-width="1.5"/>
+  <g filter="url(#shadow)"><rect x="82" y="874" width="442" height="88" rx="14" fill="#101c2d" stroke="#3b82f6"/></g>
+  <image href="architecture/assets/logos/githubactions.svg" x="104" y="896" width="42" height="42"/>
+  <text x="162" y="905" class="nt">GitHub Actions</text><text x="162" y="928" class="copy">CI - security - container smoke - real engine</text><text x="162" y="947" class="copy">quarterly KB rebuild, benchmark, and release</text>
+  <g filter="url(#shadow)"><rect x="574" y="874" width="348" height="88" rx="14" fill="#161a25" stroke="#94a3b8"/></g>
+  <path d="M600 896h38v42h-38Zm8 10h22m-22 9h22m-22 9h15" class="ico"/>
+  <text x="656" y="905" class="nt">Verified artifacts</text><text x="656" y="928" class="copy">tested revisions + checksummed KB bundle</text><text x="656" y="947" class="small">no direct application deployment from Actions</text>
+  <g filter="url(#shadow)"><rect x="972" y="874" width="546" height="88" rx="14" fill="#121d28" stroke="#34d399"/></g>
+  <path d="M998 901h35m-35 12h28m-28 12h20" class="ico" stroke="#34d399"/><circle cx="1037" cy="901" r="4" fill="#34d399" class="pulse"/>
+  <text x="1054" y="905" class="nt">Host systemd adapters</text><text x="1054" y="928" class="copy">KB rollout - health checks - capacity reports - backup</text><text x="1054" y="947" class="copy">Slack alerts - verified rollback - freshness monitoring</text>
+  <path d="M524 918H574" class="auto"/><path d="M922 918H972" class="auto"/><path d="M1244 874V800H883V736" class="auto"/><text x="945" y="794" class="label">verified KB rollout</text>
+
+  <rect x="56" y="1006" width="1488" height="26" rx="8" fill="#0e1a2b"/>
+  <text x="78" y="1024" class="lane">FLOW KEY</text>
+  <path d="M190 1019h42" class="request"/><text x="242" y="1024" class="footer">client request</text>
+  <path d="M390 1019h42" class="queue"/><text x="442" y="1024" class="footer">queued work</text>
+  <path d="M588 1019h42" class="data"/><text x="640" y="1024" class="footer">data access</text>
+  <path d="M790 1019h42" class="engine"/><text x="842" y="1024" class="footer">engine path</text>
+  <path d="M990 1019h42" class="auto"/><text x="1042" y="1024" class="footer">automation / optional integration</text>
+  <text x="1392" y="1024" class="small">single-host baseline</text>
 </svg>
