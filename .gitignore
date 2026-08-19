@@ -44,6 +44,8 @@ frontend/dist/
 # Runtime data
 backend/data/uploads/*
 backend/data/metaharmonizer.db
+backend/data/*.db-shm
+backend/data/*.db-wal
 backend/data/nci_cache.json
 backend/data/nci_schema_cache.json
 !backend/data/uploads/.gitkeep
@@ -74,6 +76,8 @@ frontend/coverage/
 # Personal / local-only documents
 GSoC_Proposal.md
 GSOC_Proposal.pdf
+GSoC 2026 Deliverable Verification - Answers.md
+GSoC 2026 Deliverable Verification.docx
 SYSTEM_OVERVIEW.md
 MEETING_PREP*.md
 MENTOR_QUESTIONS.md
@@ -97,12 +101,17 @@ backend/data/schema/aliases/
 docs/
 !docs/
 docs/*
-!docs/readiness-roadmap.md
 !docs/rollback-drill-2026-08-09.md
 !docs/credential-rotation.md
 !docs/credential-rotation-drill-2026-08-09.md
 !docs/capacity-report-2026-08-13.md
+!docs/capacity-report-2026-08-15.md
 !docs/curator-guide.md
+!docs/backup-restore-drill-2026-08-17.md
+!docs/operational-alert-drill-2026-08-19.md
+!docs/production-operations.md
+!docs/scaling-plan.md
+!docs/service-level-objectives.md
 
 
 # Local KB build output (large; built offline, distributed via the export CLI)
