@@ -14,6 +14,15 @@ optional LLM fallback with review workflows that keep curators in control.
 
 **Project:** [cBioPortal GSoC 2026 proposal](https://github.com/cBioPortal/GSoC/issues/136)
 
+> **Operating window.** The public instance is a maintained demonstrator, not a
+> permanent hosted service. It runs on project-controlled infrastructure for the
+> maintained-instance period, after which it is either handed over to an
+> operating institution or shut down with notice. Treat it as somewhere to
+> evaluate the software, and export anything you need to keep. Institutions that
+> want a lasting deployment should self-host: the deployment guide, operations
+> runbook, and container images are the deliverable, and they produce an instance
+> identical to this one.
+
 ## Capabilities
 
 - Map source columns to cBioPortal, GDC, and curated target schemas.
