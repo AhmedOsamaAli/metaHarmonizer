@@ -43,6 +43,33 @@ Edit `.env` — at minimum set these for production:
 The container DSNs for Postgres/Redis are set by compose — you do **not** edit
 `DATABASE_URL`/`REDIS_URL` for the Docker path.
 
+### Using a managed database instead of the bundled Postgres
+
+The bundled `postgres` service is convenient, not required. It shares the host's
+fate, so a single-VM deployment has a recovery point only as recent as the last
+backup. An institution with managed PostgreSQL — point-in-time recovery,
+automated patching, failover — should use it.
+
+Set `EXTERNAL_DATABASE_URL` in `.env` and leave `postgres` out of the service
+list:
+
+```bash
+EXTERNAL_DATABASE_URL=postgresql+asyncpg://user:password@db.example.org:5432/metaharmonizer
+
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+  up -d redis api worker caddy
+```
+
+No file needs editing. The variable replaces the compose-generated DSN for the
+API, worker, and seed services, and `postgres` is declared an optional
+dependency so the stack starts without it. Migrations still run on API startup,
+so the target database only needs to exist and be reachable, with the role able
+to create tables.
+
+Everything else is unchanged: backups in section 9 apply to whichever database
+is configured, though a managed service will have its own snapshot facility that
+is usually preferable.
+
 ## 3. Build the offline bundle (on a networked machine)
 
 The engine needs its knowledge base, ontology corpora, and embedding models.

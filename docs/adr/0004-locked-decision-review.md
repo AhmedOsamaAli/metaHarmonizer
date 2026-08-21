@@ -122,6 +122,16 @@ arrangement is acceptable and is documented as such. For an institutional
 deployment, managed or replicated PostgreSQL is the default, and this decision
 should be treated as superseded rather than inherited.
 
+Acted on. The deployment kit no longer assumes the bundled container: setting
+`EXTERNAL_DATABASE_URL` replaces the compose-generated DSN for the API, worker,
+and seed services, and the `postgres` service is declared an optional dependency
+so the stack starts without it. Migrations still run on API startup, so the
+target database only needs to exist and be reachable. Adopting managed
+PostgreSQL is therefore a configuration choice at commissioning time rather than
+a fork of the deployment files. The demonstrator continues on the bundled
+container, because a managed instance would exceed its cost ceiling and no free
+managed PostgreSQL is available on the current host.
+
 Reopen immediately when any of these is true:
 
 - an availability commitment stronger than best-effort is made to users;
@@ -135,6 +145,9 @@ Reopen immediately when any of these is true:
   rewritten; this ADR governs where the two disagree.
 - Three decisions are no longer presented to a future operator as settled: the
   orchestrator, the identity provider, and the database topology.
-- No change is made to the running deployment by this review. The current
-  single-host topology and its limits stay documented in
-  [architecture.md](../architecture.md) and [scaling-plan.md](../scaling-plan.md).
+- One change follows from this review: the deployment kit accepts an external
+  database through `EXTERNAL_DATABASE_URL`, so the superseded decision has a
+  supported migration path instead of only a recommendation.
+- The running deployment is otherwise unchanged. The current single-host topology
+  and its limits stay documented in [architecture.md](../architecture.md) and
+  [scaling-plan.md](../scaling-plan.md).

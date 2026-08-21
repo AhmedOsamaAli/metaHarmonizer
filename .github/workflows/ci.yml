@@ -102,3 +102,22 @@ jobs:
           path: frontend/coverage
           if-no-files-found: warn
           retention-days: 30
+
+  mcp:
+    name: MCP Server Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Installed from a different directory: the repository's own `mcp/` folder
+      # is an implicit namespace package and shadows the SDK when the working
+      # directory is the repository root.
+      - name: Install the MCP server and its test dependencies
+        run: pip install -e "./mcp[dev]"
+      - name: Run tests
+        working-directory: mcp
+        env:
+          ENGINE_IMPL: mock
+        run: pytest tests -q

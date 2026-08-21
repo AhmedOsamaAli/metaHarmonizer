@@ -13,7 +13,8 @@ authors = [{ name = "MetaHarmonizer" }]
 keywords = ["mcp", "metaharmonizer", "cbioportal", "harmonization", "ontology"]
 
 dependencies = [
-    "mcp>=1.2.0",
+    # The 2.x SDK removed mcp.server.fastmcp; the server targets the 1.x API.
+    "mcp>=1.2.0,<2",
     "pandas>=2.0",
 ]
 

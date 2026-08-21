@@ -200,6 +200,110 @@ jobs:
         if: always()
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
 
+  external-database:
+    name: External Database Deployment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Write .env pointing at a database outside the stack
+        run: |
+          cat > .env <<'EOF'
+          ENGINE_IMPL=mock
+          JOB_MODE=queue
+          AUTH_MODE=jwt
+          HIBP_CHECK=false
+          JWT_SECRET=ci-external-db-secret-key-at-least-32-bytes!!
+          ALLOWED_EMAIL_DOMAINS=example.com
+          SEED_EMAIL=admin@example.com
+          SEED_PASSWORD=CiSmoke!2026
+          SEED_ROLE=admin
+          EXTERNAL_DATABASE_URL=postgresql+asyncpg://mh:external_pw@external-db:5432/metaharmonizer
+          EOF
+
+      # `external-db` stands in for a managed instance: a separate database the
+      # stack reaches only by DSN. The bundled `postgres` service is never started.
+      - name: Write CI override
+        run: |
+          cat > docker-compose.ci.yml <<'EOF'
+          services:
+            external-db:
+              image: postgres:16-alpine
+              environment:
+                POSTGRES_USER: mh
+                POSTGRES_PASSWORD: external_pw
+                POSTGRES_DB: metaharmonizer
+              healthcheck:
+                test: ["CMD-SHELL", "pg_isready -U mh -d metaharmonizer"]
+                interval: 5s
+                timeout: 3s
+                retries: 10
+            api:
+              ports:
+                - "8000:8000"
+              depends_on:
+                external-db:
+                  condition: service_healthy
+            worker:
+              depends_on:
+                external-db:
+                  condition: service_healthy
+          EOF
+
+      - name: Build the application image
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build api
+
+      - name: Start the stack without the bundled Postgres
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d external-db redis api worker
+
+      - name: Confirm the bundled Postgres never started
+        run: |
+          set -e
+          running=$(docker compose -f docker-compose.yml -f docker-compose.ci.yml ps --services --status running)
+          echo "$running"
+          ! echo "$running" | grep -qx postgres
+
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS http://localhost:8000/healthz >/dev/null 2>&1; then
+              echo "API healthy against the external database"; exit 0
+            fi
+            sleep 3
+          done
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --tail 120 api
+          echo "API did not become healthy"; exit 1
+
+      - name: Verify migrations ran in the external database
+        run: |
+          set -e
+          count=$(docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T external-db \
+            psql -U mh -d metaharmonizer -tAc \
+            "select count(*) from information_schema.tables where table_schema='public'")
+          echo "public tables created: $count"
+          test "$count" -gt 1
+
+      - name: Seed an administrator and log in
+        run: |
+          set -e
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm seed
+          code=$(curl -s -o resp.json -w '%{http_code}' \
+            -X POST http://localhost:8000/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"admin@example.com","password":"CiSmoke!2026"}')
+          echo "login HTTP $code"
+          cat resp.json
+          test "$code" = "200"
+          grep -q 'access_token' resp.json
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --tail 200
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
+
   publish-release-sboms:
     name: Publish Release SBOMs
     if: github.ref_type == 'tag'

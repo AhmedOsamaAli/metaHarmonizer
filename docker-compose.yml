@@ -58,8 +58,10 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      # Container-internal DSNs override any host-style values in .env.
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
+      # Container-internal DSNs override any host-style values in .env. Set
+      # EXTERNAL_DATABASE_URL to point at a managed database instead; the
+      # bundled postgres service can then be omitted from the service list.
+      DATABASE_URL: ${EXTERNAL_DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}}
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
       HOME: /home/app
@@ -83,6 +85,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+        required: false
       redis:
         condition: service_healthy
       volume-init:
@@ -103,7 +106,7 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
+      DATABASE_URL: ${EXTERNAL_DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}}
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
       HOME: /home/app
@@ -137,6 +140,7 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+        required: false
       volume-init:
         condition: service_completed_successfully
     security_opt:
@@ -241,7 +245,7 @@ services:
     profiles: ["seed"]
     env_file: .env
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}
+      DATABASE_URL: ${EXTERNAL_DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER:-mh}:${POSTGRES_PASSWORD:-mh_dev_password}@postgres:5432/${POSTGRES_DB:-metaharmonizer}}
       SEED_EMAIL: ${SEED_EMAIL:-admin@example.com}
       SEED_PASSWORD: ${SEED_PASSWORD:-ChangeMe!2026}
       SEED_ROLE: ${SEED_ROLE:-admin}
@@ -249,6 +253,7 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+        required: false
     security_opt:
       - no-new-privileges:true
     restart: "no"
