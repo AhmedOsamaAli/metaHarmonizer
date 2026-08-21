@@ -1,0 +1,14 @@
+# Use a database outside the stack (managed PostgreSQL, or any existing server).
+#
+#   EXTERNAL_DATABASE_URL=postgresql+asyncpg://user:password@db.example.org:5432/metaharmonizer
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+#                  -f docker-compose.external-db.yml up -d
+#
+# Assigning the bundled service to a profile that is never enabled keeps it from
+# starting. The api/worker/seed services declare it `required: false`, so they
+# start without it and use EXTERNAL_DATABASE_URL instead.
+
+services:
+  postgres:
+    profiles: ["unused"]
