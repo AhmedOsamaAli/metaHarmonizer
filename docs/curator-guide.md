@@ -140,6 +140,25 @@ Keyboard shortcuts:
 Open **Ontology** after an ontology-capable run. Each matched value shows its
 proposed standard term, code, and confidence.
 
+### Which columns produce ontology terms
+
+The Ontology stage does not cover every column. Values are resolved only for
+columns whose accepted target field is one of a fixed set that routes to a
+controlled vocabulary:
+
+| Target field | Vocabulary |
+| --- | --- |
+| `disease`, `target_condition`, `cancer_type` | NCIt |
+| `body_site` | UBERON |
+| `treatment`, `treatment_name`, `treatment_type` | NCIt |
+
+Anything else falls back to the value dictionary, which covers far less. This
+is why the Ontology stage can look almost empty even when every column mapped
+successfully: if a target schema names its fields differently — for example
+GDC's `tissue_or_organ_of_origin` or `primary_diagnosis` rather than
+`body_site` or `disease` — few or no columns qualify, and the stage will show
+only a handful of rows. That is the current coverage, not a failed run.
+
 - **Accept** confirms the displayed term and code.
 - **Reject** declines that proposed term for the raw value.
 - **Edit/Override** searches for and assigns a different term.
@@ -152,6 +171,12 @@ Values under **No ontology match** may be identifiers, names, free text, or
 terms absent from the current corpus. Use **Find suggestions** to search the
 ontology index. Review each suggestion before applying it; dismissing a
 suggestion only removes that suggestion from the current view.
+
+**Find suggestions** reports `No confident ontology suggestions found` when
+nothing clears the confidence threshold. Compound raw values such as
+`Blood_normal` are a common cause: the search matches whole words against
+ontology labels, so an underscore-joined value usually matches nothing. Use
+**Edit/Override** to assign the term directly in that case.
 
 ## 4. Check quality and readiness
 
