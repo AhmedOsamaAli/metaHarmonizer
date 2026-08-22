@@ -112,9 +112,8 @@ the receiving side.
 
 ## 6. How ontology terms are updated
 
-Ontology terms come from corpora built into the knowledge-base bundle, not from
-a live lookup at mapping time. That is what makes a run reproducible and lets
-the system work offline.
+Ontology *corpora* are built into the knowledge-base bundle rather than fetched
+per run, which is what makes a mapping reproducible.
 
 | Corpus | Source | Refreshed |
 | --- | --- | --- |
@@ -131,6 +130,18 @@ is a superset. A refresh that loses accuracy fails instead of shipping.
 To refresh sooner, run the *Knowledge Base Refresh* workflow manually. Full
 detail, including the accuracy thresholds, is in
 [kb-lifecycle.md](kb-lifecycle.md).
+
+### Uploaded values are sent to the NCI EVS API during mapping
+
+The bundled corpora do not make a run fully offline. During schema mapping the
+engine looks up values it has not seen before against the public NCI EVS REST
+API, so **cell values from an uploaded table leave the host**. Results are
+cached on disk and in Redis, so each distinct value is sent at most once, but
+the first occurrence does go out.
+
+Treat this as a data-governance decision before uploading anything sensitive.
+There is currently no switch to disable the lookup; an institution that cannot
+allow it should raise this before deployment.
 
 ### Which fields receive ontology terms
 
