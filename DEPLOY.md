@@ -43,6 +43,31 @@ Edit `.env` — at minimum set these for production:
 The container DSNs for Postgres/Redis are set by compose — you do **not** edit
 `DATABASE_URL`/`REDIS_URL` for the Docker path.
 
+### Decide your exposure before going public
+
+Three values decide who can use the instance and how much work one account can
+create. The public demonstrator runs them wide open on purpose, so it can be
+evaluated without an approval step. **An institutional deployment should not.**
+All three are single environment values — no code change, no rebuild.
+
+| Variable | Demonstrator | Set instead | Effect |
+|---|---|---|---|
+| `ALLOWED_EMAIL_DOMAINS` | `*` — any verified email auto-approved | your domains, comma-separated | everyone else needs administrator approval |
+| `MAX_UPLOAD_ROWS` | `0` — no row ceiling | e.g. `2000` | bounds the cost of one job |
+| `MAX_UPLOAD_MB` | `50` | lower if your tables are small | rejected while still streaming |
+
+Two further limits are compiled defaults, not environment values: three active
+studies per account, and a global queue cap of 200. They bound accidental load.
+They do not stop someone who can register more accounts, which is why
+`ALLOWED_EMAIL_DOMAINS` is the control that matters on a public instance.
+
+Registration can also be closed later without editing files:
+
+```bash
+scripts/registration_mode.sh close --domains "example.org,partner.org"
+scripts/registration_mode.sh status
+```
+
 ### Using a managed database instead of the bundled Postgres
 
 The bundled `postgres` service is convenient, not required. It shares the host's
