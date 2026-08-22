@@ -217,16 +217,32 @@ def collect_check(repo: Path) -> dict[str, Any]:
     }
 
 
-def assess(check: dict[str, Any], *, require_backup: bool) -> list[dict[str, str]]:
+def disk_warning_min_streak() -> int:
+    return max(1, int(os.getenv("OPS_DISK_WARNING_MIN_CHECKS", "2")))
+
+
+def disk_warning_streak(current: dict[str, Any], previous: dict[str, Any] | None) -> int:
+    """Consecutive checks at or above the warning threshold, including this one.
+
+    A rebuild inflates the filesystem for a few minutes and then releases it, so
+    a single reading over the threshold is not yet worth waking anyone for.
+    """
+    if float(current["filesystem"]["used_percent"]) < 70:
+        return 0
+    return int((previous or {}).get("disk_warning_streak", 0)) + 1
+
+
+def assess(check: dict[str, Any], *, require_backup: bool, disk_warning_streak: int | None = None) -> list[dict[str, str]]:
     issues: list[dict[str, str]] = []
 
     def add(severity: str, code: str, message: str) -> None:
         issues.append({"severity": severity, "code": code, "message": message})
 
     used = float(check["filesystem"]["used_percent"])
+    debounced = disk_warning_streak is not None and disk_warning_streak < disk_warning_min_streak()
     if used >= 85:
         add("critical", "disk_stop", f"Filesystem use is {used:.1f}% (stop threshold 85%).")
-    elif used >= 70:
+    elif used >= 70 and not debounced:
         add("warning", "disk_warning", f"Filesystem use is {used:.1f}% (warning threshold 70%).")
     if check["public_health"]["status"] != 200:
         add("critical", "public_health", f"Public health returned {check['public_health']['status']}.")
@@ -337,6 +353,35 @@ def docker_storage() -> dict[str, dict[str, int]]:
     return result
 
 
+# Regenerable model/corpus caches only. Never data volumes (pg_data, uploads,
+# schema_versions), so an unlucky prune while the stack is down cannot lose data.
+CACHE_VOLUME_MARKERS = ("engine_cache", "hf_cache", "corpus_data")
+
+
+def reclaim_orphaned_cache_volumes() -> list[str]:
+    """Remove regenerable cache volumes no container references any more.
+
+    Compose renames these volumes when the bundle hash changes, leaving the old
+    copy behind; nothing else reclaims them.
+    """
+    try:
+        listed = run(["docker", "volume", "ls", "--format", "{{.Name}}"], timeout=120)
+    except Exception:  # noqa: BLE001 — housekeeping must never fail the check
+        return []
+    removed: list[str] = []
+    for name in (n.strip() for n in listed.splitlines()):
+        if not name or not any(marker in name for marker in CACHE_VOLUME_MARKERS):
+            continue
+        try:
+            if run(["docker", "ps", "-a", "--filter", f"volume={name}", "-q"], timeout=120).strip():
+                continue
+            run(["docker", "volume", "rm", name], timeout=300)
+        except Exception:  # noqa: BLE001 — in use or already gone; skip it
+            continue
+        removed.append(name)
+    return removed
+
+
 def reclaim_storage(
     *,
     build_cache_max_age_hours: int | None = None,
@@ -356,6 +401,7 @@ def reclaim_storage(
     if cap_build_cache:
         keep = os.getenv("OPS_BUILD_CACHE_KEEP_GB", "4")
         run(["docker", "builder", "prune", "-f", f"--keep-storage={keep}GB"], timeout=900)
+    removed_volumes = reclaim_orphaned_cache_volumes()
     after = docker_storage()
     freed = {
         kind: max(values["size_bytes"] - after.get(kind, values)["size_bytes"], 0)
@@ -366,6 +412,7 @@ def reclaim_storage(
         "capped_build_cache": cap_build_cache,
         "freed_bytes": sum(freed.values()),
         "freed_by_type": freed,
+        "removed_volumes": removed_volumes,
         "docker_storage": after,
     }
 
@@ -560,6 +607,11 @@ def alert_if_needed(
     previous = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {}
     if not issues:
         if previous.get("fingerprint"):
+            if previous.get("delivered"):
+                recovery = "MetaHarmonizer production recovered\nAll checks are passing again."
+                if capacity:
+                    recovery += f"\nCurrent capacity: {capacity}"
+                send_webhook(recovery)
             state_path.write_text(
                 json.dumps({"fingerprint": "", "delivered": False, "timestamp": datetime.now(timezone.utc).isoformat()}, indent=2) + "\n",
                 encoding="utf-8",
@@ -623,7 +675,13 @@ def main(argv: list[str] | None = None) -> int:
         previous = json.loads(previous_path.read_text(encoding="utf-8")) if previous_path.exists() else None
         add_counter_deltas(result, previous)
         maybe_reclaim(result, args.state_dir)
-        result["issues"] = assess(result, require_backup=os.getenv("OPS_REQUIRE_BACKUP", "0") == "1")
+        streak = disk_warning_streak(result, previous)
+        result["disk_warning_streak"] = streak
+        result["issues"] = assess(
+            result,
+            require_backup=os.getenv("OPS_REQUIRE_BACKUP", "0") == "1",
+            disk_warning_streak=streak,
+        )
         write_json(previous_path, result)
         alert_if_needed(result["issues"], args.state_dir, capacity=capacity_summary(result))
         print(json.dumps({

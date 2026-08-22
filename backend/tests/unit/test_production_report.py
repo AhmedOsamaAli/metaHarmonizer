@@ -52,6 +52,48 @@ def test_assess_applies_measured_thresholds():
     assert all(issue["severity"] == "warning" for issue in issues)
 
 
+def test_disk_warning_is_debounced_across_checks():
+    """A rebuild inflates the filesystem for minutes, then releases it."""
+    check = healthy_check()
+    check["filesystem"]["used_percent"] = 76.0
+    first = production_report.assess(check, require_backup=False, disk_warning_streak=1)
+    assert "disk_warning" not in {issue["code"] for issue in first}
+    second = production_report.assess(check, require_backup=False, disk_warning_streak=2)
+    assert "disk_warning" in {issue["code"] for issue in second}
+
+
+def test_disk_stop_is_never_debounced():
+    check = healthy_check()
+    check["filesystem"]["used_percent"] = 86.0
+    issues = production_report.assess(check, require_backup=False, disk_warning_streak=1)
+    assert "disk_stop" in {issue["code"] for issue in issues}
+
+
+def test_disk_warning_streak_counts_and_resets():
+    over = {"filesystem": {"used_percent": 76.0}}
+    under = {"filesystem": {"used_percent": 54.0}}
+    assert production_report.disk_warning_streak(over, None) == 1
+    assert production_report.disk_warning_streak(over, {"disk_warning_streak": 1}) == 2
+    assert production_report.disk_warning_streak(under, {"disk_warning_streak": 5}) == 0
+
+
+def test_cache_volume_markers_exclude_data_volumes():
+    """Reclaiming must never be able to select a volume holding real data."""
+    for protected in (
+        "metaharmonizer_pg_data",
+        "metaharmonizer_uploads",
+        "metaharmonizer_schema_versions",
+        "metaharmonizer_redis_data",
+    ):
+        assert not any(m in protected for m in production_report.CACHE_VOLUME_MARKERS)
+    for reclaimable in (
+        "metaharmonizer_engine_cache",
+        "metaharmonizer_hf_cache_46b97de77bd8",
+        "metaharmonizer_corpus_data",
+    ):
+        assert any(m in reclaimable for m in production_report.CACHE_VOLUME_MARKERS)
+
+
 def test_assess_active_user_window_uses_planning_thresholds():
     check = healthy_check()
     check["active_users_5m"] = 40
@@ -114,7 +156,21 @@ def test_alert_retries_after_delivery_becomes_available(tmp_path: Path, monkeypa
 
     production_report.alert_if_needed([], tmp_path)
     production_report.alert_if_needed(issues, tmp_path)
-    assert len(delivered) == 2
+    alerts = [m for m in delivered if m.startswith("MetaHarmonizer production alert")]
+    recoveries = [m for m in delivered if m.startswith("MetaHarmonizer production recovered")]
+    assert len(alerts) == 2
+    assert len(recoveries) == 1
+
+
+def test_recovery_is_announced_only_after_a_delivered_alert(tmp_path: Path, monkeypatch):
+    delivered: list[str] = []
+    monkeypatch.setattr(
+        production_report,
+        "send_webhook",
+        lambda message: delivered.append(message) is None or True,
+    )
+    production_report.alert_if_needed([], tmp_path)
+    assert delivered == []
 
 
 def test_stale_backup_and_failed_kb_update_are_reported():
