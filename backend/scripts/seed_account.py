@@ -50,7 +50,7 @@ async def seed(email: str, password: str, name: str | None, role: str | None) ->
         print("Account created:")
         print(f"  email    : {email}")
         print(f"  role     : {final_role}")
-        print(f"  verified : yes")
+        print("  verified : yes")
 
 
 def main() -> None:

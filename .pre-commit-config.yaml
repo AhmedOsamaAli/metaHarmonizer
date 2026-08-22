@@ -2,6 +2,12 @@
 # Install with: pip install pre-commit && pre-commit install
 
 repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.18
+    hooks:
+      - id: ruff
+        args: [--fix]
+
   - repo: local
     hooks:
       - id: no-engine-leaks

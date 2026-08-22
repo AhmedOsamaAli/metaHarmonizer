@@ -6,7 +6,6 @@ import argparse
 import asyncio
 import csv
 import io
-import json
 import secrets
 import time
 import uuid
@@ -14,7 +13,7 @@ import zipfile
 from dataclasses import dataclass, field
 
 import httpx
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 
 from app.core.security import hash_password
 from app.core.storage import get_storage

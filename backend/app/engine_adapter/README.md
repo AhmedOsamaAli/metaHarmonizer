@@ -225,7 +225,7 @@ ontology router uses them directly. `MetaHarmonizerAdapter.map_values`
 also delegates to `run_ontology_mapping` there so the API contract
 stays unchanged. When upstream's `KnowledgeDb` (FAISS + SQLite) is
 wired through `map_values`, those tables will be retired — see
-proposal §1.4.4.
+proposal Section 1.4.4.
 
 **Q. Why two adapters instead of one?**
 

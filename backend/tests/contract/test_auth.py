@@ -51,8 +51,6 @@ async def client(database_url, monkeypatch):
     install_observability(app)
     app.include_router(auth.router)
 
-    created: list[str] = []
-
     async def _make_client():
         return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="https://test")
 

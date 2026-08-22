@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
-from app.core.errors import AppError, ConflictError
+from app.core.errors import ConflictError
 from app.core.middleware import REQUEST_ID_HEADER, install_observability
 from app.core.pagination import (
     DEFAULT_LIMIT,

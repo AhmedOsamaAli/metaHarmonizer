@@ -163,3 +163,6 @@ MetaHarmonizerSchemaRegistry-main*/
 # Loose schema-eval outputs at the backend root (regenerable)
 backend/schema_*.csv
 backend/scripts/_diff_wheel.py
+
+# Benchmark outputs at the repo root (regenerable via scripts/eval_schema.py)
+bench_*.csv

@@ -108,5 +108,5 @@ def test_generated_study_passes_validate_data(monkeypatch, tmp_path):
     error_lines = [ln for ln in output.splitlines() if ln.startswith("ERROR:")]
     assert not error_lines, (
         "validateData.py reported ERROR-level findings on the generated study "
-        f"folder:\n" + "\n".join(error_lines)
+        "folder:\n" + "\n".join(error_lines)
     )

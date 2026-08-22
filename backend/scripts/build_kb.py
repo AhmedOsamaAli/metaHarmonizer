@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import sys
 import time
 
 # (category, ontology_source, seed_query) — the seed drives one run so the full

@@ -176,7 +176,7 @@ def build_bundle(output: Path, *, with_models: bool = True, dry_run: bool = Fals
         hf_sz = sum(p.stat().st_size for p in hf_files)
         cs_sz = sum(p.stat().st_size for p in csvs)
         print("[package] DRY RUN — would bundle:")
-        print(f"  kb.mhkb.tar.gz          (engine KB export, size TBD)")
+        print("  kb.mhkb.tar.gz          (engine KB export, size TBD)")
         print(f"  corpus CSVs             {len(csvs)} files, {_human(cs_sz)}")
         print(f"  nci_schema_cache.json   {'present' if _SCHEMA_CACHE.exists() else 'absent'}")
         print(f"  model_cache/            {len(mc_files)} files, {_human(mc_sz)}  (from {mc_root})")

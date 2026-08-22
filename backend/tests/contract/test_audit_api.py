@@ -14,7 +14,6 @@ import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 import app.db.session as db_session
-from app.core.pagination import decode_cursor
 from app.db.models import AuditEvent
 
 pytestmark = pytest.mark.asyncio

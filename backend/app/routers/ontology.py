@@ -185,7 +185,7 @@ async def suggest_ontology_terms(
     clears ``threshold``, return it keyed by mapping id. Computing this
     server-side avoids the client firing one HTTP request per value (which both
     hammers the rate limiter and is an N+1)."""
-    study = ensure_study_visible(await studies_repo.get_study(db, study_id), user)
+    ensure_study_visible(await studies_repo.get_study(db, study_id), user)
 
     rows = await ontology_repo.get_ontology_mappings(db, study_id)
 

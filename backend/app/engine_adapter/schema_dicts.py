@@ -146,7 +146,6 @@ def _pair_exists(src: str, fld: str) -> str | None:
     """Return 'built-in' / 'custom' if the (alias, field) pair already exists,
     else ``None``. Checks both layers so duplicates are reported, not silently
     swallowed."""
-    import pandas as pd
 
     src_l, fld_s = src.strip().lower(), fld.strip()
     for df, label in ((_read_csv(_ADMIN_ALIAS), "custom"),
