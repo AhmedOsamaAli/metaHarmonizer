@@ -34,6 +34,43 @@ def test_field_ontology_only_engine_ready_tuples():
     assert "hla" not in _ontology.FIELD_ONTOLOGY
 
 
+def test_field_ontology_covers_gdc_and_cbioportal_field_names():
+    """Target schemas name these fields differently; each must still route."""
+    expected = {
+        "primary_diagnosis": ("disease", "ncit"),
+        "primary_disease": ("disease", "ncit"),
+        "disease_type": ("disease", "ncit"),
+        "primary_site": ("bodysite", "uberon"),
+        "tissue_or_organ_of_origin": ("bodysite", "uberon"),
+        "site_of_resection_or_biopsy": ("bodysite", "uberon"),
+        "biospecimen_anatomic_site": ("bodysite", "uberon"),
+        "therapeutic_agents": ("treatment", "ncit"),
+    }
+    for field, tuple_ in expected.items():
+        assert _ontology.FIELD_ONTOLOGY[field] == tuple_
+        assert _ontology.is_ontology_field(field)
+    # cBioPortal ships upper-case headers; lookup is case-insensitive.
+    assert _ontology.is_ontology_field("PRIMARY_SITE")
+    assert _ontology.is_ontology_field("CANCER_TYPE")
+
+
+def test_field_ontology_excludes_non_term_vocabularies():
+    """These GDC fields are not term lists, so they must never be mapped."""
+    # treatment_or_therapy is yes/no/unknown; morphology is ICD-O codes (8000/0).
+    assert "treatment_or_therapy" not in _ontology.FIELD_ONTOLOGY
+    assert "morphology" not in _ontology.FIELD_ONTOLOGY
+
+
+def test_every_routed_tuple_is_registered_by_the_engine():
+    """Guard against routing a field to a corpus the engine cannot serve."""
+    engine_registry = {
+        ("bodysite", "ncit"), ("disease", "ncit"), ("treatment", "ncit"),
+        ("disease", "mondo"), ("bodysite", "uberon"), ("phenotype", "efo"),
+    }
+    for field, tuple_ in _ontology.FIELD_ONTOLOGY.items():
+        assert tuple_ in engine_registry, f"{field} routes to unknown corpus {tuple_}"
+
+
 def test_normalize_engine_rows():
     frame = pd.DataFrame(
         [

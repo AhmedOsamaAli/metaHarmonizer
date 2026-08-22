@@ -202,8 +202,7 @@ class MetaHarmonizerAdapter:
         # Value-to-ontology mapping (F-11). Route the engine's first-class
         # categories (NCIt-disease, UBERON-bodysite, NCIt-treatment) through
         # OntoMapEngine when ONTOLOGY_ENGINE=1; otherwise (and on any failure or
-        # missing corpus) fall back to the curated dictionary. EFO/HANCESTRO
-        # need engine-team support and are intentionally excluded.
+        # missing corpus) fall back to the curated dictionary.
         from app.services.harmonizer import run_ontology_mapping
 
         from . import _ontology

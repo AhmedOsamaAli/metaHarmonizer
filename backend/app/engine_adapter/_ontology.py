@@ -2,8 +2,10 @@
 
 Routes value→ontology mapping through the upstream ``OntoMapEngine`` for the
 engine's first-class categories, falling back to the curated dictionary
-otherwise. Opt-in via ``ONTOLOGY_ENGINE=1``. EFO/HANCESTRO are excluded (they
-need engine-team support). Only this module may touch the ontology engine.
+otherwise. Opt-in via ``ONTOLOGY_ENGINE=1``. The engine also registers
+``("phenotype", "efo")``, but no field in the supported target schemas is a
+phenotype term field, so nothing routes there yet. Only this module may touch
+the ontology engine.
 """
 
 from __future__ import annotations
@@ -33,14 +35,24 @@ def _auto_accept_threshold() -> float:
 
 # Dashboard field name (lower) → engine ontology (category, source), limited to
 # the engine's first-class tuples; anything else uses the dictionary fallback.
+# Excluded on purpose: GDC ``treatment_or_therapy`` (yes/no/unknown) and
+# ``morphology`` (ICD-O codes such as 8000/0) are not term vocabularies.
 FIELD_ONTOLOGY: dict[str, tuple[str, str]] = {
     "disease": ("disease", "ncit"),
     "target_condition": ("disease", "ncit"),
     "cancer_type": ("disease", "ncit"),
+    "primary_diagnosis": ("disease", "ncit"),
+    "primary_disease": ("disease", "ncit"),
+    "disease_type": ("disease", "ncit"),
     "body_site": ("bodysite", "uberon"),
+    "primary_site": ("bodysite", "uberon"),
+    "tissue_or_organ_of_origin": ("bodysite", "uberon"),
+    "site_of_resection_or_biopsy": ("bodysite", "uberon"),
+    "biospecimen_anatomic_site": ("bodysite", "uberon"),
     "treatment": ("treatment", "ncit"),
     "treatment_name": ("treatment", "ncit"),
     "treatment_type": ("treatment", "ncit"),
+    "therapeutic_agents": ("treatment", "ncit"),
 }
 
 
