@@ -1,6 +1,6 @@
 fastapi==0.141.1
 starlette==1.6.0
-uvicorn[standard]==0.52.3
+uvicorn[standard]==0.52.4
 python-multipart==0.0.32
 pydantic==2.13.4
 pydantic-settings==2.15.0
@@ -8,7 +8,7 @@ pandas==2.3.3
 rapidfuzz==3.14.5
 numpy==1.26.4
 sentence-transformers==5.7.0
-transformers==5.15.0
+transformers==5.15.1
 torch>=2.1.0
 requests>=2.34.2
 google-genai>=1.75.0
