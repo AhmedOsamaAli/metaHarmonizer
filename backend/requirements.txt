@@ -1,14 +1,14 @@
 fastapi==0.141.1
 starlette==1.6.0
-uvicorn[standard]==0.52.3
+uvicorn[standard]==0.52.4
 python-multipart==0.0.32
-pydantic==2.13.4
+pydantic==2.13.5
 pydantic-settings==2.15.0
 pandas==2.3.3
 rapidfuzz==3.14.5
 numpy==1.26.4
 sentence-transformers==5.7.0
-transformers==5.15.0
+transformers==5.16.1
 torch>=2.1.0
 requests>=2.34.2
 google-genai>=1.75.0
@@ -23,7 +23,7 @@ arq==0.28.0
 
 # --- Observability --------------------------------------------------------
 # Optional: error tracking. init_sentry() no-ops if unset/uninstalled.
-sentry-sdk[fastapi]==2.68.0
+sentry-sdk[fastapi]==2.68.1
 # Prometheus golden-signal metrics at admin-scoped /metrics.
 prometheus-client==0.26.0
 
@@ -33,7 +33,7 @@ pyjwt==2.13.0
 email-validator==2.3.0
 
 # --- Federation-lite (G1): Ed25519 signing --------------------------------
-cryptography==50.0.0
+cryptography==50.0.1
 
 # --- Object storage (S3 / Cloudflare R2) ----------------------------------
 # Only used when OBJECT_STORE_URL is s3://… ; the file:// backend needs nothing.
