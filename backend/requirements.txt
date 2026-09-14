@@ -37,7 +37,7 @@ cryptography==50.0.1
 
 # --- Object storage (S3 / Cloudflare R2) ----------------------------------
 # Only used when OBJECT_STORE_URL is s3://… ; the file:// backend needs nothing.
-boto3>=1.43.77
+boto3>=1.43.92
 
 # --- Test ----------------------------------------------------------------
 pytest==9.1.1
