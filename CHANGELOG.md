@@ -9,6 +9,8 @@ versioning once a stable `1.x` release is declared.
 - Continued observability, availability, and mixed-load hardening.
 - Refreshed dependency baselines and expanded auditing to frontend build tools.
 - Published a reproducible summary of the August schema benchmark.
+- Migrated React Router to v7 and removed the engine's unused NLTK dependency,
+  clearing all Python and npm dependency-audit findings without exceptions.
 
 ## [0.1.0] - 2026-08-19
 

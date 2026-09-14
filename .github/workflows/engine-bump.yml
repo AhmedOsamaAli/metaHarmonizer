@@ -87,6 +87,11 @@ jobs:
           print("ok: wheel contains", need)
           PY
 
+      - name: Remove the engine's unused NLTK dependency
+        run: |
+          WHEEL=$(ls "$RUNNER_TEMP"/mh_wheel/metaharmonizer-*-py3-none-any.whl)
+          python scripts/strip_unused_nltk_dependency.py --wheel "$WHEEL" --strip
+
       - name: Vendor the new wheel + update the requirements pin
         id: vendor
         run: |
