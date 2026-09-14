@@ -19,8 +19,26 @@ RUN apt-get update \
 # is referenced from requirements.txt, so copy it before installing.
 COPY requirements.txt ./
 COPY vendor/ ./vendor/
-RUN python -m pip install pip==26.2.1 \
-    && pip install -r requirements.txt
+ARG TARGETARCH
+ARG TORCH_VERSION=2.14.0
+RUN set -eux; \
+    tr -d '\r' < requirements.txt | grep -Fqx "torch>=${TORCH_VERSION}"; \
+    case "$TARGETARCH" in \
+      amd64) \
+        torch_wheel="https://download-r2.pytorch.org/whl/cpu/torch-${TORCH_VERSION}%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl#sha256=a09987c95ec4cffdb6df798d3d641558110a334cfccce22f2f046d83142bc260" \
+        ;; \
+      arm64) \
+        torch_wheel="https://download-r2.pytorch.org/whl/cpu/torch-${TORCH_VERSION}%2Bcpu-cp312-cp312-manylinux_2_28_aarch64.whl#sha256=da8140c3d4a41500d29710e35bf8e66a4295ec31026487c69f54a3f583310f8d" \
+        ;; \
+      *) \
+        echo "Unsupported Docker architecture for the pinned PyTorch wheel: $TARGETARCH" >&2; \
+        exit 1 \
+        ;; \
+    esac; \
+    python -m pip install pip==26.2.1; \
+    pip install "$torch_wheel"; \
+    pip install -r requirements.txt; \
+    pip check
 
 FROM python:3.12-slim@sha256:2c941e860699f878900b0edc2403613c234d4b32eda3cc9fa7036991a2a63c4a
 

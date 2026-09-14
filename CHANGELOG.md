@@ -11,6 +11,8 @@ versioning once a stable `1.x` release is declared.
 - Published a reproducible summary of the August schema benchmark.
 - Migrated React Router to v7 and removed the engine's unused NLTK dependency,
   clearing all Python and npm dependency-audit findings without exceptions.
+- Pinned CPU-only PyTorch wheels by container architecture, avoiding unsupported
+  CUDA packages on ARM production hosts and enforcing `pip check` in image builds.
 
 ## [0.1.0] - 2026-08-19
 
