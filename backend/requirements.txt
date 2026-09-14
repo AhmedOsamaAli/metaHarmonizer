@@ -18,7 +18,7 @@ google-genai>=1.75.0
 # --- Persistence + cache (Sprint 2 / Dev infra) ---------------------------
 sqlalchemy[asyncio]==2.0.52
 asyncpg==0.31.0
-alembic==1.19.2
+alembic==1.20.0
 redis==5.3.1
 # Job queue for the harmonize pipeline (Sprint 4).
 arq==0.28.0
