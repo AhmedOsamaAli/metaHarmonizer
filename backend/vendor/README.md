@@ -16,6 +16,14 @@ metaharmonizer.scripts.knowledge_db import|export`) — without it a Docker/CI
 `kb-import` fails with `No module named metaharmonizer.scripts.knowledge_db`. Re-pin
 from a source that already contains it on the next version bump (then drop this note).
 
+The wheel metadata also omits upstream's `nltk` dependency. There are no NLTK
+references anywhere in the engine package, so installing it exposed
+applications to NLTK advisories without providing runtime behavior. Run
+`python scripts/strip_unused_nltk_dependency.py --wheel <wheel> --strip` after
+each rebuild. The command refuses to remove the dependency if the application
+or wheel starts referencing NLTK; the engine-bump workflow and security CI
+enforce that invariant.
+
 **Why not `pip install git+...`**: several files under `examples/data/` and
 `data/corpus/` have `:` in their names (e.g.
 `disease_corpus_from_NCIT:C3262.csv`), which NTFS forbids. A full git checkout
@@ -33,6 +41,7 @@ When upstream ships a new commit you want to pin (src-layout, >=0.4.0):
 
 ```powershell
 # 1. Sparse-clone only the package source (avoids the ':' corpus filenames)
+$repo = (Resolve-Path .).Path
 $bd = "$env:TEMP\mh_build"
 Remove-Item $bd -Recurse -Force -ErrorAction SilentlyContinue
 git clone --no-checkout --depth 1 https://github.com/shbrief/MetaHarmonizer.git $bd
@@ -40,12 +49,18 @@ cd $bd
 git checkout HEAD -- src pyproject.toml README.md   # only what the build needs
 
 # 2. Build the wheel
-backend\.venv\Scripts\python.exe -m pip wheel . --no-deps -w "$env:TEMP\mh_wheel"
+& "$repo\backend\.venv\Scripts\python.exe" -m pip wheel . --no-deps -w "$env:TEMP\mh_wheel"
 
-# 3. Drop the new wheel in this directory, remove the old one
-Move-Item "$env:TEMP\mh_wheel\metaharmonizer-*-py3-none-any.whl" backend\vendor\ -Force
+# 3. Remove the unused NLTK dependency (fails if new engine code uses it)
+$wheel = Get-ChildItem "$env:TEMP\mh_wheel\metaharmonizer-*-py3-none-any.whl" |
+  Select-Object -First 1
+& "$repo\backend\.venv\Scripts\python.exe" "$repo\scripts\strip_unused_nltk_dependency.py" `
+  --wheel $wheel.FullName --strip
 
-# 4. Update the wheel path + version in backend/requirements.txt, commit, push
+# 4. Drop the new wheel in this directory, remove the old one
+Move-Item $wheel.FullName "$repo\backend\vendor\" -Force
+
+# 5. Update the wheel path + version in backend/requirements.txt, commit, push
 ```
 
 Linux/macOS: same flow with `bash` and `git`.
