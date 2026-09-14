@@ -165,6 +165,7 @@ Ontology stage will look sparse even though the run succeeded.
 | Availability and support targets | [service-level-objectives.md](service-level-objectives.md) |
 | Handing the deployment to someone else | [handover.md](handover.md) |
 | Curator-facing workflow | [curator-guide.md](curator-guide.md) |
+| Driving harmonization from an AI client | [MCP server](../mcp/README.md) |
 
 ## 8. Audit
 

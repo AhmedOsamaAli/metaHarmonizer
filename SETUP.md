@@ -102,7 +102,8 @@ accept or correct the mappings.
 ## Develop natively (contributors)
 
 Prefer hot reload without rebuilding images? Keep Postgres + Redis in Docker and run
-the API and SPA on the host. Requires **Python 3.12+** and **Node 20+**.
+the API and SPA on the host. Requires **Python 3.12+** and either
+**Node 20.19+ or Node 22.12+**.
 
 ```bash
 # Datastores only
@@ -127,4 +128,3 @@ npm run dev                       # Vite dev server, proxies /api to :8000
 
 Open the URL Vite prints (e.g. <http://localhost:5173>).
 Building or upgrading the KB bundle itself is covered in **[DEPLOY.md](DEPLOY.md)**.
-

@@ -106,6 +106,25 @@ access. Preserve one tested break-glass path under institutional control.
 - Confirmation of who owns R2, Resend, domain/DNS, billing, and recovery.
 - Backup encryption-key custody plan with no key material in Git.
 
+### Reading the backup encryption key
+
+The key lives at `/home/ubuntu/.config/metaharmonizer/backup.key`. It is owned by
+`opc` with mode `0600`, so the `ubuntu` account cannot read it directly and
+`cat` fails with "Permission denied". Backups still work because the systemd
+unit bind-mounts the file into the container as root.
+
+```bash
+sudo cat /home/ubuntu/.config/metaharmonizer/backup.key
+```
+
+Use `sudo cat` rather than a redirect: in `sudo wc -c < key` the shell opens the
+file as `ubuntu` before `sudo` runs, so it fails for the same reason.
+
+Losing this key makes every backup in R2 permanently undecryptable, so a copy
+belongs in institutional key custody. Verify a stored copy with
+`sudo cat … | sha256sum` against a hash of the escrowed value; a trailing
+newline added by an editor is the usual cause of a mismatch.
+
 ## Part 2 — Commissioning an institutional instance
 
 This is the actual handover. It does not depend on Part 1 and it inherits no
