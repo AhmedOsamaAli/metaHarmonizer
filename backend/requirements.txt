@@ -9,6 +9,8 @@ rapidfuzz==3.14.6
 numpy==1.26.4
 sentence-transformers==5.7.0
 transformers==5.17.0
+# Docker images preinstall the hash-pinned 2.14.0+cpu wheel for their
+# architecture; keep this compatibility floor synchronized with Dockerfile.
 torch>=2.14.0
 requests>=2.34.2
 google-genai>=1.75.0

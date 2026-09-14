@@ -8,12 +8,23 @@
 .venv/
 venv/
 *.egg-info/
+htmlcov/
+.coverage
+coverage.xml
+*.log
+eval_*.csv
+schema_*.csv
+kb.mhkb.tar.gz
+kb_build/
+kb_import_test/
 
 # Local data / DBs — never bake into the image
 data/*.db
 data/*.db-wal
 data/*.db-shm
 data/uploads/*
+data/corpus/
+data/exports/
 data/schema_mapping_eval/*
 
 # Env + secrets
