@@ -42,12 +42,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Validate NLTK advisory exception
+        run: python scripts/check_nltk_advisory_exception.py
       - name: Normalize local wheel path
         run: sed 's|^\./vendor/|./backend/vendor/|' backend/requirements.txt > .audit-requirements.txt
       - name: Audit Python dependencies
         run: |
           python -m pip install --disable-pip-version-check pip-audit==2.10.1
-          python -m pip_audit --vulnerability-service osv --requirement .audit-requirements.txt
+          # GHSA-8mgp-746c-j5xp requires NLTK pathsec plus caller-controlled
+          # model-artifact paths. NLTK is declared but unused by the vendored
+          # engine; the preceding guard fails if runtime code starts using it.
+          python -m pip_audit \
+            --vulnerability-service osv \
+            --requirement .audit-requirements.txt \
+            --ignore-vuln PYSEC-2026-3740
 
   node-dependencies:
     name: Node Dependency Audit
@@ -57,9 +65,9 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
-      - name: Audit frontend runtime dependencies
+      - name: Audit frontend dependencies
         working-directory: frontend
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --audit-level=high
       - name: Audit E2E dependencies
         working-directory: e2e
         run: npm audit --audit-level=high

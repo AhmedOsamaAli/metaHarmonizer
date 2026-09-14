@@ -3,7 +3,7 @@
 Pre-built wheels we install instead of fetching from git, so
 `pip install -r requirements.txt` works on every OS without a special path.
 
-## `metaharmonizer-0.4.0-py3-none-any.whl`
+## `metaharmonizer-0.4.1-py3-none-any.whl`
 
 Built from [`shbrief/MetaHarmonizer`](https://github.com/shbrief/MetaHarmonizer)
 `main` (v0.4.0, src-layout refactor, PR #81), with only the `src/` package tree

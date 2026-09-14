@@ -3,6 +3,11 @@
 This guide covers the curator workflow on the hosted application at
 <https://metaharmonizer.online> and on an equivalent self-hosted instance.
 
+Administrator tasks — approving accounts, promoting schema versions, managing
+aliases, promoting learned decisions, federation — are in the
+[administrator guide](admin-guide.md). To drive harmonization from an AI client
+instead of the browser, see the [MCP server](../mcp/README.md).
+
 ## Getting access
 
 1. Open the application and choose **Create account**, then supply your

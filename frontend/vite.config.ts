@@ -16,8 +16,10 @@ export default defineConfig({
             thresholds: {
                 lines: 5.4,
                 statements: 5.4,
-                functions: 25,
-                branches: 58,
+                // Vitest 5 applies `include` to the whole source tree, including
+                // modules no unit test imports. Ratchet that whole-app baseline.
+                functions: 4.4,
+                branches: 6.5,
             },
         },
     },

@@ -112,18 +112,39 @@ upstream-engine imports outside the adapter boundary.
 
 ## Documentation
 
+**Using the application**
+
+- [Curator guide](docs/curator-guide.md) — upload, review mappings, confirm ontology terms, export
+- [Administrator guide](docs/admin-guide.md) — users and roles, schema versions, aliases, learned decisions, federation
+- [MCP server](mcp/README.md) — drive harmonization from Claude Desktop, Cursor, or VS Code
+
+**Running it**
+
 - [Local setup and troubleshooting](SETUP.md)
 - [Production deployment and recovery](DEPLOY.md)
-- [Curator guide](docs/curator-guide.md)
 - [Production operations](docs/production-operations.md)
-- [Architecture](docs/architecture.md)
-- [Service-level objectives](docs/service-level-objectives.md)
+- [Knowledge-base lifecycle](docs/kb-lifecycle.md) — how ontology corpora are refreshed
 - [Capacity and scaling](docs/scaling-plan.md)
+- [Service-level objectives](docs/service-level-objectives.md)
 - [Authority handover](docs/handover.md)
-- [Licensing and cBioPortal RFC 86](docs/licensing.md)
-- [Load and stress testing](load/README.md)
+
+**Design and contribution**
+
+- [Architecture](docs/architecture.md)
 - [Engine adapter](backend/app/engine_adapter/README.md)
-- [MCP server](mcp/README.md)
+- [Load and stress testing](load/README.md)
+- [Accuracy benchmarks](backend/benchmarks/README.md)
+- [Licensing and cBioPortal RFC 86](docs/licensing.md)
+
+**Operational evidence** — dated records of exercises actually run
+
+- [Backup restore drill](docs/backup-restore-drill-2026-08-17.md)
+- [Rollback drill](docs/rollback-drill-2026-08-09.md)
+- [Credential rotation drill](docs/credential-rotation-drill-2026-08-09.md)
+- [Operational alert drill](docs/operational-alert-drill-2026-08-19.md)
+- [Capacity reports](docs/capacity-report-2026-08-15.md) ([earlier](docs/capacity-report-2026-08-13.md))
+- [Schema benchmark report](docs/schema-benchmark-report-2026-08-22.md)
+- [Curator usability protocol](docs/curator-usability-protocol.md)
 
 ## Security and Data Handling
 

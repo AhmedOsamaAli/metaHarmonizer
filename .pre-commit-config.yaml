@@ -19,3 +19,12 @@ repos:
         language: system
         files: ^backend/app/.*\.py$
         pass_filenames: true
+      - id: guard-nltk-advisory-exception
+        name: guard the NLTK audit exception
+        description: |
+          The NLTK advisory exception is valid only while application and
+          vendored-engine runtime code do not reference NLTK.
+        entry: python scripts/check_nltk_advisory_exception.py
+        language: system
+        files: ^(backend/(app/.*\.py|vendor/metaharmonizer-.*\.whl)|mcp/.*\.py|scripts/check_nltk_advisory_exception\.py)$
+        pass_filenames: false

@@ -7,6 +7,8 @@ versioning once a stable `1.x` release is declared.
 
 - Institutional handover and authority transfer.
 - Continued observability, availability, and mixed-load hardening.
+- Refreshed dependency baselines and expanded auditing to frontend build tools.
+- Published a reproducible summary of the August schema benchmark.
 
 ## [0.1.0] - 2026-08-19
 
