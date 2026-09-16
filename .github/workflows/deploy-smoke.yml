@@ -63,6 +63,21 @@ jobs:
       - name: Build application images
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build api web
 
+      - name: Validate production Compose and TLS configuration
+        env:
+          DOMAIN: harmonize.example.org
+          ACME_EMAIL: operations@example.org
+          APP_BASE_URL: https://harmonize.example.org
+          CORS_ORIGINS: https://harmonize.example.org
+          JWT_SECRET: ci-production-config-secret-at-least-32-bytes
+        run: |
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet
+          docker run --rm \
+            -e DOMAIN -e ACME_EMAIL \
+            -v "$PWD/Caddyfile.prod:/etc/caddy/Caddyfile:ro" \
+            caddy:2-alpine \
+            caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
       - name: Install Trivy
         env:
           TRIVY_VERSION: "0.73.0"
@@ -133,6 +148,19 @@ jobs:
 
       - name: Seed bootstrap admin
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml run --rm seed
+
+      - name: Encrypted PostgreSQL backup/restore roundtrip
+        run: |
+          set -euo pipefail
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T postgres \
+            createdb -U mh metaharmonizer_restore_ci
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T api \
+            sh -c 'umask 077; python -m scripts.backup_postgres keygen --key-file /tmp/backup.key'
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T api \
+            sh -c 'BACKUP_ENCRYPTION_KEY_FILE=/tmp/backup.key python -m scripts.backup_postgres roundtrip \
+              --target-database-name metaharmonizer_restore_ci'
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T postgres \
+            dropdb -U mh metaharmonizer_restore_ci
 
       - name: Smoke — login returns a token
         run: |

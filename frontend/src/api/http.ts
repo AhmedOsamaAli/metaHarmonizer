@@ -100,11 +100,13 @@ interface Options extends RequestInit {
     skipAuthRetry?: boolean;
     /** Parse and return JSON (default true). */
     json?: boolean;
+    /** Return the raw authenticated response (used for file downloads). */
+    raw?: boolean;
 }
 
 /** Central fetch wrapper: injects bearer token, sends cookies, retries once on 401. */
 export async function apiFetch<T = unknown>(path: string, opts: Options = {}): Promise<T> {
-    const { skipAuthRetry, json = true, headers, ...init } = opts;
+    const { skipAuthRetry, json = true, raw = false, headers, ...init } = opts;
 
     // Guest preview has no account. Serve sample fixtures for GETs so the
     // walkthrough shows a realistic curated study, and block everything else
@@ -139,6 +141,12 @@ export async function apiFetch<T = unknown>(path: string, opts: Options = {}): P
     }
 
     if (!res.ok) throw await parseError(res);
+    if (raw) return res as T;
     if (!json || res.status === 204) return undefined as T;
     return (await res.json()) as T;
+}
+
+/** Authenticated raw response for blobs and other non-JSON payloads. */
+export function apiFetchResponse(path: string, opts: Options = {}): Promise<Response> {
+    return apiFetch<Response>(path, { ...opts, raw: true });
 }

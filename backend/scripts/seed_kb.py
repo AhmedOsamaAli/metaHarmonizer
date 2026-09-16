@@ -20,6 +20,8 @@ import tarfile
 import tempfile
 from pathlib import Path
 
+from app.engine_adapter.kb_assets import bundle_member_issues, installed_kb_issues
+
 _BACKEND = Path(__file__).resolve().parents[1]
 _SCHEMA_CACHE_DEST = _BACKEND / "data" / "nci_schema_cache.json"
 
@@ -48,7 +50,7 @@ def _safe_extract(tar: tarfile.TarFile, dest: Path) -> None:
     dest = dest.resolve()
     for member in tar.getmembers():
         target = (dest / member.name).resolve()
-        if not str(target).startswith(str(dest)):
+        if not target.is_relative_to(dest):
             raise RuntimeError(f"unsafe path in bundle: {member.name}")
     # filter="data" (py>=3.12) strips unsafe metadata; members already validated.
     tar.extractall(dest, filter="data")  # noqa: S202
@@ -138,7 +140,7 @@ def _download(url: str, dest: Path, *, sha256: str | None = None) -> None:
     print(f"[seed] downloaded {done // (1 << 20)} MiB -> {dest}")
 
 
-def seed(bundle: Path, *, force: bool) -> int:
+def seed(bundle: Path, *, force: bool, allow_incomplete: bool = False) -> int:
     if not bundle.exists():
         print(f"[seed] bundle not found: {bundle}", file=sys.stderr)
         return 1
@@ -149,6 +151,11 @@ def seed(bundle: Path, *, force: bool) -> int:
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         with tarfile.open(bundle, "r:gz") as tar:
+            issues = bundle_member_issues({member.name for member in tar.getmembers()})
+            if issues and not allow_incomplete:
+                for issue in issues:
+                    print(f"[seed] ERROR: {issue}", file=sys.stderr)
+                return 1
             _safe_extract(tar, tmp_path)
 
         kb_archive = tmp_path / "kb.mhkb.tar.gz"
@@ -189,6 +196,12 @@ def seed(bundle: Path, *, force: bool) -> int:
         # Schema model (all-MiniLM-L6-v2) -> HuggingFace hub cache.
         _install_tree(tmp_path / "hf_hub", _hf_hub_root(), force, label="hf-model")
 
+    if not allow_incomplete:
+        issues = installed_kb_issues()
+        if issues:
+            for issue in issues:
+                print(f"[seed] ERROR: {issue}", file=sys.stderr)
+            return 1
     print("[seed] done — instance is seeded for offline operation.")
     return 0
 
@@ -215,6 +228,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--force", action="store_true",
                         help="Overwrite existing KB / corpus / cache / models.")
+    parser.add_argument(
+        "--allow-incomplete",
+        action="store_true",
+        help="Permit a development-only bundle with missing required assets.",
+    )
     args = parser.parse_args(argv)
 
     # The positional may be a URL directly (convenience).
@@ -235,7 +253,7 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
-    return seed(bundle, force=args.force)
+    return seed(bundle, force=args.force, allow_incomplete=args.allow_incomplete)
 
 
 if __name__ == "__main__":

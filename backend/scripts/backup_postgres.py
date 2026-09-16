@@ -124,6 +124,14 @@ def decrypt_file(source: Path, destination: Path, key: bytes) -> None:
             dst.write(decryptor.finalize())
 
 
+def _file_sha256(path: Path) -> bytes:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while chunk := handle.read(CHUNK_SIZE):
+            digest.update(chunk)
+    return digest.digest()
+
+
 def _timestamp_from_key(key: str) -> datetime | None:
     match = TIMESTAMP_RE.search(key)
     if not match:
@@ -201,11 +209,7 @@ def backup() -> str:
     with tempfile.TemporaryDirectory(prefix="mh-backup-") as temp_dir:
         dump_path = Path(temp_dir) / "database.dump"
         encrypted_path = Path(temp_dir) / "database.dump.enc"
-        subprocess.run(
-            ["pg_dump", "--format=custom", "--no-owner", "--no-privileges", "--file", str(dump_path)],
-            env=_postgres_env(database),
-            check=True,
-        )
+        _dump_database(database, dump_path)
         sha256 = encrypt_file(dump_path, encrypted_path, encryption_key)
         client = _r2_client()
         client.upload_file(
@@ -246,6 +250,56 @@ def _write_compatible_restore_sql(source: Path, destination: Path) -> int:
     return removed
 
 
+def _dump_database(database: URL, destination: Path) -> None:
+    subprocess.run(
+        [
+            "pg_dump",
+            "--format=custom",
+            "--no-owner",
+            "--no-privileges",
+            "--file",
+            str(destination),
+        ],
+        env=_postgres_env(database),
+        check=True,
+    )
+
+
+def _restore_dump(dump_path: Path, target: URL, temp_dir: Path) -> None:
+    raw_sql_path = temp_dir / "database.raw.sql"
+    restore_sql_path = temp_dir / "database.restore.sql"
+    subprocess.run(
+        [
+            "pg_restore",
+            "--clean",
+            "--if-exists",
+            "--no-owner",
+            "--no-privileges",
+            "--file",
+            str(raw_sql_path),
+            str(dump_path),
+        ],
+        check=True,
+    )
+    _write_compatible_restore_sql(raw_sql_path, restore_sql_path)
+    subprocess.run(
+        [
+            "psql",
+            "--set",
+            "ON_ERROR_STOP=1",
+            "--file",
+            str(restore_sql_path),
+        ],
+        env=_postgres_env(target),
+        check=True,
+    )
+    subprocess.run(
+        ["psql", "--tuples-only", "--command", "SELECT version_num FROM alembic_version"],
+        env=_postgres_env(target),
+        check=True,
+    )
+
+
 def restore(target_database_url: str, object_key: str | None, allow_production: bool) -> str:
     production = _database_url()
     target = _database_url(target_database_url)
@@ -272,44 +326,49 @@ def restore(target_database_url: str, object_key: str | None, allow_production: 
         object_key = max(candidates, key=lambda key: _timestamp_from_key(key) or datetime.min.replace(tzinfo=timezone.utc))
 
     with tempfile.TemporaryDirectory(prefix="mh-restore-") as temp_dir:
+        temp_path = Path(temp_dir)
         encrypted_path = Path(temp_dir) / "database.dump.enc"
         dump_path = Path(temp_dir) / "database.dump"
-        raw_sql_path = Path(temp_dir) / "database.raw.sql"
-        restore_sql_path = Path(temp_dir) / "database.restore.sql"
         client.download_file(bucket, object_key, str(encrypted_path))
         decrypt_file(encrypted_path, dump_path, encryption_key)
-        subprocess.run(
-            [
-                "pg_restore",
-                "--clean",
-                "--if-exists",
-                "--no-owner",
-                "--no-privileges",
-                "--file",
-                str(raw_sql_path),
-                str(dump_path),
-            ],
-            check=True,
-        )
-        _write_compatible_restore_sql(raw_sql_path, restore_sql_path)
-        subprocess.run(
-            [
-                "psql",
-                "--set",
-                "ON_ERROR_STOP=1",
-                "--file",
-                str(restore_sql_path),
-            ],
-            env=_postgres_env(target),
-            check=True,
-        )
-        subprocess.run(
-            ["psql", "--tuples-only", "--command", "SELECT version_num FROM alembic_version"],
-            env=_postgres_env(target),
-            check=True,
-        )
+        _restore_dump(dump_path, target, temp_path)
     print(f"restored s3://{bucket}/{object_key} into {target.database}")
     return object_key
+
+
+def roundtrip(
+    target_database_url: str | None = None,
+    target_database_name: str | None = None,
+) -> None:
+    source = _database_url()
+    if bool(target_database_url) == bool(target_database_name):
+        raise RuntimeError(
+            "set exactly one of target_database_url or target_database_name"
+        )
+    target = (
+        _database_url(target_database_url)
+        if target_database_url
+        else source.set(database=target_database_name)
+    )
+    if _same_database(source, target):
+        raise RuntimeError("roundtrip target must be a separate scratch database")
+    key_path = Path(
+        os.getenv("BACKUP_ENCRYPTION_KEY_FILE", "/run/secrets/metaharmonizer-backup.key")
+    )
+    encryption_key = _load_key(key_path)
+
+    with tempfile.TemporaryDirectory(prefix="mh-backup-roundtrip-") as temp_dir:
+        temp_path = Path(temp_dir)
+        source_dump = temp_path / "source.dump"
+        encrypted = temp_path / "source.dump.enc"
+        decrypted = temp_path / "decrypted.dump"
+        _dump_database(source, source_dump)
+        encrypt_file(source_dump, encrypted, encryption_key)
+        decrypt_file(encrypted, decrypted, encryption_key)
+        if _file_sha256(source_dump) != _file_sha256(decrypted):
+            raise RuntimeError("decrypted dump differs from the source dump")
+        _restore_dump(decrypted, target, temp_path)
+    print(f"encrypted backup roundtrip restored into {target.database}")
 
 
 def main() -> None:
@@ -322,6 +381,10 @@ def main() -> None:
     restore_parser.add_argument("--target-database-url", required=True)
     restore_parser.add_argument("--object-key")
     restore_parser.add_argument("--allow-production", action="store_true")
+    roundtrip_parser = commands.add_parser("roundtrip")
+    roundtrip_target = roundtrip_parser.add_mutually_exclusive_group(required=True)
+    roundtrip_target.add_argument("--target-database-url")
+    roundtrip_target.add_argument("--target-database-name")
     args = parser.parse_args()
 
     if args.command == "keygen":
@@ -329,8 +392,10 @@ def main() -> None:
         print(f"created {args.key_file}")
     elif args.command == "backup":
         backup()
-    else:
+    elif args.command == "restore":
         restore(args.target_database_url, args.object_key, args.allow_production)
+    else:
+        roundtrip(args.target_database_url, args.target_database_name)
 
 
 if __name__ == "__main__":

@@ -60,14 +60,27 @@ async def _check_redis() -> tuple[bool, str]:
         return False, f"error: {type(exc).__name__}"
 
 
+def _check_ontology_kb() -> tuple[bool, str]:
+    from app.engine_adapter._ontology import runtime_asset_issues
+    from app.engine_adapter.kb_assets import runtime_engine_required
+
+    if not runtime_engine_required():
+        return True, "disabled"
+    issues = runtime_asset_issues()
+    if issues:
+        return False, f"error: incomplete ({len(issues)} required asset(s) missing)"
+    return True, "ok"
+
+
 @router.get("/readyz")
 async def readyz(response: Response) -> dict[str, object]:
     """Readiness: every configured dependency is reachable."""
     pg_ok, pg_msg = await _check_postgres()
     redis_ok, redis_msg = await _check_redis()
+    kb_ok, kb_msg = _check_ontology_kb()
 
-    checks = {"postgres": pg_msg, "redis": redis_msg}
-    ready = pg_ok and redis_ok
+    checks = {"postgres": pg_msg, "redis": redis_msg, "ontology_kb": kb_msg}
+    ready = pg_ok and redis_ok and kb_ok
     if not ready:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
     return {"ready": ready, "checks": checks}

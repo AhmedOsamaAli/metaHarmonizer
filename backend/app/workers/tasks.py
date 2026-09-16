@@ -208,6 +208,11 @@ async def run_harmonize(
 
     try:
         await _checkpoint(study_id)
+        if mode in ("both", "ontology"):
+            from app.engine_adapter._ontology import runtime_asset_error
+
+            if error := runtime_asset_error():
+                raise PermanentJobError(error)
         await _emit(study_id, stage="parse", message="Reading file", pct=10)
 
         await _set_status(study_id, "processing")

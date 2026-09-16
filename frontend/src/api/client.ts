@@ -1,6 +1,7 @@
 // API client — centralised HTTP layer every component calls into.
 
 import { apiFetch, BASE } from './http';
+import { downloadApiFile } from './download';
 import type {
     AuditEvent,
     HarmonizationResults,
@@ -258,19 +259,28 @@ export async function editOntologyMapping(
 
 /* ---------- Export ---------- */
 
-export function getExportUrl(
+export async function downloadExport(
     studyId: string,
     format: 'harmonized' | 'cbioportal' | 'cbioportal-study' | 'report',
-): string {
-    return `${BASE}/export/${studyId}/${format}`;
+): Promise<void> {
+    const filenames = {
+        harmonized: `${studyId}_harmonized.csv`,
+        cbioportal: `data_clinical_${studyId}.txt`,
+        'cbioportal-study': `${studyId}_cbioportal_study.zip`,
+        report: `${studyId}_report.json`,
+    };
+    return downloadApiFile(`/export/${encodeURIComponent(studyId)}/${format}`, filenames[format]);
 }
 
 /** Labeled-dataset export (confirmed mappings) — CSV or JSONL (G9). */
-export function getLabeledExportUrl(
+export async function downloadLabeledExport(
     studyId: string,
     format: 'csv' | 'jsonl' = 'csv',
-): string {
-    return `${BASE}/export/${studyId}/labeled?format=${format}`;
+): Promise<void> {
+    return downloadApiFile(
+        `/export/${encodeURIComponent(studyId)}/labeled?format=${format}`,
+        `${studyId}_labeled.${format}`,
+    );
 }
 
 /* ---------- Audit (admin) ---------- */

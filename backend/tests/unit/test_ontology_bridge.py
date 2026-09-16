@@ -184,3 +184,23 @@ def test_map_values_via_engine_falls_back_on_error():
     # Engine failed -> nothing handled, so the caller falls back to the dict.
     assert rows == []
     assert handled == set()
+
+
+def test_map_values_does_not_construct_engine_when_runtime_assets_are_missing(
+    monkeypatch,
+):
+    class _MustNotConstruct:
+        def __init__(self, **_kwargs):
+            raise AssertionError("engine construction would trigger an on-demand build")
+
+    class _MissingAssetsPkg:
+        OntoMapEngine = _MustNotConstruct
+
+    monkeypatch.setattr(_ontology, "runtime_asset_issues", lambda: ["missing FAISS index"])
+    raw_df = pd.DataFrame({"dx": ["lung cancer"]})
+    schema = [{"raw_column": "dx", "matched_field": "disease"}]
+
+    rows, handled = _ontology.map_values_via_engine(_MissingAssetsPkg(), raw_df, schema)
+
+    assert rows == []
+    assert handled == set()

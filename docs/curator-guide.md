@@ -231,6 +231,9 @@ studies are automatically removed after the configured retention period.
   manually, or leave it unmatched when no standard term is appropriate.
 - **An export looks incomplete:** return to **Quality** and review its readiness
   checklist and unmapped-column count.
+- **A download fails:** sign in again if the session expired, then retry from
+  **Export**. Downloads use the authenticated session and show the server error
+  in the application; they no longer open a protected API URL directly.
 - **The session expired:** sign in again. Saved curator decisions are stored on
   the server and do not depend on the browser tab remaining open.
 

@@ -12,7 +12,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.logging import configure_logging
-from app.core.middleware import SecurityHeadersMiddleware, install_observability
+from app.core.middleware import (
+    EngineReadinessMiddleware,
+    SecurityHeadersMiddleware,
+    install_observability,
+)
 from app.core.limits import install_limits
 from app.core.metrics import MetricsMiddleware
 from app.core.sentry import init_sentry
@@ -114,6 +118,10 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
 )
+
+# Added last so it is outermost: reject before any inner middleware or FastAPI
+# can parse/spool a harmonization multipart body.
+app.add_middleware(EngineReadinessMiddleware)
 
 # Register routers
 app.include_router(health.router)

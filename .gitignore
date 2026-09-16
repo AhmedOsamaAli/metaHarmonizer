@@ -115,6 +115,7 @@ docs/*
 !docs/capacity-report-2026-08-13.md
 !docs/capacity-report-2026-08-15.md
 !docs/schema-benchmark-report-2026-08-22.md
+!docs/deployment-review-resolution.md
 !docs/curator-guide.md
 !docs/admin-guide.md
 !docs/curator-usability-protocol.md

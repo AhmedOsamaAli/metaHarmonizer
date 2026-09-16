@@ -65,8 +65,8 @@ services:
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
       HOME: /home/app
-      # Real ontology mapping (NCIt/UBERON via the engine KB). Falls back to the
-      # curated dictionary if the KB isn't seeded, so it's safe on by default.
+      # Real ontology mapping (NCIt/UBERON via the prebuilt offline KB).
+      # Readiness and upload admission fail closed when required assets are absent.
       ONTOLOGY_ENGINE: "${ONTOLOGY_ENGINE:-1}"
       # Load embedding models from the seeded caches only — never the network.
       HF_HUB_OFFLINE: "1"
@@ -93,7 +93,7 @@ services:
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8000/healthz"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/readyz"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -110,8 +110,8 @@ services:
       REDIS_URL: redis://redis:6379/0
       METAHARMONIZER_DATA_DIR: /app/data
       HOME: /home/app
-      # Real ontology mapping (NCIt/UBERON via the engine KB). Falls back to the
-      # curated dictionary if the KB isn't seeded, so it's safe on by default.
+      # Real ontology mapping (NCIt/UBERON via the prebuilt offline KB).
+      # The worker repeats the API's completeness check before heavy work.
       ONTOLOGY_ENGINE: "${ONTOLOGY_ENGINE:-1}"
       # Load embedding models from the seeded caches only — never the network.
       HF_HUB_OFFLINE: "1"
@@ -227,7 +227,7 @@ services:
       - corpus_data:/app/data/corpus       # seed the corpus into the shared volume api/worker read
       - ./kb:/kb:ro
     # Use ./kb/<archive> if it's mounted there, otherwise download from KB_BUNDLE_URL.
-    command: ["sh", "-c", "F=/kb/${KB_ARCHIVE:-kb_offline_bundle.tar.gz}; if [ -f \"$$F\" ]; then python -m scripts.seed_kb \"$$F\" --force; else python -m scripts.seed_kb /tmp/kb_offline_bundle.tar.gz --force; fi"]
+    command: ["sh", "-c", "F=/kb/${KB_ARCHIVE:-kb_offline_bundle.tar.gz}; if [ -f \"$$F\" ]; then python -m scripts.seed_kb \"$$F\" --force; else python -m scripts.seed_kb /tmp/kb_offline_bundle.tar.gz --force; fi && python -m scripts.kb_probe"]
     depends_on:
       volume-init:
         condition: service_completed_successfully

@@ -88,7 +88,9 @@ accept or correct the mappings.
   transfer between machines/installs; each install needs its own first account (or seed).
 - **Ontology mapping returns no NCIt / UBERON codes** — the KB step didn't complete.
   Re-run `docker compose --profile kb run --rm kb-import` and confirm it prints a
-  `downloaded … MiB` line.
+  `downloaded … MiB` line followed by `[kb-probe] complete offline KB verified`.
+  `/readyz` stays unavailable and ontology uploads are rejected with HTTP 503
+  until that verification passes; no user job builds a KB on demand.
 - **Port already in use (8080 / 8000 / 5432 / 6379)** — stop the conflicting service,
   or change the published port in `docker-compose.override.yml`.
 - **`JWT_SECRET must be at least 32 bytes`** — only happens on a native run (below)

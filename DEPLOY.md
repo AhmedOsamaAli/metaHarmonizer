@@ -99,20 +99,30 @@ Everything else is unchanged: backups in section 9 apply to whichever database
 is configured, though a managed service will have its own snapshot facility that
 is usually preferable.
 
-## 3. Build the offline bundle (on a networked machine)
+## 3. Obtain the published offline bundle
 
-The engine needs its knowledge base, ontology corpora, and embedding models.
-Build them **once** on a box with internet, then ship the bundle to the host:
+Normal deployments **do not build ontologies or embeddings**. The release URL
+and SHA-256 in `.env.example` point at the prebuilt `kb-latest` asset. Keep those
+values in `.env`; the importer downloads the bundle when no local copy exists
+and rejects any checksum mismatch.
+
+Building a new bundle is a maintainer operation that can take several hours on a
+cold machine. Its exact prerequisite order is:
 
 ```bash
 cd backend
+pip install -r requirements.txt
+python -m scripts.build_kb
+python -m scripts.warm_schema_cache
 python -m scripts.package_kb -o ../kb/kb_offline_bundle.tar.gz
-#   --dry-run   to preview contents + size (~0.7 GB models + KB)
-#   --no-models to exclude models (if you manage them separately)
 ```
 
-Copy the whole repo (or just `kb/kb_offline_bundle.tar.gz`) to the host so the
-file sits at `./kb/kb_offline_bundle.tar.gz`.
+`package_kb` fails unless all three required ontology corpora, their FAISS
+indexes and ID sidecars, the engine database, both embedding models, and the
+warmed schema cache exist. Use `--allow-incomplete` only for an explicitly
+development-only artifact. The maintained quarterly build, resumable checkpoint,
+quality comparison, release upload, and checksum PR are documented in
+`docs/kb-lifecycle.md`.
 
 ## 4. Seed the KB + models into the stack
 
@@ -122,7 +132,10 @@ docker compose --profile kb run --rm kb-import
 
 This installs the KB, corpus CSVs, and models into the shared `engine_cache`,
 `corpus_data`, and `hf_cache` volumes so the API/worker load everything from
-disk — the first harmonization never touches the network.
+disk. The command ends with `scripts.kb_probe` over every launch ontology and
+fails if any required asset is absent. API readiness and upload admission repeat
+the same completeness contract, so the first user task can never start an
+on-demand ontology build.
 
 ## 5. Start the stack
 
@@ -130,6 +143,7 @@ disk — the first harmonization never touches the network.
 docker compose up -d              # postgres, redis, api, worker, caddy, web
 docker compose ps                 # all should be healthy
 docker compose exec api curl -fsS http://localhost:8000/healthz   # 200 when the API is up
+docker compose exec api curl -fsS http://localhost:8000/readyz    # Postgres, Redis, KB all ready
 ```
 
 Migrations run automatically on API start (`alembic upgrade head`).

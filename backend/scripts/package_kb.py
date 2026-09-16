@@ -20,7 +20,6 @@ This script rolls everything a fresh instance needs into one bundle:
 
 The two model trees make a fresh box load its embedding models from disk with
 ``HF_HUB_OFFLINE=1`` instead of pulling them from HuggingFace on first use.
-Pass ``--no-models`` to omit them (smaller bundle; models managed separately).
 
 Install it with ``scripts/seed_kb.py``.
 
@@ -28,7 +27,6 @@ Usage::
 
     python -m scripts.package_kb -o kb_offline_bundle.tar.gz
     python -m scripts.package_kb -o kb_offline_bundle.tar.gz --dry-run
-    python -m scripts.package_kb -o kb_offline_bundle.tar.gz --no-models
 """
 
 from __future__ import annotations
@@ -39,6 +37,8 @@ import sys
 import tarfile
 import tempfile
 from pathlib import Path
+
+from app.engine_adapter.kb_assets import installed_kb_issues
 
 _BACKEND = Path(__file__).resolve().parents[1]
 _SCHEMA_CACHE = _BACKEND / "data" / "nci_schema_cache.json"
@@ -150,26 +150,30 @@ def _human(n: float) -> str:
     return f"{n:.0f} GB"
 
 
-def build_bundle(output: Path, *, with_models: bool = True, dry_run: bool = False) -> int:
+def build_bundle(
+    output: Path,
+    *,
+    dry_run: bool = False,
+    allow_incomplete: bool = False,
+) -> int:
     # Resolve everything first so --dry-run can report without exporting the KB.
     csvs = _corpus_csvs()
-    if not csvs:
-        print("[package] WARNING: no corpus CSVs found — a fresh instance "
-              "will rebuild corpora from the network.", file=sys.stderr)
-
-    mc_root, mc_files = (None, [])
-    hf_root, hf_files = (None, [])
-    if with_models:
-        mc_root, mc_files = _model_cache_files()
-        hf_root, hf_files = _hf_schema_model()
-        if not mc_files:
-            print("[package] WARNING: no engine model_cache found — ontology "
-                  "matching will pull models from HuggingFace on first use.",
-                  file=sys.stderr)
-        if not hf_files:
-            print("[package] WARNING: schema model (all-MiniLM-L6-v2) not found "
-                  "in the HF cache — schema matching will pull it on first use.",
-                  file=sys.stderr)
+    mc_root, mc_files = _model_cache_files()
+    hf_root, hf_files = _hf_schema_model()
+    issues = installed_kb_issues()
+    if not _SCHEMA_CACHE.exists():
+        issues.append(f"missing warmed schema cache: {_SCHEMA_CACHE}")
+    if issues:
+        level = "WARNING" if allow_incomplete else "ERROR"
+        for issue in issues:
+            print(f"[package] {level}: {issue}", file=sys.stderr)
+        if not allow_incomplete:
+            print(
+                "[package] run scripts.build_kb and scripts.warm_schema_cache "
+                "before packaging; use --allow-incomplete only for development.",
+                file=sys.stderr,
+            )
+            return 1
 
     if dry_run:
         mc_sz = sum(p.stat().st_size for p in mc_files)
@@ -221,12 +225,19 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Package an offline KB bundle.")
     parser.add_argument("-o", "--output", required=True, type=Path,
                         help="Output bundle path (.tar.gz).")
-    parser.add_argument("--no-models", action="store_true",
-                        help="Omit the embedding models (smaller bundle).")
     parser.add_argument("--dry-run", action="store_true",
                         help="Report what would be bundled without writing it.")
+    parser.add_argument(
+        "--allow-incomplete",
+        action="store_true",
+        help="Permit a development-only bundle with missing required assets.",
+    )
     args = parser.parse_args(argv)
-    return build_bundle(args.output, with_models=not args.no_models, dry_run=args.dry_run)
+    return build_bundle(
+        args.output,
+        dry_run=args.dry_run,
+        allow_incomplete=args.allow_incomplete,
+    )
 
 
 if __name__ == "__main__":

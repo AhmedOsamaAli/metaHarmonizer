@@ -144,6 +144,7 @@ upstream-engine imports outside the adapter boundary.
 - [Operational alert drill](docs/operational-alert-drill-2026-08-19.md)
 - [Capacity reports](docs/capacity-report-2026-08-15.md) ([earlier](docs/capacity-report-2026-08-13.md))
 - [Schema benchmark report](docs/schema-benchmark-report-2026-08-22.md)
+- [Deployment review resolution](docs/deployment-review-resolution.md)
 - [Curator usability protocol](docs/curator-usability-protocol.md)
 
 ## Security and Data Handling
