@@ -53,4 +53,47 @@ test.describe('authenticated journey', () => {
     await expect(page).not.toHaveURL(/\/login$/, { timeout: 10_000 });
     await expect(page.locator('#root')).toBeVisible();
   });
+
+  test('UI downloads a bearer-protected harmonized CSV', async ({ page, request }) => {
+    const login = await request.post('/api/v1/auth/login', {
+      data: { email: EMAIL, password: PASSWORD },
+    });
+    const { access_token } = await login.json();
+    const auth = { Authorization: `Bearer ${access_token}` };
+    const upload = await request.post('/api/v1/harmonize', {
+      headers: auth,
+      multipart: {
+        file: {
+          name: 'download-regression.csv',
+          mimeType: 'text/csv',
+          buffer: Buffer.from('participant_id,sex\nP001,Female\n'),
+        },
+        mode: 'schema',
+      },
+    });
+    expect(upload.ok()).toBeTruthy();
+    const accepted = await upload.json();
+
+    try {
+      await expect.poll(async () => {
+        const status = await request.get(`/api/v1/jobs/${accepted.study_id}`, { headers: auth });
+        return (await status.json()).state;
+      }, { timeout: 60_000 }).toBe('succeeded');
+
+      await page.goto('/login');
+      await page.locator('input[type="email"], input[name="email"]').first().fill(EMAIL!);
+      await page.locator('input[type="password"]').first().fill(PASSWORD!);
+      await page.locator('button[type="submit"]').first().click();
+      await expect(page).not.toHaveURL(/\/login$/, { timeout: 10_000 });
+      await page.goto(`/export/${accepted.study_id}`);
+
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Download Harmonized CSV' }).click();
+      const download = await downloadPromise;
+      expect(download.suggestedFilename()).toBe(`${accepted.study_id}_harmonized.csv`);
+      expect(await download.path()).toBeTruthy();
+    } finally {
+      await request.delete(`/api/v1/studies/${accepted.study_id}`, { headers: auth });
+    }
+  });
 });

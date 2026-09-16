@@ -25,16 +25,17 @@ import argparse
 import logging
 import time
 
+from app.engine_adapter.kb_assets import (
+    REQUIRED_ONTOLOGY_TUPLES,
+    installed_kb_issues,
+)
+
 # (category, ontology_source, seed_query) — the seed drives one run so the full
 # corpus AND the FAISS index build. It must NOT be an exact ontology label,
 # otherwise Stage 1 short-circuits and Stage 2 (which builds the FAISS index) is
 # skipped, leaving an index-less KB. A deliberately non-label probe forces Stage 2.
 _PROBE = "kb build probe do not match"
-LAUNCH_TUPLES = [
-    ("disease", "ncit", _PROBE),
-    ("bodysite", "uberon", _PROBE),
-    ("treatment", "ncit", _PROBE),
-]
+LAUNCH_TUPLES = [(category, source, _PROBE) for category, source in REQUIRED_ONTOLOGY_TUPLES]
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("build_kb")
@@ -115,6 +116,16 @@ def main(argv: list[str] | None = None) -> int:
 
     if failures:
         logger.error("%d/%d tuple(s) failed", failures, len(tuples))
+        return 1
+    built_tuples = tuple((category, source) for category, source, _ in tuples)
+    issues = installed_kb_issues(
+        require_ontology_model=True,
+        require_schema_model=False,
+        tuples=built_tuples,
+    )
+    if issues:
+        for issue in issues:
+            logger.error("incomplete KB: %s", issue)
         return 1
     logger.info("done — %d tuple(s) built", len(tuples))
     return 0

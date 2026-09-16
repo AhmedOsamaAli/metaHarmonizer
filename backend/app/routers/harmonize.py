@@ -154,6 +154,11 @@ async def harmonize_study(
     mode = _validate_mode(mode)
     suffix = _validate_suffix(file.filename)
     onto_cols = [c.strip() for c in (ontology_columns or "").split(",") if c.strip()]
+    if mode in ("both", "ontology"):
+        from app.engine_adapter._ontology import runtime_asset_error
+
+        if error := runtime_asset_error():
+            raise ServiceUnavailableError(error)
 
     # Validate the curator's chosen target schema (GDC / cBioPortal / cMD / …).
     from app.engine_adapter import _schema_registry

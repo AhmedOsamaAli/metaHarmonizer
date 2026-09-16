@@ -48,3 +48,36 @@ def test_real_schema_mapping(real_engine, tmp_path):
     for r in rows:
         assert 0.0 <= float(r["confidence_score"]) <= 1.0
         assert r["stage"] in {"stage1", "stage2", "stage3", "stage4", "unmapped", "invalid"}
+
+
+@pytest.mark.skipif(
+    os.getenv("RUN_REAL_ONTOLOGY") != "1",
+    reason="real ontology test requires the published KB bundle",
+)
+def test_real_ontology_mapping_uses_prebuilt_bundle(real_engine):
+    from app.engine_adapter import _ontology
+    import metaharmonizer
+
+    raw = pd.DataFrame(
+        {
+            "diagnosis": ["glioblastoma"],
+            "anatomic_site": ["spleen"],
+            "therapy": ["pembrolizumab"],
+        }
+    )
+    schema = [
+        {"raw_column": "diagnosis", "matched_field": "disease"},
+        {"raw_column": "anatomic_site", "matched_field": "body_site"},
+        {"raw_column": "therapy", "matched_field": "treatment_name"},
+    ]
+
+    rows, handled = _ontology.map_values_via_engine(metaharmonizer, raw, schema)
+
+    assert handled == {"disease", "body_site", "treatment_name"}
+    assert {row["raw_value"] for row in rows} == {
+        "glioblastoma",
+        "spleen",
+        "pembrolizumab",
+    }
+    assert all(row["ontology_term"] for row in rows)
+    assert all(row["ontology_id"] for row in rows)

@@ -211,3 +211,27 @@ async def test_queue_failure_cleans_upload_and_releases_dedup(env, monkeypatch):
         assert failed_job is not None
         assert failed_job.state == "failed"
         assert failed_job.error_code == "queue_unavailable"
+
+
+async def test_missing_ontology_bundle_is_rejected_before_upload(env, monkeypatch):
+    make_client, domain = env
+    from app.engine_adapter import _ontology
+
+    monkeypatch.setattr(
+        _ontology,
+        "runtime_asset_error",
+        lambda: "The ontology knowledge-base bundle is not ready.",
+    )
+
+    async with make_client() as client:
+        user = await register_and_login(client, f"kb-missing@{domain}")
+        headers = {"Authorization": "Bearer " + user["access_token"]}
+        response = await client.post(
+            "/api/v1/harmonize",
+            headers=headers,
+            files={"file": ("study.csv", b"SEX\nFemale\n", "text/csv")},
+            data={"mode": "both"},
+        )
+
+    assert response.status_code == 503
+    assert "knowledge-base bundle is not ready" in response.json()["error"]["message"]

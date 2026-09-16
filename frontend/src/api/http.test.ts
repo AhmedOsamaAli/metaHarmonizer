@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ApiError,
   apiFetch,
+  apiFetchResponse,
   getAccessToken,
   isGuestMode,
   onTokenChange,
@@ -67,6 +68,22 @@ describe('apiFetch', () => {
     expect(url).toBe('/api/v1/studies');
     expect(init.credentials).toBe('include');
     expect(new Headers(init.headers).get('Authorization')).toBe('Bearer tok-123');
+  });
+
+  describe('apiFetchResponse', () => {
+    it('returns an authenticated raw response for file downloads', async () => {
+      const response = new Response('csv-data', {
+        headers: { 'content-type': 'text/csv' },
+      });
+      const fetchMock = vi.fn().mockResolvedValue(response);
+      vi.stubGlobal('fetch', fetchMock);
+      setAccessToken('download-token');
+
+      await expect(apiFetchResponse('/export/study/harmonized')).resolves.toBe(response);
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(url).toBe('/api/v1/export/study/harmonized');
+      expect(new Headers(init.headers).get('Authorization')).toBe('Bearer download-token');
+    });
   });
 
   it('maps the unified error envelope to an ApiError', async () => {

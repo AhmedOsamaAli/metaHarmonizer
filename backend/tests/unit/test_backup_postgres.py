@@ -80,3 +80,32 @@ def test_restore_refuses_production_database(monkeypatch):
 
     with pytest.raises(RuntimeError, match="refusing"):
         backup.restore(url, "postgres/example.dump.enc", allow_production=False)
+
+
+def test_roundtrip_requires_separate_scratch_database(monkeypatch):
+    url = "postgresql+asyncpg://" + "mh:pw@" + "postgres:5432/metaharmonizer"
+    monkeypatch.setenv("DATABASE_URL", url)
+
+    with pytest.raises(RuntimeError, match="separate scratch database"):
+        backup.roundtrip(target_database_url=url)
+
+
+def test_roundtrip_derives_scratch_url_without_repeating_credentials(monkeypatch):
+    source = "postgresql+asyncpg://" + "mh:pw@" + "postgres:5432/metaharmonizer"
+    monkeypatch.setenv("DATABASE_URL", source)
+    seen = {}
+
+    def capture(_dump, target, _temp):
+        seen["target"] = target
+
+    monkeypatch.setattr(backup, "_dump_database", lambda _source, destination: destination.write_bytes(b"dump"))
+    monkeypatch.setattr(backup, "encrypt_file", lambda source, destination, _key: destination.write_bytes(source.read_bytes()) or "hash")
+    monkeypatch.setattr(backup, "decrypt_file", lambda source, destination, _key: destination.write_bytes(source.read_bytes()))
+    monkeypatch.setattr(backup, "_restore_dump", capture)
+    monkeypatch.setattr(backup, "_load_key", lambda _path: bytes(32))
+
+    backup.roundtrip(target_database_name="metaharmonizer_restore_ci")
+
+    assert seen["target"].database == "metaharmonizer_restore_ci"
+    assert seen["target"].username == "mh"
+    assert seen["target"].password == "pw"

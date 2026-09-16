@@ -99,6 +99,11 @@ jobs:
         # offline runtime use.
         run: python -m scripts.build_kb
 
+      - name: Warm schema model and persistent NCI cache
+        if: inputs.reuse_run_id == ''
+        working-directory: backend
+        run: python -m scripts.warm_schema_cache
+
       - name: Package pre-graft checkpoint
         if: inputs.reuse_run_id == ''
         working-directory: backend

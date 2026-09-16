@@ -70,6 +70,44 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class EngineReadinessMiddleware:
+    """Reject harmonization before Starlette reads a multipart request body."""
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if (
+            scope["type"] == "http"
+            and scope["method"] == "POST"
+            and scope["path"] == "/api/v1/harmonize"
+        ):
+            from app.engine_adapter._ontology import runtime_asset_error
+
+            if message := runtime_asset_error():
+                request_headers = dict(scope.get("headers", []))
+                rid = request_headers.get(b"x-request-id", b"").decode() or (
+                    f"req_{uuid.uuid4().hex}"
+                )
+                headers = {
+                    "Retry-After": "30",
+                    REQUEST_ID_HEADER: rid,
+                    **_SECURITY_HEADERS,
+                }
+                response = JSONResponse(
+                    status_code=503,
+                    content=error_envelope(
+                        "SERVICE_UNAVAILABLE",
+                        message,
+                        request_id=rid,
+                    ),
+                    headers=headers,
+                )
+                await response(scope, receive, send)
+                return
+        await self.app(scope, receive, send)
+
+
 def _rid(request: Request) -> str:
     return getattr(request.state, "request_id", "") or request_id_ctx.get()
 

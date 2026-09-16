@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Download, FileText, Database, FileJson, FolderArchive, Tags } from 'lucide-react';
-import { getExportUrl, getLabeledExportUrl } from '../api/client';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { downloadExport, downloadLabeledExport } from '../api/client';
 import { useStudies } from '../hooks/queries';
 import PageHeader from '../components/ui/PageHeader';
 import { Card, CardBody } from '../components/ui/Card';
@@ -10,6 +12,19 @@ import CompleteStudyButton from '../components/CompleteStudyButton';
 export default function ExportPage() {
   const { studyId } = useParams<{ studyId: string }>();
   const { data: studies, isLoading } = useStudies();
+  const [downloading, setDownloading] = useState<string | null>(null);
+
+  const runDownload = async (key: string, action: () => Promise<void>) => {
+    setDownloading(key);
+    try {
+      await action();
+      toast.success('Download started');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Download failed. Please try again.');
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   if (!studyId) {
     return (
@@ -83,10 +98,16 @@ export default function ExportPage() {
                   <p className="mt-1 max-w-md text-xs text-slate-500">{desc}</p>
                 </div>
               </div>
-              <a href={getExportUrl(studyId, format)} download className="btn-primary btn-sm shrink-0">
+              <button
+                type="button"
+                aria-label={`Download ${title}`}
+                disabled={downloading !== null}
+                onClick={() => runDownload(format, () => downloadExport(studyId, format))}
+                className="btn-primary btn-sm shrink-0 disabled:cursor-wait disabled:opacity-60"
+              >
                 <Download className="h-4 w-4" />
-                Download
-              </a>
+                {downloading === format ? 'Preparing…' : 'Download'}
+              </button>
             </CardBody>
           </Card>
         ))}
@@ -106,14 +127,26 @@ export default function ExportPage() {
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              <a href={getLabeledExportUrl(studyId, 'csv')} download className="btn-secondary btn-sm">
+              <button
+                type="button"
+                aria-label="Download Labeled Dataset CSV"
+                disabled={downloading !== null}
+                onClick={() => runDownload('labeled-csv', () => downloadLabeledExport(studyId, 'csv'))}
+                className="btn-secondary btn-sm disabled:cursor-wait disabled:opacity-60"
+              >
                 <Download className="h-4 w-4" />
-                CSV
-              </a>
-              <a href={getLabeledExportUrl(studyId, 'jsonl')} download className="btn-secondary btn-sm">
+                {downloading === 'labeled-csv' ? 'Preparing…' : 'CSV'}
+              </button>
+              <button
+                type="button"
+                aria-label="Download Labeled Dataset JSONL"
+                disabled={downloading !== null}
+                onClick={() => runDownload('labeled-jsonl', () => downloadLabeledExport(studyId, 'jsonl'))}
+                className="btn-secondary btn-sm disabled:cursor-wait disabled:opacity-60"
+              >
                 <Download className="h-4 w-4" />
-                JSONL
-              </a>
+                {downloading === 'labeled-jsonl' ? 'Preparing…' : 'JSONL'}
+              </button>
             </div>
           </CardBody>
         </Card>

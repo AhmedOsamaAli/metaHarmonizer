@@ -13,6 +13,8 @@ versioning once a stable `1.x` release is declared.
   clearing all Python and npm dependency-audit findings without exceptions.
 - Pinned CPU-only PyTorch wheels by container architecture, avoiding unsupported
   CUDA packages on ARM production hosts and enforcing `pip check` in image builds.
+- Made KB packaging, import, readiness, and job admission fail closed; completed
+  the real deployment validation gates; and fixed authenticated browser downloads.
 
 ## [0.1.0] - 2026-08-19
 

@@ -1,6 +1,7 @@
 /*  Auth, sessions, API tokens, and admin endpoints.  */
 
-import { apiFetch, setAccessToken, BASE, getAccessToken } from './http';
+import { apiFetch, setAccessToken } from './http';
+import { downloadApiFile } from './download';
 import type {
     ApiTokenCreated,
     ApiTokenInfo,
@@ -372,18 +373,8 @@ export async function adminDeleteAlias(source: string, fieldName: string): Promi
 
 /** Download the alias dictionary as a CSV file (authenticated fetch → blob). */
 export async function adminExportAliases(scope: 'merged' | 'custom' = 'merged'): Promise<void> {
-    const token = getAccessToken();
-    const res = await fetch(`${BASE}/admin/schema-aliases/export?scope=${scope}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    if (!res.ok) throw new Error('Export failed');
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `aliases_${scope}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    return downloadApiFile(
+        `/admin/schema-aliases/export?scope=${scope}`,
+        `aliases_${scope}.csv`,
+    );
 }

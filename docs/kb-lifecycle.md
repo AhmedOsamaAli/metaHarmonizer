@@ -5,6 +5,12 @@ and the embedding models are large and built **out-of-band**, then shipped as
 one offline bundle (`kb_offline_bundle.tar.gz`). Running instances **seed** that
 bundle — they never build it.
 
+The exact maintainer order is `build_kb` → `warm_schema_cache` → `package_kb`.
+Packaging is fail-closed: it will not publish a bundle missing a required
+corpus, FAISS index/ID sidecar, engine database, embedding model, or schema
+cache. Import validates the archive before extraction and verifies the installed
+assets afterward.
+
 ## Refresh pipeline (`.github/workflows/kb-refresh.yml`)
 
 Runs on an **ephemeral GitHub runner** (manual `workflow_dispatch` or a quarterly
@@ -33,12 +39,24 @@ flowchart LR
   relabeled IDs, and before/after mapping-quality metrics. The same evidence,
   including affected ID lists, is retained for 90 days as JSON/CSV artifacts.
 
+The cold ontology build is inherently compute- and network-heavy. Historical
+clean runs took about 3 hours 20 minutes; a successful retry reusing the
+pre-graft checkpoint completed in about 8 minutes. That cost belongs to the
+quarterly maintainer workflow, never to deployment or a user's first task. The
+workflow exposes `reuse_run_id` so a failed graft/package/publish phase reuses
+the expensive build checkpoint instead of rebuilding all ontologies.
+
 ## Consume (every instance, local or prod)
 
 ```
 docker compose --profile kb run --rm kb-import   # download from KB_BUNDLE_URL + verify sha256 + seed volumes
 docker compose up --build                        # api/worker load the KB + models offline (HF_HUB_OFFLINE=1)
 ```
+
+The import command runs `scripts.kb_probe` for disease/NCIt, bodysite/UBERON,
+and treatment/NCIt. `/readyz` reports `ontology_kb=ok` only after the same
+contract passes, and ontology submissions receive HTTP 503 before upload if it
+does not. The worker repeats the check for jobs inserted outside the API.
 
 The bundle is a **point-in-time snapshot**; studies are stamped with the
 schema/ontology version they were harmonized against (`SchemaVersion` /

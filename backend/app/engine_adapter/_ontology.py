@@ -19,6 +19,13 @@ from typing import Any
 
 import pandas as pd
 
+from .kb_assets import (
+    REQUIRED_ONTOLOGY_TUPLES,
+    installed_kb_issues,
+    runtime_engine_required,
+    runtime_ontology_required,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,6 +71,34 @@ def is_ontology_field(field: str | None) -> bool:
 def engine_enabled() -> bool:
     """True when the operator has opted into the real ontology engine path."""
     return os.getenv("ONTOLOGY_ENGINE", "0").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def runtime_asset_issues() -> list[str]:
+    """Return missing production KB assets without constructing the engine."""
+    if not runtime_engine_required():
+        return []
+    try:
+        ontology_required = runtime_ontology_required()
+        return installed_kb_issues(
+            require_engine_db=ontology_required,
+            require_ontology_model=ontology_required,
+            require_schema_model=True,
+            tuples=REQUIRED_ONTOLOGY_TUPLES if ontology_required else (),
+        )
+    except Exception as exc:  # noqa: BLE001 - readiness must return a diagnosis
+        return [f"could not inspect ontology assets: {type(exc).__name__}: {exc}"]
+
+
+def runtime_asset_error() -> str | None:
+    issues = runtime_asset_issues()
+    if not issues:
+        return None
+    logger.error("ontology KB readiness failed: %s", issues)
+    return (
+        "The ontology knowledge-base bundle is not ready. "
+        "Ask the operator to run `docker compose --profile kb run --rm kb-import` "
+        f"and retry ({len(issues)} required asset(s) missing)."
+    )
 
 
 def _to_score(value: Any) -> float:
@@ -172,6 +207,10 @@ def map_values_via_engine(
     """
     OntoMapEngine = getattr(pkg, "OntoMapEngine", None)
     if OntoMapEngine is None:
+        return [], set()
+    issues = runtime_asset_issues()
+    if issues:
+        logger.error("ontology engine skipped because the offline KB is incomplete: %s", issues)
         return [], set()
 
     # Collect unique values per supported field.

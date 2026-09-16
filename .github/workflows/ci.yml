@@ -77,6 +77,27 @@ jobs:
           --cov-report=term
           --cov-report=xml:coverage.xml
           --cov-report=html:htmlcov
+      - name: Validate a generated study with cBioPortal validateData.py
+        env:
+          CBIO_VALIDATOR_REF: c1ecdf8b955670ac030f816766f2554d2e39b78e
+          CBIO_VALIDATOR_SHA256: 4f879e4fd79abeb45b99edd510733c506fd29996102b73519979aa78fcec8c12
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/cbio-validator.tar.gz"
+          validator="$RUNNER_TEMP/cbio-validator"
+          curl -sSfL \
+            "https://github.com/cBioPortal/datahub-study-curation-tools/archive/${CBIO_VALIDATOR_REF}.tar.gz" \
+            -o "$archive"
+          echo "${CBIO_VALIDATOR_SHA256}  ${archive}" | sha256sum --check --strict
+          mkdir "$validator"
+          tar -xzf "$archive" -C "$validator" --strip-components=1
+          script="$validator/validation/validator/validateData.py"
+          test -f "$script"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends default-libmysqlclient-dev pkg-config
+          python -m pip install dsnparse==0.4.0 mysqlclient==2.2.8
+          CBIO_VALIDATE_DATA="$script" \
+            pytest backend/tests/integration/test_validate_data_gate.py -q
       - name: Upload backend coverage
         if: always()
         uses: actions/upload-artifact@v4
