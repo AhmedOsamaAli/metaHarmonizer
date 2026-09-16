@@ -12,9 +12,9 @@ from app.engine_adapter.kb_assets import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 
 PROBE_VALUES = {
-    ("disease", "ncit"): "glioblastoma",
-    ("bodysite", "uberon"): "spleen",
-    ("treatment", "ncit"): "pembrolizumab",
+    ("disease", "ncit"): "glioblastma",
+    ("bodysite", "uberon"): "splen",
+    ("treatment", "ncit"): "pembrolizumabb",
 }
 
 
