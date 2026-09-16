@@ -107,7 +107,7 @@ jobs:
           done
 
       - name: Upload SBOM artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cyclonedx-sboms-${{ github.sha }}
           path: metaharmonizer-*.cdx.json
@@ -211,7 +211,7 @@ jobs:
 
       - name: Upload end-to-end report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-report-${{ github.sha }}
           path: |
