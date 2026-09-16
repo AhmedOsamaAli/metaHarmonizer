@@ -133,3 +133,17 @@ still verify that it has no issues, Actions secrets, deploy keys, or other
 settings she needs. Once it is deleted or detached from the fork network,
 transfer can be retried as `shbrief/metaHarmonizer-app`; GitHub then emails her
 an acceptance link that expires after one day.
+
+## 7. Production verification
+
+Deployed on 16 September 2026 at revision `41ecade` after a fresh encrypted R2
+backup. The controlled cutover took 52 seconds. Final verification reported:
+
+- `/healthz` healthy and `/readyz` ready with PostgreSQL, Redis, and
+  `ontology_kb=ok`;
+- full offline KB probe passed for all three launch tuples;
+- authenticated production audit passed 19 workflows (Gemini skipped because
+  no key is configured) and removed its temporary data;
+- a separate Chromium test created a curator and study, downloaded the
+  bearer-protected harmonized CSV from the Export page, verified the response
+  and file, and removed the temporary user/study.

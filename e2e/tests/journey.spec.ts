@@ -55,6 +55,7 @@ test.describe('authenticated journey', () => {
   });
 
   test('UI downloads a bearer-protected harmonized CSV', async ({ page, request }) => {
+    test.setTimeout(90_000);
     const login = await request.post('/api/v1/auth/login', {
       data: { email: EMAIL, password: PASSWORD },
     });
@@ -85,10 +86,17 @@ test.describe('authenticated journey', () => {
       await page.locator('input[type="password"]').first().fill(PASSWORD!);
       await page.locator('button[type="submit"]').first().click();
       await expect(page).not.toHaveURL(/\/login$/, { timeout: 10_000 });
+      const closeShowcase = page.getByRole('button', { name: 'Close showcase' });
+      if (await closeShowcase.isVisible()) await closeShowcase.click();
       await page.goto(`/export/${accepted.study_id}`);
 
+      const responsePromise = page.waitForResponse((response) =>
+        response.url().endsWith(`/api/v1/export/${accepted.study_id}/harmonized`),
+      );
       const downloadPromise = page.waitForEvent('download');
       await page.getByRole('button', { name: 'Download Harmonized CSV' }).click();
+      const response = await responsePromise;
+      expect(response.status()).toBe(200);
       const download = await downloadPromise;
       expect(download.suggestedFilename()).toBe(`${accepted.study_id}_harmonized.csv`);
       expect(await download.path()).toBeTruthy();

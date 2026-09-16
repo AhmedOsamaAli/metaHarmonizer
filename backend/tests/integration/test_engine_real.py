@@ -60,9 +60,9 @@ def test_real_ontology_mapping_uses_prebuilt_bundle(real_engine):
 
     raw = pd.DataFrame(
         {
-            "diagnosis": ["glioblastoma"],
-            "anatomic_site": ["spleen"],
-            "therapy": ["pembrolizumab"],
+            "diagnosis": ["glioblastma"],
+            "anatomic_site": ["splen"],
+            "therapy": ["pembrolizumabb"],
         }
     )
     schema = [
@@ -75,9 +75,9 @@ def test_real_ontology_mapping_uses_prebuilt_bundle(real_engine):
 
     assert handled == {"disease", "body_site", "treatment_name"}
     assert {row["raw_value"] for row in rows} == {
-        "glioblastoma",
-        "spleen",
-        "pembrolizumab",
+        "glioblastma",
+        "splen",
+        "pembrolizumabb",
     }
     assert all(row["ontology_term"] for row in rows)
     assert all(row["ontology_id"] for row in rows)
