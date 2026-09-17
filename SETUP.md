@@ -16,7 +16,7 @@ MetaHarmonizer always runs the real ML engine, so the only sizeable step is a
 
 ```bash
 # 1 — Get the code
-git clone https://github.com/AhmedOsamaAli/metaHarmonizer.git
+git clone https://github.com/sehyunohlab/metaHarmonizer.git
 cd metaHarmonizer
 
 # 2 — Create your .env (boots as-is — dev secret + KB download URL are preset)

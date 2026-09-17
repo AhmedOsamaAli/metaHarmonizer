@@ -239,7 +239,7 @@ studies are automatically removed after the configured retention period.
 
 ## Reporting problems
 
-Use the project's [GitHub Issues](https://github.com/AhmedOsamaAli/metaHarmonizer/issues)
+Use the project's [GitHub Issues](https://github.com/sehyunohlab/metaHarmonizer/issues)
 for non-sensitive bugs and feature requests. Never paste or attach PHI, raw
 patient metadata, credentials, API tokens, or private exports to a public issue.
 For a report that may contain sensitive information, contact the operator of

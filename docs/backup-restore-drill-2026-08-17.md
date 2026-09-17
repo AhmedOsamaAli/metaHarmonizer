@@ -72,7 +72,7 @@ this is expected and keeps storage bounded.
 aggregate data parity, scratch cleanup, daily scheduling, and freshness
 monitoring are verified.
 
-Relevant fixes: [`23e5af2`](https://github.com/AhmedOsamaAli/metaHarmonizer/commit/23e5af2)
+Relevant fixes: [`23e5af2`](https://github.com/sehyunohlab/metaHarmonizer/commit/23e5af2)
 for PostgreSQL 16 restore compatibility and
-[`87ed4b7`](https://github.com/AhmedOsamaAli/metaHarmonizer/commit/87ed4b7)
+[`87ed4b7`](https://github.com/sehyunohlab/metaHarmonizer/commit/87ed4b7)
 for durable successful-backup freshness monitoring.

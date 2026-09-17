@@ -8,7 +8,7 @@ has a separate maintenance agreement.
 
 ## Report a vulnerability
 
-Use [GitHub private vulnerability reporting](https://github.com/AhmedOsamaAli/metaHarmonizer/security/advisories/new).
+Use [GitHub private vulnerability reporting](https://github.com/sehyunohlab/metaHarmonizer/security/advisories/new).
 Do not open a public issue for vulnerabilities, credentials, private metadata,
 or protected health information.
 

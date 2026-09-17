@@ -5,8 +5,8 @@ repo_root=$(git rev-parse --show-toplevel)
 cd "$repo_root"
 
 compose=(docker compose -f docker-compose.yml -f docker-compose.prod.yml)
-bundle_url=${KB_DEPLOY_BUNDLE_URL:-https://github.com/AhmedOsamaAli/metaHarmonizer/releases/download/kb-latest/kb_offline_bundle.tar.gz}
-checksum_url=${KB_DEPLOY_CHECKSUM_URL:-https://github.com/AhmedOsamaAli/metaHarmonizer/releases/download/kb-latest/kb_offline_bundle.sha256}
+bundle_url=${KB_DEPLOY_BUNDLE_URL:-https://github.com/sehyunohlab/metaHarmonizer/releases/download/kb-latest/kb_offline_bundle.tar.gz}
+checksum_url=${KB_DEPLOY_CHECKSUM_URL:-https://github.com/sehyunohlab/metaHarmonizer/releases/download/kb-latest/kb_offline_bundle.sha256}
 state_dir=${KB_DEPLOY_STATE_DIR:-${HOME}/.local/state/metaharmonizer/kb-deploy}
 lock_file=${KB_DEPLOY_LOCK_FILE:-/tmp/metaharmonizer-kb-deploy.lock}
 keep_releases=${KB_DEPLOY_KEEP_RELEASES:-2}
