@@ -12,8 +12,10 @@ Thank you for improving MetaHarmonizer.
    operational risk.
 6. Merge only after all protected checks pass.
 
-See [SETUP.md](SETUP.md) for local development and [architecture](docs/architecture.md)
-for ownership boundaries.
+See [SETUP.md](SETUP.md) for local development,
+[architecture](docs/architecture.md) for ownership boundaries, and the
+[release process](docs/release-process.md) for how a merged change reaches
+production. Merging a pull request does not deploy it automatically.
 
 ## Architectural rules
 

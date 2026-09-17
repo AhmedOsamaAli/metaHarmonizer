@@ -57,6 +57,11 @@ whole-filesystem growth. Whole-filesystem growth is deliberately conservative;
 the component table separates KB releases, uploads, PostgreSQL, Redis, images,
 volumes, and reclaimable build cache.
 
+Application code is released separately from the KB timer. A merge to `main`
+does not deploy production automatically. The exact developer-to-operator
+workflow, backup-first deployment command, schema-migration exception, and
+rollback record are documented in [release-process.md](release-process.md).
+
 Install or update the units:
 
 ```bash

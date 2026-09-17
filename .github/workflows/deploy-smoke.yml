@@ -17,6 +17,11 @@ on:
       - "docker-compose.yml"
       - "backend/**"
       - "frontend/**"
+      - "scripts/deploy_revision.sh"
+      - "scripts/rollback_revision.sh"
+      - "scripts/deploy_kb_bundle.sh"
+      - "scripts/test_deploy_revision.sh"
+      - "deploy/systemd/metaharmonizer-kb-update.service"
       - ".github/workflows/deploy-smoke.yml"
   pull_request:
   workflow_dispatch:
@@ -30,6 +35,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+
+      - name: Validate release and rollback scripts
+        run: |
+          bash -n scripts/deploy_revision.sh
+          bash -n scripts/rollback_revision.sh
+          bash -n scripts/deploy_kb_bundle.sh
+          bash -n scripts/test_deploy_revision.sh
+          bash scripts/test_deploy_revision.sh
 
       # Minimal env the api/worker/seed services read via `env_file: .env`.
       - name: Write .env
@@ -61,7 +74,23 @@ jobs:
           EOF
 
       - name: Build application images
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
         run: docker compose -f docker-compose.yml -f docker-compose.ci.yml build api web
+
+      - name: Verify release identity metadata
+        env:
+          SOURCE_COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(docker image inspect --format \
+            '{{index .Config.Labels "org.opencontainers.image.revision"}}' \
+            metaharmonizer-api)" = "$SOURCE_COMMIT"
+          test "$(docker image inspect --format \
+            '{{index .Config.Labels "org.opencontainers.image.revision"}}' \
+            metaharmonizer-web)" = "$SOURCE_COMMIT"
+          test "$(docker run --rm --entrypoint cat \
+            metaharmonizer-web /dist/.release-revision)" = "$SOURCE_COMMIT"
 
       - name: Validate production Compose and TLS configuration
         env:

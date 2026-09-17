@@ -15,6 +15,8 @@ versioning once a stable `1.x` release is declared.
   CUDA packages on ARM production hosts and enforcing `pip check` in image builds.
 - Made KB packaging, import, readiness, and job admission fail closed; completed
   the real deployment validation gates; and fixed authenticated browser downloads.
+- Added a documented developer-to-production release process and a backup-first,
+  exact-revision routine deployment command with automatic image rollback.
 
 ## [0.1.0] - 2026-08-19
 

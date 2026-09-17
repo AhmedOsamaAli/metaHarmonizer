@@ -167,12 +167,14 @@ the host and allow inbound TCP 80/443.
 
 ## 8. Operations
 
-- **Backups:** use the encrypted R2 backup tooling in Section 10. A volume
+- **Backups:** use the encrypted R2 backup tooling in Section 9. A volume
   snapshot alone is not an off-host backup.
 - **Labeled-data export:** the worker writes a nightly confirmed-mapping corpus
   to `backend/data/exports/labeled/`; pull it live from `GET /api/v1/export/labeled`.
 - **Logs:** `docker compose logs -f api worker`. Set `SENTRY_DSN` for error tracking.
-- **Upgrades:** `git pull && docker compose up -d --build` (migrations re-run).
+- **Application upgrades:** deploy an exact merged revision with the
+  backup-first, preflighted command below; merging a pull request does not
+  automatically change production.
 - **Scale throughput:** `docker compose up -d --scale worker=N`.
 
 ### Automatic KB rollout
@@ -224,29 +226,76 @@ Reports are written under
 `docs/production-operations.md`; the timers remain useful without provider
 credentials and explicitly report unconfigured delivery/backup dependencies.
 
-### Application rollback
+### Application release
 
-Use an exact tested Git revision, not a moving branch name. The rollback command
-builds that revision, republishes the SPA, recreates API/worker/Caddy, waits for
-API and worker health, and performs an authenticated login smoke test. If any
-validation fails after switching revisions, it attempts to restore the revision
-that was running when the command started.
+For routine code or dependency releases, use the exact-revision deployment
+command rather than an ad hoc `git pull`/Compose sequence. Before its first use,
+record the independently verified live revision once without changing that
+checkout:
 
 ```bash
 git fetch --all --tags --prune
-ROLLBACK_DRY_RUN=1 \
-ROLLBACK_BASE_URL=https://harmonize.example.org \
-ROLLBACK_SMOKE_EMAIL=rollback-check@example.org \
-ROLLBACK_SMOKE_PASSWORD='<temporary-or-dedicated-password>' \
-  ./scripts/rollback_revision.sh <previous-tested-commit>
+LIVE=<known-currently-deployed-40-character-commit>
+test "$(git rev-parse HEAD)" = "$LIVE"
+git show origin/main:scripts/deploy_revision.sh > /tmp/deploy_revision.sh
+chmod 700 /tmp/deploy_revision.sh
+DEPLOY_BASE_URL=https://harmonize.example.org \
+DEPLOY_REPO_ROOT="$PWD" \
+  /tmp/deploy_revision.sh --record-current "$LIVE"
+rm /tmp/deploy_revision.sh
+git show origin/main:deploy/systemd/metaharmonizer-kb-update.service \
+  > /tmp/metaharmonizer-kb-update.service
+sudo install -m 0644 /tmp/metaharmonizer-kb-update.service /etc/systemd/system/
+rm /tmp/metaharmonizer-kb-update.service
+sudo systemctl daemon-reload
 ```
 
-Run once with `ROLLBACK_DRY_RUN=1` to verify the target and live migration are
-compatible without switching revisions. Remove it to execute the rollback.
+Then use the protected `main` head:
 
-The command records the prior revision in `.git/metaharmonizer-previous-revision`
-and leaves the repository detached at the rollback revision. Return to normal
-deployment with `git switch main && git pull --ff-only`.
+```bash
+git fetch --all --tags --prune
+TARGET=$(git rev-parse origin/main)
+DEPLOY_TOOL="$HOME/.local/state/metaharmonizer/deploy/bin/deploy_revision.sh"
+DEPLOY_BASE_URL=https://harmonize.example.org \
+DEPLOY_REPO_ROOT="$PWD" \
+DEPLOY_DRY_RUN=1 \
+  "$DEPLOY_TOOL" "$TARGET"
+DEPLOY_BASE_URL=https://harmonize.example.org \
+DEPLOY_REPO_ROOT="$PWD" \
+  "$DEPLOY_TOOL" "$TARGET"
+```
+
+It verifies durable live commit/image/database state, shares a lock with the KB
+updater, verifies the encrypted backup, stops application services before
+changing tracked runtime inputs, builds revision-labeled images, rejects
+unreviewed schema changes, preflights dependencies and the engine, runs the
+authenticated production audit, and restores the previous checkout and images
+after a command failure or termination signal. The developer, reviewer, and
+operator responsibilities and the special procedures for migrations,
+configuration, KB updates, and rollback are in
+[`docs/release-process.md`](docs/release-process.md).
+
+### Application rollback
+
+Use an exact tested Git revision, not a moving branch name. The rollback command
+uses the same state-aware, backup-first engine as a forward release. The
+immediately previous release uses its retained exact image IDs; other targets
+must support revision-labeled builds. It republishes the SPA, recreates
+API/worker/Caddy, runs the production audit, and updates the deployment record.
+If validation fails, it restores the revision that was running when the command
+started.
+
+```bash
+git fetch --all --tags --prune
+DEPLOY_TOOL="$HOME/.local/state/metaharmonizer/deploy/bin/deploy_revision.sh"
+DEPLOY_BASE_URL=https://harmonize.example.org \
+DEPLOY_REPO_ROOT="$PWD" \
+DEPLOY_DRY_RUN=1 \
+  "$DEPLOY_TOOL" --rollback <previous-tested-commit>
+```
+
+Run once with `DEPLOY_DRY_RUN=1` to verify the target and live migration are
+compatible without switching revisions. Remove it to execute the rollback.
 
 Rollback never downgrades PostgreSQL automatically. It proceeds only when the
 target revision contains the live Alembic head. If the target predates the live
