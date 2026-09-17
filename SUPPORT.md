@@ -2,8 +2,8 @@
 
 ## Product and development questions
 
-Use [GitHub Discussions](https://github.com/AhmedOsamaAli/metaHarmonizer/discussions)
-when available, or open a [GitHub issue](https://github.com/AhmedOsamaAli/metaHarmonizer/issues/new/choose)
+Use [GitHub Discussions](https://github.com/sehyunohlab/metaHarmonizer/discussions)
+when available, or open a [GitHub issue](https://github.com/sehyunohlab/metaHarmonizer/issues/new/choose)
 for reproducible non-sensitive bugs and feature requests.
 
 Before filing an issue, review:
