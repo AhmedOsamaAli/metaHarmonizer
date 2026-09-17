@@ -55,6 +55,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        SOURCE_COMMIT: "${SOURCE_COMMIT:-unknown}"
     restart: unless-stopped
     env_file: .env
     environment:
@@ -184,6 +186,8 @@ services:
   web:
     build:
       context: ./frontend
+      args:
+        SOURCE_COMMIT: "${SOURCE_COMMIT:-unknown}"
     volumes:
       - web_dist:/srv
     depends_on:

@@ -7,4 +7,5 @@ After=docker.service network-online.target
 Type=oneshot
 User=ubuntu
 WorkingDirectory=/home/ubuntu/metaHarmonizer
-ExecStart=/home/ubuntu/metaHarmonizer/scripts/deploy_kb_bundle.sh
+Environment=KB_DEPLOY_REPO_ROOT=/home/ubuntu/metaHarmonizer
+ExecStart=/bin/sh -c 'tool=/home/ubuntu/.local/state/metaharmonizer/deploy/bin/deploy_kb_bundle.sh; if [ ! -x "$tool" ]; then tool=/home/ubuntu/metaHarmonizer/scripts/deploy_kb_bundle.sh; fi; exec "$tool"'

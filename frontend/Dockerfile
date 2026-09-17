@@ -11,21 +11,26 @@
 FROM node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS build
 WORKDIR /app
 
+ARG SOURCE_COMMIT=unknown
+
 # Install deps first for better layer caching.
 COPY package.json package-lock.json* ./
 RUN npm ci
 
 # Build the static bundle.
 COPY . .
-RUN npm run build
+RUN npm run build \
+	&& printf '%s\n' "${SOURCE_COMMIT}" > /app/dist/.release-revision
 
 # Publisher stage: holds the built assets and copies them into the mounted
 # web volume, then exits (a one-shot service in compose).
 FROM alpine:3.20@sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc AS dist
 WORKDIR /dist
+ARG SOURCE_COMMIT=unknown
+LABEL org.opencontainers.image.revision="${SOURCE_COMMIT}"
 COPY --from=build /app/dist ./
 RUN addgroup -g 1000 app \
 	&& adduser -D -u 1000 -G app app \
 	&& chown -R app:app /dist
 USER app:app
-CMD ["sh", "-c", "rm -rf /srv/* && cp -R /dist/. /srv/ && echo 'web assets published to /srv'"]
+CMD ["sh", "-c", "find /srv -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && cp -R /dist/. /srv/ && echo 'web assets published to /srv'"]
