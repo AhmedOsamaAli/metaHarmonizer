@@ -122,6 +122,7 @@ upstream-engine imports outside the adapter boundary.
 
 - [Local setup and troubleshooting](SETUP.md)
 - [Production deployment and recovery](DEPLOY.md)
+- [Change review and production release process](docs/release-process.md)
 - [Production operations](docs/production-operations.md)
 - [Knowledge-base lifecycle](docs/kb-lifecycle.md) — how ontology corpora are refreshed
 - [Capacity and scaling](docs/scaling-plan.md)

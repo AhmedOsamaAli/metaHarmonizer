@@ -26,8 +26,9 @@ access. Never send credentials or recovery codes through issues, chat, or email.
 
 | Role | Current holder | Current authority |
 |---|---|---|
-| Project owner | Ahmed Osama Ali | GitHub administration, production host, cloud/DNS/provider credentials |
-| Scientific mentor | Dr. Sehyun Oh | Scientific review, secondary Slack alert receipt |
+| Repository owner | Sehyun Oh Lab organisation | GitHub repository, releases, workflows, issues, and settings |
+| Developer and demonstrator operator | Ahmed Osama Ali | Repository write access, production host, cloud/DNS/provider credentials |
+| Scientific mentor | Dr. Sehyun Oh | Organisation ownership, scientific review, secondary Slack alert receipt |
 | Institutional service owner | Not yet assigned | None |
 
 ## Interim access matrix
@@ -38,7 +39,7 @@ institutional instance is commissioned with its own, as Part 2 sets out.
 
 | Service | Purpose | Minimum interim state | Verification | State |
 |---|---|---|---|---|
-| GitHub repository | Source, PRs, Actions, releases, KB assets | Maintainer initially; administrator only when accepted | Approve a test PR; inspect branch protection, Actions, releases | Pending |
+| GitHub repository | Source, PRs, Actions, releases, KB assets | Organisation ownership plus named developer roles | Protected PR, transferred release/secret/history, old URL redirect | Complete; transferred 17 September 2026 |
 | OCI tenancy/instance | Production VM and block storage | Least-privilege group plus tested console recovery | Sign in with MFA, inspect instance, run read-only health check | Second administrator added 2026-08-20; activation pending |
 | SSH host access | Host operations | Named Ed25519 key per operator; no shared private key | Independent login, read-only health command, revocation test | Pending |
 | Domain/DNS registrar | `metaharmonizer.online` | Manager or delegated DNS role, with renewal visibility | Sign in, read DNS records, confirm recovery contact | Pending |
@@ -52,7 +53,7 @@ institutional instance is commissioned with its own, as Part 2 sets out.
 
 Order by service:
 
-1. GitHub maintainer access.
+1. GitHub repository ownership and named maintainer access (complete).
 2. OCI identity with least privilege; do not use the tenancy-wide Administrators
    group as the first step.
 3. Independent SSH key and read-only production verification.
